@@ -139,6 +139,32 @@ preview for the film as a whole.
   dependency copy, and every install/typecheck/browser/render command used the
   fixed two-slot heavy queue.
 
+## Rendered evidence audits
+
+- Parent ran `audit-shot-motion.mjs` and `audit-onscreen-text.mjs` over the
+  delivered shots and read the two reports before showing the canary. Both are
+  facts about rendered output; a pass is never aesthetic approval, and neither
+  replaces the user's choice.
+- Every shot declares `truth.readableHold`, or the audit fell back to the
+  motion map `settleMs` and said which source it used. A shot with neither is
+  reported `unmeasured`, not passed.
+- No shot carries a still tail beyond its declared hold, a mid-shot still run
+  over the ceiling, or an action window below the energy floor. A frozen shot
+  clears every other mechanical gate in this file, which is why this one exists.
+- Where a signal was answered, it was answered by enlarging the object that
+  carries the shot or by adding a real beat, never by adding explanatory text
+  and never by widening the declared hold.
+- Every string the film renders resolves to the SRT, the Recipe's
+  `creativeProposal.visibleText`, the visual system vocabulary, or fixed chrome,
+  and every `visibleText` entry names something that exists. Production
+  scaffolding — shot counters, stage names, Recipe beat names — never reaches a
+  viewer.
+- Text a Recipe invents to summarise the picture for the viewer is not a
+  vocabulary entry. If a label is needed to explain the shot, the shot is what
+  needs revision.
+- Surfaces the audit cannot read — canvas, shader, burnt-in bitmap text — are
+  listed as `unmeasured` rather than counted as clean.
+
 ## Scripted shot rendering, preview, and delivery
 
 - Parent ran `render-assigned-shots.mjs` for each assignment. Every planned

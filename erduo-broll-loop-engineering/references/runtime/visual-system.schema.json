@@ -13,6 +13,12 @@
     "typographyRoles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/typeRole" } },
     "materials": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmpty" } },
     "depthPlan": { "type": "object", "additionalProperties": false, "required": ["background", "midground", "foreground"], "properties": { "background": { "$ref": "#/$defs/nonEmpty" }, "midground": { "$ref": "#/$defs/nonEmpty" }, "foreground": { "$ref": "#/$defs/nonEmpty" } } },
+    "vocabulary": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Field names, units, and chrome the film may render on screen without repeating the declaration in every Recipe. Names things the picture contains; never a phrase that explains the picture to the viewer.",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "compositionFamilies": { "type": "array", "minItems": 3, "uniqueItems": true, "items": { "$ref": "#/$defs/compositionFamily" } },
     "motifSemantics": { "type": "array", "items": { "$ref": "#/$defs/role" } },
     "rhythmCurve": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rhythm" } },

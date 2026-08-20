@@ -16,6 +16,7 @@
       "properties": {
         "chapterId": { "$ref": "#/$defs/id" },
         "srtWindowMs": { "$ref": "#/$defs/window" },
+        "readableHold": { "$ref": "#/$defs/window", "description": "Absolute window the shot must hold readable and still. Lives in truth so a Builder cannot widen it to pass the motion audit." },
         "sourceCues": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
         "spokenFacts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/nonEmpty" } },
         "audienceOutcome": { "$ref": "#/$defs/nonEmpty" },
@@ -35,7 +36,22 @@
         "motionIdea": { "$ref": "#/$defs/nonEmpty" },
         "materialRoute": { "enum": ["native", "provided", "search", "generate", "mixed"] },
         "keyStates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/nonEmpty" } },
-        "whyThisCouldWork": { "$ref": "#/$defs/nonEmpty" }
+        "whyThisCouldWork": { "$ref": "#/$defs/nonEmpty" },
+        "visibleText": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "Every string the shot renders on screen, with where it comes from. A declaration whose source cannot be traced is an invented label, not a licence.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "source"],
+            "properties": {
+              "text": { "$ref": "#/$defs/nonEmpty" },
+              "source": { "enum": ["srt", "object", "vocabulary", "data"] },
+              "objectRef": { "$ref": "#/$defs/nonEmpty", "description": "Required when source is object: the creativeProposal.objects entry this text names." }
+            }
+          }
+        }
       }
     },
     "craftIntent": {

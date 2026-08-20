@@ -104,6 +104,8 @@ Before full production, require all of the following:
 - at least two shots use real or generated material unless the input genuinely
   does not need it and the user agrees;
 - design energy, type hierarchy, and at least two signature motions are visible;
+- `scripts/audit-shot-motion.mjs` reports no signal on any delivered shot;
+- `scripts/audit-onscreen-text.mjs` reports no signal on any delivered shot;
 - user prefers this version for at least 3/5 shots;
 - assignment-to-first-canary-preview wall time is at most 45 minutes.
 

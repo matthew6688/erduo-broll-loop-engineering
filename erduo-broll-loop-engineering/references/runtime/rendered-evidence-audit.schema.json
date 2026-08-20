@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/rendered-evidence-audit.schema.json",
+  "title": "Rendered evidence audit",
+  "description": "Facts measured on delivered shot media and its authored source. Signals, not a score; a pass is never aesthetic approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "audit", "planIdentity", "status", "thresholds", "thresholdSource", "shots"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "audit": { "enum": ["shot-motion", "onscreen-text"] },
+    "planIdentity": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["passed", "signals"] },
+    "thresholds": { "type": "object" },
+    "thresholdSource": { "enum": ["production-profile", "default"] },
+    "shots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["shotId", "status", "findings"],
+        "properties": {
+          "shotId": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["passed", "signals", "unmeasured"] },
+          "measurements": { "type": "object" },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["signal", "detail"],
+              "properties": {
+                "signal": { "type": "string", "minLength": 1 },
+                "detail": { "type": "string", "minLength": 1 },
+                "text": { "type": "string" }
+              }
+            }
+          },
+          "unmeasured": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

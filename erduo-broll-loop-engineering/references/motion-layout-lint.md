@@ -120,3 +120,12 @@ Builder to add ambient or continuous movement. It does not prove that a metaphor
 understandable, a diagram is the right explanation, a rhythm feels right, or
 an animation is beautiful; those remain creative judgments in the final moving
 preview.
+
+## Backends without a runtime trace
+
+`plan-runtime.mjs` returns a trace locator only for Remotion. On a backend with
+no trace this lint cannot run at all, and the beat-to-element binding above is
+unavailable. Cover that gap with
+[rendered evidence audits](rendered-evidence-audits.md), which measure the
+delivered file instead of the runtime. They are a floor against freezing, not a
+replacement: pixel energy cannot name the element that moved.
