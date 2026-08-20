@@ -33,3 +33,15 @@
 Both audits report facts about rendered output. A pass is never aesthetic
 approval, an unchanged readable hold is not a defect, and no automatic score
 replaces the user's canary choice.
+
+### Fixed
+
+- `validate-shot-media.mjs` computed `truthIdentity` by hashing `recipe.truth`
+  alone while `render-assigned-shots.mjs` hashed `{shotId, truth}`. A Builder
+  view receipt could satisfy one validator or the other but never both, so
+  `assembleShotPreview` was unreachable for any production. Identity now comes
+  from `validate-shot-recipes.mjs` in both places.
+- `validate-shot-media.mjs` did not pass the original SRT or design files to
+  `validateRuntimePlan`, so any plan carrying those bindings failed validation
+  and blocked preview assembly. The locators are now resolved from the plan's
+  own `sourceContext`.

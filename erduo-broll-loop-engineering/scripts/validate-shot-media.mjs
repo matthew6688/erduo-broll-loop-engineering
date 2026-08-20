@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { validateRuntimePlan } from './validate-runtime-plan.mjs';
+import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import {
   assertProductionSourcePolicy,
   assertMediaFacts,
@@ -28,14 +29,21 @@ const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const shotSchemaFile = path.join(skillRoot, 'references', 'runtime', 'shot-media.schema.json');
 const deliverySchemaFile = path.join(skillRoot, 'references', 'runtime', 'delivery-index.schema.json');
 
-function runtimePlanInputs(productionRoot, recipesDirectory) {
-  const director = path.join(path.resolve(productionRoot), '01-director');
+function runtimePlanInputs(productionRoot, recipesDirectory, plan) {
+  const root = path.resolve(productionRoot);
+  const director = path.join(root, '01-director');
+  /* A plan that binds the original SRT or design can only be verified against
+   * those files. Omitting them here made every such plan fail validation, which
+   * blocked preview assembly and delivery for the whole film. */
+  const raw = plan?.sourceContext ?? {};
   return {
     narrativeEnvelopeFile: path.join(director, 'narrative-envelope.json'),
     visualSystemFile: path.join(director, 'visual-system.json'),
     representativeScenesFile: path.join(director, 'representative-scenes.json'),
     motionMapFile: path.join(director, 'motion-map.json'),
     recipesDirectory: path.resolve(recipesDirectory),
+    ...(raw.originalSrt?.locator ? { originalSrtFile: path.join(root, raw.originalSrt.locator) } : {}),
+    ...(raw.originalDesign?.locator ? { originalDesignFile: path.join(root, raw.originalDesign.locator) } : {}),
   };
 }
 
@@ -132,14 +140,18 @@ function expectedUnit(plan, shotId) {
   return matches[0];
 }
 
+/* Identity is computed in exactly one place. This file previously hashed
+ * recipe.truth alone while render-assigned-shots hashed {shotId, truth}, so a
+ * Builder view receipt could satisfy one validator or the other but never both,
+ * and preview assembly was unreachable for every production. */
 function creativeRecipeBinding(recipe) {
   if (!recipe?.truth || typeof recipe.truth !== 'object' || Array.isArray(recipe.truth)) {
     throw new Error(`${recipe?.shotId ?? 'Recipe'} has no immutable truth object`);
   }
   return {
     shotId: recipe.shotId,
-    recipeIdentity: createHash('sha256').update(canonicalJson(recipe)).digest('hex'),
-    truthIdentity: createHash('sha256').update(canonicalJson(recipe.truth)).digest('hex'),
+    recipeIdentity: computeRecipeIdentity(recipe),
+    truthIdentity: computeRecipeTruthIdentity(recipe),
   };
 }
 
@@ -214,7 +226,7 @@ export async function validateShotMedia({
     readJson(shotSchemaFile, 'shot media schema'),
     readJson(deliverySchemaFile, 'delivery index schema'),
   ]);
-  await validateRuntimePlan(plan, runtimePlanInputs(productionRoot, recipesDirectory));
+  await validateRuntimePlan(plan, runtimePlanInputs(productionRoot, recipesDirectory, plan));
   const sourceIdentities = await bindSourceIdentities({
     sourceManifestFile, sourceManifestFiles, productionRoot, plan,
   });
