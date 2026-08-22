@@ -5,13 +5,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { probeAudioVisual } from './create-presenter-source.mjs';
-import { validateSchemaValue } from './runtime-schema-validator.mjs';
+import { compilePresenterSegments } from './create-presenter-edit-plan.mjs';
+import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import {
   commandFailure, hashFile, probeAndDecode, readJson, requireRegularFile, runCommand,
 } from './shot-media-lib.mjs';
 import {
   parseCliPairs, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot,
 } from './presenter-media-lib.mjs';
+import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
+import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -49,6 +52,66 @@ export function validatePresenterEditPlan({ plan, shots, presenterDurationMs }) 
   }
   if (cursor > presenterDurationMs) throw new Error('edit plan extends beyond presenter media duration');
   return { durationMs: cursor, presenterDurationMs: presenterMs, brollDurationMs: brollMs };
+}
+
+async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source, plan }) {
+  if (plan.presenterSource.file !== sourceRecord.locator
+    || plan.presenterSource.sha256 !== await hashFile(sourceRecord.absolute)
+    || plan.presenterSource.mediaSha256 !== source.media.sha256) {
+    throw new Error('presenter edit plan is not bound to the current presenter source contract');
+  }
+  if (plan.compositionScope === 'full-production'
+    && (source.authorization.use !== 'publishing' || source.approval.scope !== 'full-production')) {
+    throw new Error('full-production composition requires publishing authorization and full-production approval');
+  }
+  const runtimeRecord = await resolveExistingRegularWithinRoot(productionRoot, plan.runtimePlan.file, 'bound runtime plan');
+  const runtimePlan = await readJson(runtimeRecord.absolute, 'bound runtime plan');
+  if (await hashFile(runtimeRecord.absolute) !== plan.runtimePlan.sha256
+    || runtimePlan.identity !== plan.runtimePlan.identity
+    || computeRuntimePlanIdentity(runtimePlan) !== runtimePlan.identity) {
+    throw new Error('presenter edit plan runtime plan binding changed');
+  }
+  if (runtimePlan.sourceContext?.originalSrt?.sha256 !== source.inputIdentity.srt.sha256) {
+    throw new Error('bound runtime plan original SRT differs from the presenter source SRT');
+  }
+  const plannedPresenter = runtimePlan.sourceContext?.presenterSource;
+  if (!plannedPresenter || plannedPresenter.locator !== sourceRecord.locator
+    || plannedPresenter.sha256 !== plan.presenterSource.sha256
+    || plannedPresenter.mediaSha256 !== source.media.sha256) {
+    throw new Error('bound runtime plan presenter source differs from the composition source');
+  }
+  const expectedOutput = {
+    width: runtimePlan.productionProfile?.raster?.width,
+    height: runtimePlan.productionProfile?.raster?.height,
+    fps: runtimePlan.productionProfile?.fps?.numerator / runtimePlan.productionProfile?.fps?.denominator,
+  };
+  if (plan.output.width !== expectedOutput.width || plan.output.height !== expectedOutput.height
+    || Math.abs(plan.output.fps - expectedOutput.fps) > 1e-6) {
+    throw new Error('presenter edit plan output differs from the bound runtime production profile');
+  }
+  const boundShotIds = new Set();
+  const boundRecipes = [];
+  for (const binding of plan.recipes) {
+    if (boundShotIds.has(binding.shotId)) throw new Error(`presenter edit plan repeats Recipe ${binding.shotId}`);
+    boundShotIds.add(binding.shotId);
+    const recipeRecord = await resolveExistingRegularWithinRoot(productionRoot, binding.file, `${binding.shotId} Recipe`);
+    const recipe = await readJson(recipeRecord.absolute, `${binding.shotId} Recipe`);
+    if (recipe.shotId !== binding.shotId
+      || computeRecipeIdentity(recipe) !== binding.recipeIdentity
+      || computeRecipeTruthIdentity(recipe) !== binding.truthIdentity) {
+      throw new Error(`${binding.shotId} Recipe changed after presenter edit plan compilation`);
+    }
+    boundRecipes.push(recipe);
+  }
+  for (const segment of plan.segments) {
+    if (segment.kind === 'broll' && !boundShotIds.has(segment.shotId)) {
+      throw new Error(`B-roll segment references unbound Recipe ${segment.shotId}`);
+    }
+  }
+  const compiledSegments = compilePresenterSegments(boundRecipes, source.media.durationMs);
+  if (canonicalJson(plan.segments) !== canonicalJson(compiledSegments)) {
+    throw new Error('presenter edit plan segments differ from the bound Recipe presenter treatments');
+  }
 }
 
 function seconds(ms) {
@@ -132,6 +195,7 @@ export async function assemblePresenterBroll({
     assertSchema(plan, 'presenter-edit-plan.schema.json', 'presenter edit plan'),
     assertSchema(deliveryIndex, 'delivery-index.schema.json', 'delivery index'),
   ]);
+  await verifyCompiledPlanBindings({ productionRoot, sourceRecord, source, plan });
   const presenter = await resolveExistingRegularWithinRoot(productionRoot, source.media.file, 'presenter media');
   if (await hashFile(presenter.absolute) !== source.media.sha256) throw new Error('presenter media hash changed after source registration');
   if (source.approval.approvedMediaSha256 !== source.media.sha256) {
@@ -202,6 +266,8 @@ export async function assemblePresenterBroll({
     const usedShotIds = [...new Set(plan.segments.filter(({ kind }) => kind === 'broll').map(({ shotId }) => shotId))];
     const receiptValue = {
       schemaVersion: '1.0.0',
+      compositionScope: plan.compositionScope,
+      authorizationUse: source.authorization.use,
       inputs: {
         presenterSourceSha256: await hashFile(sourcePath),
         deliveryIndexSha256: await hashFile(indexPath),

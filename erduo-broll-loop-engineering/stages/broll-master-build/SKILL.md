@@ -23,6 +23,11 @@ objects, composition, motion, material route, or key states when a better
 answer preserves the audience outcome and required readable result. Record one
 concise reason, not a new approval workflow.
 
+For an assignment with an approved digital presenter, also view and revise
+`presenterTreatment` when needed. Decide `presenter`, `broll`, or absolute
+`mixed.brollWindows` from the actual chapter result. Parent only compiles these
+Recipe decisions and must not invent the cuts.
+
 Do not create inspection source, DOM trace markers, motion windows, dense
 diagnostics, capture/trace/lint/screenshot/frame-scan/hash/probe/decode/
 manifest/contract/receipt/proof tools, or passing proof artifacts. Parent owns

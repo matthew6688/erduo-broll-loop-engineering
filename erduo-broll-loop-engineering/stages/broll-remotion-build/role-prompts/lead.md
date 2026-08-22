@@ -39,4 +39,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `shotIds`, `motionMapLocator`, `assetIndexLocator`, `sharedSourceRoot`, `capabilityIndexLocator`, `viewConclusion`, `unresolvedIssues`
+`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `presenterSourceLocator`, `shotIds`, `motionMapLocator`, `assetIndexLocator`, `sharedSourceRoot`, `capabilityIndexLocator`, `viewConclusion`, `unresolvedIssues`

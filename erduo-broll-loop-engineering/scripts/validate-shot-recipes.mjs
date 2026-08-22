@@ -27,6 +27,12 @@ export function computeRecipeIdentity(recipe) {
   return createHash('sha256').update(canonicalJson(recipe)).digest('hex');
 }
 
+export function computeRecipeNonCreativeIdentity(recipe) {
+  const clone = structuredClone(recipe);
+  delete clone.creativeProposal;
+  return createHash('sha256').update(canonicalJson(clone)).digest('hex');
+}
+
 export function validateCreativeRevision(original, revised) {
   if (original?.schemaVersion !== '4.0.0' || revised?.schemaVersion !== '4.0.0'
     || original.shotId !== revised.shotId) {
@@ -35,12 +41,7 @@ export function validateCreativeRevision(original, revised) {
   if (computeRecipeTruthIdentity(original) !== computeRecipeTruthIdentity(revised)) {
     throw new Error(`${original.shotId}: truth is immutable`);
   }
-  const withoutProposal = (value) => {
-    const clone = structuredClone(value);
-    delete clone.creativeProposal;
-    return clone;
-  };
-  if (canonicalJson(withoutProposal(original)) !== canonicalJson(withoutProposal(revised))) {
+  if (computeRecipeNonCreativeIdentity(original) !== computeRecipeNonCreativeIdentity(revised)) {
     throw new Error(`${original.shotId}: only creativeProposal may change during Builder revision`);
   }
   const schemaErrors = [];
@@ -244,6 +245,26 @@ function validateSemanticInvariants(
     const lifecycleIds = (recipe.elementLifecycles ?? []).map(({ elementId }) => elementId);
     if (new Set(lifecycleIds).size !== lifecycleIds.length) {
       errors.push('#/elementLifecycles: elementId values must be unique');
+    }
+  }
+
+  const presenterTreatment = recipe.creativeProposal?.presenterTreatment;
+  if (presenterTreatment) {
+    const windows = presenterTreatment.brollWindows;
+    if (presenterTreatment.mode === 'mixed' && (!Array.isArray(windows) || windows.length === 0)) {
+      errors.push('#/creativeProposal/presenterTreatment: mixed mode requires brollWindows');
+    }
+    if (presenterTreatment.mode !== 'mixed' && windows !== undefined) {
+      errors.push('#/creativeProposal/presenterTreatment: only mixed mode may declare brollWindows');
+    }
+    let cursor = startMs;
+    for (const [index, window] of (windows ?? []).entries()) {
+      if (Number.isInteger(window.startMs) && Number.isInteger(window.endMs)
+        && (window.startMs < cursor || window.endMs <= window.startMs
+          || window.startMs < startMs || window.endMs > endMs)) {
+        errors.push(`#/creativeProposal/presenterTreatment/brollWindows/${index}: window must be ordered, non-overlapping, and inside the shot window`);
+      }
+      cursor = window.endMs;
     }
   }
 

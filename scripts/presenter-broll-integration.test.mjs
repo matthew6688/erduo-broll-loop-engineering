@@ -10,7 +10,12 @@ import {
   validatePresenterEditPlan,
 } from '../erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs';
 import { createPresenterSource } from '../erduo-broll-loop-engineering/scripts/create-presenter-source.mjs';
-import { resolveExistingRegularWithinRoot } from '../erduo-broll-loop-engineering/scripts/presenter-media-lib.mjs';
+import { createPresenterEditPlan } from '../erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs';
+import {
+  resolveExistingDirectoryWithinRoot, resolveExistingRegularWithinRoot,
+} from '../erduo-broll-loop-engineering/scripts/presenter-media-lib.mjs';
+import { validateRecipeDirectory } from '../erduo-broll-loop-engineering/scripts/validate-shot-recipes.mjs';
+import { computeRuntimePlanIdentity } from '../erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs';
 
 function sha(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -18,7 +23,7 @@ function sha(value) {
 
 function plan(segments) {
   return {
-    schemaVersion: '1.0.0',
+    schemaVersion: '2.0.0',
     output: { width: 640, height: 360, fps: 30 },
     segments,
   };
@@ -150,20 +155,128 @@ test('compositor preserves one presenter audio stream while switching to validat
     schemaVersion: '1.0.0',
     shots: [{ order: 1, shotId: 'S01', file: 'shots/001-S01.mp4', contract: 'shots/001-S01.shot-media.json', srtWindowMs: { start: 1000, end: 3000 }, previousShotId: null, nextShotId: null, seamType: 'cut' }],
   })}\n`);
+  const recipesDirectory = path.join(productionRoot, '01-director', 'shot-recipes');
+  const runtimePlanDirectory = path.join(productionRoot, '01-runtime-plan');
+  await Promise.all([mkdir(recipesDirectory, { recursive: true }), mkdir(runtimePlanDirectory, { recursive: true })]);
+  const recipeFile = path.join(recipesDirectory, 'S01.json');
+  await writeFile(recipeFile, `${JSON.stringify({
+    schemaVersion: '4.0.0', shotId: 'S01',
+    truth: {
+      chapterId: 'C01', srtWindowMs: { startMs: 1000, endMs: 3000 }, sourceCues: ['cue-1'],
+      spokenFacts: ['One fact.'], audienceOutcome: 'Understand the fact.',
+      requiredReadableResult: 'The fact is readable.', incomingSeam: 'cut', outgoingSeam: 'cut',
+    },
+    creativeProposal: {
+      metaphor: 'A resolved relationship.', objects: ['fact'], composition: 'full-bleed-material',
+      motionIdea: 'The relationship resolves.', materialRoute: 'native', keyStates: ['opening', 'result'],
+      whyThisCouldWork: 'The visual directly serves the fact.',
+      presenterTreatment: { mode: 'broll', reason: 'The visual explanation is stronger than a held face.' },
+    },
+    craftIntent: ['staging', 'timing'],
+  })}\n`);
+  const validRecipe = await readFile(recipeFile, 'utf8');
+  const invalidTreatment = JSON.parse(validRecipe);
+  invalidTreatment.creativeProposal.presenterTreatment = {
+    mode: 'presenter', brollWindows: [{ startMs: 1200, endMs: 1800 }], reason: 'Invalid fixture.',
+  };
+  await writeFile(recipeFile, `${JSON.stringify(invalidTreatment)}\n`);
+  await assert.rejects(validateRecipeDirectory(recipesDirectory), /only mixed mode may declare brollWindows/u);
+  await writeFile(recipeFile, validRecipe);
+  const runtimePlanFile = path.join(runtimePlanDirectory, 'runtime-plan.json');
+  const presenterSourceContract = JSON.parse(await readFile(sourceFile, 'utf8'));
+  const runtimePlan = {
+    schemaVersion: '4.0.0',
+    sourceContext: {
+      originalSrt: { sha256: sha('SRT') },
+      presenterSource: {
+        locator: '00-inputs/presenter/presenter-source.json',
+        sha256: sha(await readFile(sourceFile)),
+        mediaSha256: presenterSourceContract.media.sha256,
+        durationMs: presenterSourceContract.media.durationMs,
+        authorizationUse: presenterSourceContract.authorization.use,
+        approvalScope: presenterSourceContract.approval.scope,
+      },
+    },
+    productionProfile: { raster: { width: 640, height: 360 }, fps: { numerator: 30, denominator: 1 } },
+  };
+  runtimePlan.identity = computeRuntimePlanIdentity(runtimePlan);
+  await writeFile(runtimePlanFile, `${JSON.stringify(runtimePlan)}\n`);
   const editPlanFile = path.join(productionRoot, 'presenter-edit-plan.json');
-  await writeFile(editPlanFile, `${JSON.stringify(plan([
+  await assert.rejects(createPresenterEditPlan({
+    productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
+    outputFile: path.join(productionRoot, 'full-production-edit-plan.json'),
+    compositionScope: 'full-production', verifyRuntimePlan: async () => ({ status: 'valid' }),
+  }), /requires publishing authorization and full-production approval/u);
+  const publishingSourceFile = path.join(presenterDirectory, 'publishing-presenter-source.json');
+  await createPresenterSource({
+    productionRoot, inputFile: presenterFile, outputFile: publishingSourceFile, provider: 'heygen',
+    srtFile, portraitFile, narrationFile,
+    alignment: { method: 'local-whisper', status: 'confirmed' },
+    authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'publishing' },
+    approval: { scope: 'full-production', approvedBy: 'user', identity: 'approved', voice: 'approved', lipSync: 'approved' },
+    runner,
+  });
+  const publishingSource = JSON.parse(await readFile(publishingSourceFile, 'utf8'));
+  const publishingRuntimePlan = structuredClone(runtimePlan);
+  publishingRuntimePlan.sourceContext.presenterSource = {
+    locator: '00-inputs/presenter/publishing-presenter-source.json',
+    sha256: sha(await readFile(publishingSourceFile)), mediaSha256: publishingSource.media.sha256,
+    durationMs: publishingSource.media.durationMs, authorizationUse: 'publishing',
+    approvalScope: 'full-production',
+  };
+  publishingRuntimePlan.identity = computeRuntimePlanIdentity(publishingRuntimePlan);
+  const publishingRuntimePlanFile = path.join(runtimePlanDirectory, 'publishing-runtime-plan.json');
+  await writeFile(publishingRuntimePlanFile, `${JSON.stringify(publishingRuntimePlan)}\n`);
+  const fullPlanResult = await createPresenterEditPlan({
+    productionRoot, runtimePlanFile: publishingRuntimePlanFile, recipesDirectory,
+    presenterSourceFile: publishingSourceFile,
+    outputFile: path.join(productionRoot, 'full-production-edit-plan.json'),
+    compositionScope: 'full-production', verifyRuntimePlan: async () => ({ status: 'valid' }),
+  });
+  assert.equal(fullPlanResult.plan.compositionScope, 'full-production');
+  await createPresenterEditPlan({
+    productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
+    outputFile: editPlanFile, compositionScope: 'canary',
+    verifyRuntimePlan: async () => ({ status: 'valid' }),
+  });
+  const compiledPlan = JSON.parse(await readFile(editPlanFile, 'utf8'));
+  assert.equal(compiledPlan.authoredBy, 'compiled-from-recipe-creative-proposals');
+  assert.equal(compiledPlan.recipes[0].file, '01-director/shot-recipes/S01.json');
+  assert.deepEqual(compiledPlan.segments, [
     { kind: 'presenter', startMs: 0, endMs: 1000 },
     { kind: 'broll', shotId: 'S01', startMs: 1000, endMs: 3000 },
     { kind: 'presenter', startMs: 3000, endMs: 4000 },
-  ]))}\n`);
+  ]);
   const outputFile = path.join(deliveryRoot, 'presenter-broll-master.mp4');
   const receiptFile = path.join(deliveryRoot, 'presenter-broll-master.receipt.json');
+  const compiledPlanBody = await readFile(editPlanFile, 'utf8');
+  const handEditedPlan = JSON.parse(compiledPlanBody);
+  handEditedPlan.segments = [
+    { kind: 'presenter', startMs: 0, endMs: 1500 },
+    { kind: 'broll', shotId: 'S01', startMs: 1500, endMs: 3000 },
+    { kind: 'presenter', startMs: 3000, endMs: 4000 },
+  ];
+  await writeFile(editPlanFile, `${JSON.stringify(handEditedPlan)}\n`);
+  await assert.rejects(assemblePresenterBroll({
+    productionRoot, deliveryRoot, presenterSourceFile: sourceFile,
+    deliveryIndexFile, editPlanFile, outputFile, receiptFile, runner,
+  }), /segments differ from the bound Recipe presenter treatments/u);
+  await writeFile(editPlanFile, compiledPlanBody);
   await writeFile(srtFile, 'CHANGED-SRT');
   await assert.rejects(assemblePresenterBroll({
     productionRoot, deliveryRoot, presenterSourceFile: sourceFile,
     deliveryIndexFile, editPlanFile, outputFile, receiptFile, runner,
   }), /presenter srt changed/u);
   await writeFile(srtFile, 'SRT');
+  const originalRecipe = await readFile(recipeFile, 'utf8');
+  const changedRecipe = JSON.parse(originalRecipe);
+  changedRecipe.creativeProposal.metaphor = 'A stale unbound revision.';
+  await writeFile(recipeFile, `${JSON.stringify(changedRecipe)}\n`);
+  await assert.rejects(assemblePresenterBroll({
+    productionRoot, deliveryRoot, presenterSourceFile: sourceFile,
+    deliveryIndexFile, editPlanFile, outputFile, receiptFile, runner,
+  }), /Recipe changed after presenter edit plan compilation/u);
+  await writeFile(recipeFile, originalRecipe);
   const result = await assemblePresenterBroll({
     productionRoot, deliveryRoot, presenterSourceFile: sourceFile,
     deliveryIndexFile, editPlanFile, outputFile, receiptFile,
@@ -176,6 +289,8 @@ test('compositor preserves one presenter audio stream while switching to validat
   assert.ok(Math.abs(result.mediaFacts.fps - 30) < 1e-6);
   assert.ok(Math.abs(result.mediaFacts.durationMs - 4000) <= 35);
   const receipt = JSON.parse(await readFile(receiptFile, 'utf8'));
+  assert.equal(receipt.compositionScope, 'canary');
+  assert.equal(receipt.authorizationUse, 'internal-canary');
   assert.equal(receipt.mix.brollDurationMs, 2000);
   assert.equal(receipt.mix.presenterDurationMs, 2000);
   assert.equal(receipt.output.fullDecode, 'passed');
@@ -195,6 +310,10 @@ test('presenter paths reject an intermediate symlink that escapes the production
   await symlink(outside, path.join(productionRoot, 'linked-inputs'));
   await assert.rejects(
     resolveExistingRegularWithinRoot(productionRoot, 'linked-inputs/presenter.mp4', 'presenter input'),
+    /inside its declared root/u,
+  );
+  await assert.rejects(
+    resolveExistingDirectoryWithinRoot(productionRoot, 'linked-inputs', 'Recipe directory'),
     /inside its declared root/u,
   );
 });

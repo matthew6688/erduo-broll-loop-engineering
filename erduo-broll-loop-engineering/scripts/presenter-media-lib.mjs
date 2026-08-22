@@ -32,6 +32,16 @@ export async function resolveExistingRegularWithinRoot(root, fileOrLocator, labe
   return { absolute: candidateReal, locator: path.relative(rootReal, candidateReal).split(path.sep).join('/') };
 }
 
+export async function resolveExistingDirectoryWithinRoot(root, fileOrLocator, label) {
+  const rootReal = await canonicalRoot(root, label);
+  const candidate = lexicalCandidate(rootReal, fileOrLocator, label);
+  const [candidateReal, info] = await Promise.all([realpath(candidate), lstat(candidate)]);
+  if (!isInside(rootReal, candidateReal) || !info.isDirectory() || info.isSymbolicLink()) {
+    throw new Error(`${label} must be a real non-symlink directory inside its declared root`);
+  }
+  return { absolute: candidateReal, locator: path.relative(rootReal, candidateReal).split(path.sep).join('/') };
+}
+
 export async function resolveNewOutputWithinRoot(root, fileOrLocator, label) {
   const rootReal = await canonicalRoot(root, label);
   const candidate = lexicalCandidate(rootReal, fileOrLocator, label);

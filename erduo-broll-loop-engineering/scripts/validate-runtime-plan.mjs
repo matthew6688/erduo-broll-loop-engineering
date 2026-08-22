@@ -8,8 +8,10 @@ import { fileURLToPath } from 'node:url';
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { validateMezzaninePolicy } from './frozen-media-policy.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
+import { resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
 import {
   computeRecipeIdentity,
+  computeRecipeNonCreativeIdentity,
   computeRecipeTruthIdentity,
   validateRecipeDirectory,
 } from './validate-shot-recipes.mjs';
@@ -24,6 +26,7 @@ const schemaPaths = new Map([
 const narrativeSchemaPath = path.join(skillRoot, 'references', 'runtime', 'narrative-envelope.schema.json');
 const visualSchemaPath = path.join(skillRoot, 'references', 'runtime', 'visual-system.schema.json');
 const representativeSchemaPath = path.join(skillRoot, 'references', 'runtime', 'representative-scenes.schema.json');
+const presenterSourceSchemaPath = path.join(skillRoot, 'references', 'runtime', 'presenter-source.schema.json');
 
 export function computeRuntimePlanIdentity(plan) {
   const { identity: _identity, ...identityInput } = plan;
@@ -139,7 +142,34 @@ async function verifyRawSourceBinding(binding, file, label, productionRoot) {
   }
 }
 
-async function verifyRecipeBindings(plan, recipesDirectory) {
+async function verifyPresenterSourceBinding(binding, file, productionRoot) {
+  if (!binding) return;
+  if (!file || !productionRoot) throw new Error('presenter source contract file and production root are required');
+  const record = await resolveExistingRegularWithinRoot(
+    productionRoot, file, 'presenter source contract',
+  );
+  const body = await readFile(record.absolute);
+  if (createHash('sha256').update(body).digest('hex') !== binding.sha256) {
+    throw new Error('presenter source contract hash differs from the planned binding');
+  }
+  if (binding.locator !== record.locator) {
+    throw new Error('presenter source contract locator differs from the planned binding');
+  }
+  let source;
+  try { source = JSON.parse(body.toString('utf8')); } catch { throw new Error('presenter source contract is invalid JSON'); }
+  const schema = JSON.parse(await readFile(presenterSourceSchemaPath, 'utf8'));
+  const errors = validateSchemaValue(source, schema, schema);
+  if (errors.length) throw new Error(`presenter source contract schema validation failed:\n${errors.join('\n')}`);
+  if (binding.mediaSha256 !== source.media.sha256
+    || binding.durationMs !== source.media.durationMs
+    || binding.authorizationUse !== source.authorization.use
+    || binding.approvalScope !== source.approval.scope
+    || source.approval.approvedMediaSha256 !== source.media.sha256) {
+    throw new Error('presenter source contract facts differ from the planned binding');
+  }
+}
+
+async function verifyRecipeBindings(plan, recipesDirectory, { allowCreativeRevisions = false } = {}) {
   if (!recipesDirectory) throw new Error('Recipe directory is required for runtime plan v4');
   await validateRecipeDirectory(recipesDirectory);
   const entries = (await readdir(recipesDirectory, { withFileTypes: true }))
@@ -155,11 +185,20 @@ async function verifyRecipeBindings(plan, recipesDirectory) {
   for (const binding of bindings) {
     const recipe = recipeById.get(binding.shotId);
     if (!recipe) throw new Error(`${binding.shotId}: bound Recipe file is missing`);
-    if (binding.recipeIdentity !== computeRecipeIdentity(recipe)) {
-      throw new Error(`${binding.shotId}: Recipe identity differs from the planned binding`);
-    }
     if (binding.truthIdentity !== computeRecipeTruthIdentity(recipe)) {
       throw new Error(`${binding.shotId}: Recipe truth identity differs from the planned binding`);
+    }
+    if (!allowCreativeRevisions && binding.recipeIdentity !== computeRecipeIdentity(recipe)) {
+      throw new Error(`${binding.shotId}: Recipe identity differs from the planned binding`);
+    }
+    if (allowCreativeRevisions) {
+      if (binding.nonCreativeIdentity) {
+        if (binding.nonCreativeIdentity !== computeRecipeNonCreativeIdentity(recipe)) {
+          throw new Error(`${binding.shotId}: Recipe non-creative identity differs from the planned binding`);
+        }
+      } else if (binding.recipeIdentity !== computeRecipeIdentity(recipe)) {
+        throw new Error(`${binding.shotId}: legacy Recipe identity differs from the planned binding`);
+      }
     }
   }
 }
@@ -189,7 +228,10 @@ export async function verifyRuntimePlanInputs(plan, files = {}) {
   await Promise.all([
     verifyRawSourceBinding(plan.sourceContext?.originalSrt, files.originalSrtFile, 'original SRT', productionRoot),
     verifyRawSourceBinding(plan.sourceContext?.originalDesign, files.originalDesignFile, 'original design', productionRoot),
-    verifyRecipeBindings(plan, files.recipesDirectory),
+    verifyPresenterSourceBinding(plan.sourceContext?.presenterSource, files.presenterSourceFile, productionRoot),
+    verifyRecipeBindings(plan, files.recipesDirectory, {
+      allowCreativeRevisions: files.allowCreativeRevisions === true,
+    }),
     validateMotionMap({
       motionMapFile: files.motionMapFile,
       recipesDirectory: files.recipesDirectory,

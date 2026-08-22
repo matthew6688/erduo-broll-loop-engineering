@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   computeRecipeIdentity,
+  computeRecipeNonCreativeIdentity,
   computeRecipeTruthIdentity,
   recipeWindow,
   validateRecipeDirectory,
@@ -26,7 +27,7 @@ import {
   computeRuntimePlanIdentity,
   validateRuntimePlan,
 } from './validate-runtime-plan.mjs';
-import { canonicalJson } from './runtime-schema-validator.mjs';
+import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { roleInjection } from './generate-role-files.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
 
@@ -34,6 +35,7 @@ const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
 const defaultMatrix = path.join(runtimeRoot, 'capability-matrix.json');
 const defaultRemotionIndex = path.join(skillRoot, 'references', 'shotcraft', 'remotion-sources', 'index.json');
+const presenterSourceSchemaFile = path.join(runtimeRoot, 'presenter-source.schema.json');
 const SOLO_REASONS = new Set([
   'exclusive-3d-webgl-gpu',
   'external-project-toolchain',
@@ -180,6 +182,7 @@ function makeUnitFactory(shots, recipes, sharedArtifactBindings) {
               shotId,
               locator: `shot-recipes/${shotId}.json`,
               recipeIdentity: computeRecipeIdentity(recipe),
+              nonCreativeIdentity: computeRecipeNonCreativeIdentity(recipe),
               truthIdentity: computeRecipeTruthIdentity(recipe),
             };
           }),
@@ -518,6 +521,7 @@ export async function planRuntime({
   motionMapFile,
   originalSrtFile,
   originalDesignFile,
+  presenterSourceFile,
   runtimeExecutableFiles = {},
   parentSoloReasons = {},
   matrixFile = defaultMatrix,
@@ -542,9 +546,12 @@ export async function planRuntime({
     ...(representativeSceneData ? { representativeScenes: representativeSceneData.binding } : {}),
   };
   const inferredProductionRoot = path.dirname(path.dirname(path.resolve(narrativeEnvelopeFile)));
+  const presenterContext = planSchemaVersion === '4.0.0'
+    ? await bindPresenterContext(inferredProductionRoot, presenterSourceFile) : null;
   const sourceContext = planSchemaVersion === '4.0.0' ? {
     originalSrt: await bindOriginalInput(originalSrtFile, inferredProductionRoot, 'original SRT'),
     originalDesign: await bindOriginalInput(originalDesignFile, inferredProductionRoot, 'original design'),
+    ...(presenterContext ? { presenterSource: presenterContext } : {}),
   } : null;
   const productionProfile = bindProductionProfile(requestedProductionProfile);
   if (['3.0.0', '4.0.0'].includes(planSchemaVersion)) {
@@ -730,7 +737,8 @@ export async function planRuntime({
     );
     await validateRuntimePlan(plan, {
       narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-      originalSrtFile, originalDesignFile, productionRoot: inferredProductionRoot,
+      originalSrtFile, originalDesignFile, presenterSourceFile,
+      productionRoot: inferredProductionRoot,
     });
     return plan;
   }
@@ -796,7 +804,8 @@ export async function planRuntime({
   plan.identity = computeRuntimePlanIdentity(plan);
   await validateRuntimePlan(plan, {
     narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-    originalSrtFile, originalDesignFile, productionRoot: inferredProductionRoot,
+    originalSrtFile, originalDesignFile, presenterSourceFile,
+    productionRoot: inferredProductionRoot,
   });
   return plan;
 }
@@ -889,6 +898,32 @@ function creativeContext(plan) {
   };
 }
 
+async function bindPresenterContext(productionRoot, presenterSourceFile) {
+  if (!presenterSourceFile) return null;
+  const root = realpathSync(path.resolve(productionRoot));
+  const absolute = realpathSync(path.resolve(presenterSourceFile));
+  if (!inside(root, absolute)) throw new Error('presenter source contract must be inside the production root');
+  const info = await lstat(path.resolve(presenterSourceFile));
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error('presenter source contract must be a real non-symlink file');
+  const [body, schema] = await Promise.all([
+    readFile(absolute), readFile(presenterSourceSchemaFile, 'utf8').then(JSON.parse),
+  ]);
+  const source = JSON.parse(body.toString('utf8'));
+  const errors = validateSchemaValue(source, schema, schema);
+  if (errors.length) throw new Error(`presenter source contract failed schema validation:\n- ${errors.join('\n- ')}`);
+  if (source.approval.approvedMediaSha256 !== source.media.sha256) {
+    throw new Error('presenter source approval is not bound to its media hash');
+  }
+  return {
+    locator: path.relative(root, absolute).split(path.sep).join('/'),
+    sha256: createHash('sha256').update(body).digest('hex'),
+    mediaSha256: source.media.sha256,
+    durationMs: source.media.durationMs,
+    authorizationUse: source.authorization.use,
+    approvalScope: source.approval.scope,
+  };
+}
+
 export function buildBuilderAssignments(plan, {
   productionRoot,
   recipesDirectory,
@@ -896,6 +931,7 @@ export function buildBuilderAssignments(plan, {
   visualSystemFile,
   representativeScenesFile,
   motionMapFile,
+  presenterContext = plan?.sourceContext?.presenterSource ?? null,
 } = {}) {
   if (!['2.0.0', '3.0.0', '4.0.0'].includes(plan?.schemaVersion) || plan.status !== 'planned') {
     throw new Error('Builder assignments require one planned runtime plan v2, v3, or v4');
@@ -969,10 +1005,12 @@ export function buildBuilderAssignments(plan, {
           originalDesign: plan.sourceContext.originalDesign.locator,
           assetIndex: '02-assets/asset-index.json',
           leadCapabilityIndexes: [...new Set(plannedLeadSamples(plan).map(({ capabilityIndex }) => capabilityIndex))],
+          ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
         } : {}),
       },
       ...(plan.schemaVersion === '4.0.0' ? {
         ...creativeContext(plan),
+        ...(presenterContext ? { presenterContext } : {}),
         recipeBindings: unit.context.recipeBindings,
         chapter: {
           chapterIds: unit.chapterIds,
@@ -1083,10 +1121,12 @@ export function buildBuilderAssignments(plan, {
           originalSrt: plan.sourceContext.originalSrt.locator,
           originalDesign: plan.sourceContext.originalDesign.locator,
           assetIndex: '02-assets/asset-index.json',
+          ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
         } : {}),
       },
       ...(plan.schemaVersion === '4.0.0' ? {
         ...creativeContext(plan),
+        ...(presenterContext ? { presenterContext } : {}),
         recipeBindings: scenes.map(({ shotId }) => plan.authoringUnits
           .flatMap(({ context }) => context.recipeBindings)
           .find((binding) => binding.shotId === shotId)),
@@ -1170,7 +1210,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const name = argv[index];
     if (name === '--json') continue;
-    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
+    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--presenter-source', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
     const value = argv[index + 1];
     if (!value) throw new Error(`${name} requires a path`);
     options[name.slice(2)] = path.resolve(value);
@@ -1184,6 +1224,7 @@ function parseArgs(argv) {
     motionMapFile: options['motion-map'],
     originalSrtFile: options['original-srt'],
     originalDesignFile: options['original-design'],
+    presenterSourceFile: options['presenter-source'],
     runtimeExecutableFiles: {
       ...(options['hyperframes-executable'] ? { hyperframes: options['hyperframes-executable'] } : {}),
       ...(options['remotion-executable'] ? { remotion: options['remotion-executable'] } : {}),

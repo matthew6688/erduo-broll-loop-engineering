@@ -9,6 +9,7 @@ import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
 import { validateVisualLock } from './validate-visual-lock.mjs';
 import { canonicalJson } from './runtime-schema-validator.mjs';
 import { roleInjection } from './generate-role-files.mjs';
+import { resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
 import {
   buildBuilderAssignments,
   runtimeInspectionContract,
@@ -46,12 +47,8 @@ function identityOf(value) {
 }
 
 async function verifyFileHash(productionRoot, locator, expectedSha256, label) {
-  const absolute = path.resolve(productionRoot, locator);
-  const relative = path.relative(path.resolve(productionRoot), absolute);
-  if (!relative || path.isAbsolute(relative) || relative === '..' || relative.startsWith(`..${path.sep}`)) {
-    throw new Error(`${label} locator escapes the production root`);
-  }
-  const body = await readFile(absolute);
+  const record = await resolveExistingRegularWithinRoot(productionRoot, locator, label);
+  const body = await readFile(record.absolute);
   if (createHash('sha256').update(body).digest('hex') !== expectedSha256) {
     throw new Error(`${label} file hash differs from its gate binding`);
   }
@@ -156,6 +153,7 @@ function expectedV4Assignment(assignment, plan, productionRoot) {
     motionMapFile: path.join(root, '01-director/motion-map.json'),
     originalSrtFile: path.join(root, plan.sourceContext.originalSrt.locator),
     originalDesignFile: path.join(root, plan.sourceContext.originalDesign.locator),
+    presenterContext: plan.sourceContext.presenterSource ?? null,
   });
   return assignments.find(({ assignmentId }) => assignmentId === assignment.assignmentId);
 }
@@ -173,6 +171,12 @@ export async function gateBuilderAssignment(assignment, options = {}) {
     }
     if (assignment?.schemaVersion !== '3.0.0' || assignment.planIdentity !== plan.identity) {
       throw new Error('assignment does not bind the planned runtime identity');
+    }
+    if (plan.sourceContext.presenterSource) {
+      await verifyFileHash(
+        productionRoot, plan.sourceContext.presenterSource.locator,
+        plan.sourceContext.presenterSource.sha256, 'presenter source contract',
+      );
     }
     const expected = expectedV4Assignment(assignment, plan, productionRoot);
     if (!expected) throw new Error('assignment is not declared by the runtime plan');

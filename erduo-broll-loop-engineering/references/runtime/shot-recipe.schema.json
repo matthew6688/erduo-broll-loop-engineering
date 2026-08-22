@@ -37,6 +37,20 @@
         "materialRoute": { "enum": ["native", "provided", "search", "generate", "mixed"] },
         "keyStates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/nonEmpty" } },
         "whyThisCouldWork": { "$ref": "#/$defs/nonEmpty" },
+        "presenterTreatment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "reason"],
+          "properties": {
+            "mode": { "enum": ["presenter", "broll", "mixed"] },
+            "brollWindows": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/window" }
+            },
+            "reason": { "$ref": "#/$defs/nonEmpty" }
+          }
+        },
         "visibleText": {
           "type": "array",
           "uniqueItems": true,

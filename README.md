@@ -84,9 +84,13 @@ Builder 任务和成片校验；明确的竖屏或其他帧率不会退回默认
 ### 可选：数字人 + B-roll 最终合成
 
 数字人不是新的 B-roll 渲染后端。先把已经获授权、已经下载到生产目录的带声数字人
-MP4 登记为 provider-neutral source；再用一个连续、无空隙的 edit plan 指定哪些时间保留
-数字人，哪些时间由 `delivery-index.json` 中的静音 shot 覆盖。合成器会校验素材 hash、
+MP4 登记为 provider-neutral source。Director 在每个 Recipe 的
+`creativeProposal.presenterTreatment` 中提出 `presenter|broll|mixed`，Chapter Builder
+看片后可以修订。Parent 只能从最终 Recipes 机械编译连续、无空隙的 edit plan，不能手写
+切点。合成器会校验素材 hash、Runtime Plan、Recipe 身份、
 逐镜合同、SRT window、完整音视频解码、输出帧率与唯一音轨。
+生成 Runtime Plan 时还要传入 `--presenter-source <presenter-source.json>`，这样同一份
+哈希封闭的授权、时长和媒体身份会进入 Lead/Builder assignment。
 
 ```bash
 node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
@@ -101,20 +105,29 @@ node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
   --approval-scope canary --identity-approval approved \
   --voice-approval approved --lip-sync-approval approved --approved-by user
 
+node erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs \
+  --production-root /path/to/broll-production \
+  --plan /path/to/broll-production/01-runtime-plan/runtime-plan.json \
+  --recipes /path/to/broll-production/01-director/shot-recipes \
+  --presenter-source /path/to/broll-production/00-inputs/presenter/presenter-source.json \
+  --output /path/to/broll-production/01-runtime-plan/presenter-edit-plan.json \
+  --scope canary
+
 node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs \
   --production-root /path/to/broll-production \
   --presenter-source /path/to/broll-production/00-inputs/presenter/presenter-source.json \
-  --edit-plan /path/to/broll-production/presenter-edit-plan.json \
+  --edit-plan /path/to/broll-production/01-runtime-plan/presenter-edit-plan.json \
   --delivery-index /path/to/broll-production/05-delivery/delivery-index.json \
   --output /path/to/broll-production/05-delivery/presenter-broll-master.mp4 \
   --receipt /path/to/broll-production/05-delivery/presenter-broll-master.receipt.json
 ```
 
-`presenter-edit-plan.json` 的每段为
-`{"kind":"presenter","startMs":0,"endMs":2400}` 或
-`{"kind":"broll","shotId":"S01","startMs":2400,"endMs":6100}`。
-B-roll 段必须落在该 shot 的绝对 SRT window 内。建议短视频让数字人承担开场、章节锚点
+`presenterTreatment.mode=mixed` 时，`brollWindows` 使用该 Recipe SRT window 内的绝对
+毫秒窗口；`presenter` 和 `broll` 则覆盖整镜。编译器会用 Runtime Plan、presenter source
+和全部最终 Recipes 的哈希封闭 edit plan，任何后续漂移都会阻止合成。建议短视频让数字人承担开场、章节锚点
 和结尾，约占 15–25%；其余 75–85% 用信息图、界面、素材与证据型 B-roll 覆盖。
+正式发布必须用 `--scope full-production`，且 presenter source 同时具有 `publishing`
+授权和 `full-production` 用户批准；canary/internal 合同不能生成正式发布合成。
 首版只支持本地 MP4 的画面硬切；透明 WebM 数字人持续叠加在 B-roll 上属于后续 adapter，
 不能把本地导入能力表述为已经接通某家供应商 API。
 

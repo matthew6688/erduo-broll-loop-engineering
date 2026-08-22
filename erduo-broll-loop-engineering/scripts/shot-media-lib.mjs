@@ -465,8 +465,12 @@ export async function validateCanaryTechnicalGate({
     representativeScenesFile: path.join(director, 'representative-scenes.json'),
     motionMapFile: path.join(director, 'motion-map.json'),
     recipesDirectory: path.resolve(recipesDirectory ?? path.join(director, 'shot-recipes')),
+    allowCreativeRevisions: true,
     originalSrtFile: path.resolve(productionRoot, plan.sourceContext?.originalSrt?.locator ?? '00-input/original.srt'),
     originalDesignFile: path.resolve(productionRoot, plan.sourceContext?.originalDesign?.locator ?? '00-input/original-design.md'),
+    ...(plan.sourceContext?.presenterSource?.locator ? {
+      presenterSourceFile: path.resolve(productionRoot, plan.sourceContext.presenterSource.locator),
+    } : {}),
   });
   const loaded = await readGateFile(productionRoot, gate.technicalLocator, 'canary technical gate');
   if (!loaded) return null;

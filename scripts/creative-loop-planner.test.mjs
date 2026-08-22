@@ -227,6 +227,30 @@ test('Recipe v4 separates immutable truth from revisable creative proposal and r
 
 test('20 shot-media deliveries remain twenty shots but authoring is three contiguous chapter units', async (t) => {
   const data = await fixture(t);
+  const presenterDirectory = path.join(data.productionRoot, '00-inputs', 'presenter');
+  await mkdir(presenterDirectory, { recursive: true });
+  data.presenterSourceFile = path.join(presenterDirectory, 'presenter-source.json');
+  const presenterMediaSha = hash('presenter-media');
+  await writeFile(data.presenterSourceFile, `${JSON.stringify({
+    schemaVersion: '1.0.0', provider: 'heygen',
+    inputIdentity: {
+      srt: { file: '00-inputs/presenter/source.srt', sha256: hash('srt') },
+      portrait: { file: '00-inputs/presenter/portrait.png', sha256: hash('portrait') },
+      narration: { file: '00-inputs/presenter/narration.wav', sha256: hash('narration') },
+    },
+    alignment: { method: 'local-whisper', status: 'confirmed' },
+    authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'internal-canary' },
+    approval: {
+      scope: 'canary', approvedBy: 'user', approvedMediaSha256: presenterMediaSha,
+      identity: 'approved', voice: 'approved', lipSync: 'approved',
+    },
+    media: {
+      file: '00-inputs/presenter/presenter.mp4', sha256: presenterMediaSha,
+      durationMs: 180000, width: 1920, height: 1080, fps: 30,
+      videoCodec: 'h264', audioCodec: 'aac', sampleRate: 48000, channels: 2,
+      fullDecode: 'passed',
+    },
+  })}\n`);
   const result = await writeProductionPlan(data);
   assert.equal(result.plan.schemaVersion, '4.0.0');
   assert.equal(result.plan.integrationMode, 'shot-media');
@@ -253,6 +277,12 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   assert.equal('visualLock' in result.plan, false);
   assert.equal(result.plan.leadProduction.representativeScenes.length, 3);
   assert.equal(lead.phase, 'lead-production');
+  assert.ok([lead, ...builders].every((assignment) => (
+    assignment.contextFiles.presenterSource === '00-inputs/presenter/presenter-source.json'
+      && assignment.presenterContext.locator === assignment.contextFiles.presenterSource
+      && assignment.presenterContext.mediaSha256 === presenterMediaSha
+      && assignment.presenterContext.approvalScope === 'canary'
+  )));
   assert.equal(result.plan.runtimeExecutables.hyperframes.sha256, hash(await readFile(verifiedHyperframes)));
   assert.equal(lead.originalInputs.srt.sha256, hash(await readFile(data.originalSrtFile)));
   assert.equal(lead.originalInputs.design.sha256, hash(await readFile(data.originalDesignFile)));
@@ -422,14 +452,38 @@ test('runtime policy permits implicit/default HyperFrames only', async (t) => {
 test('runtime plan v4 revalidates bound Recipes, motion map, and original locators', async (t) => {
   const data = await fixture(t);
   const { plan } = await writeProductionPlan(data);
+  const legacyPlan = structuredClone(plan);
+  for (const binding of legacyPlan.authoringUnits.flatMap(({ context }) => context.recipeBindings)) {
+    delete binding.nonCreativeIdentity;
+  }
+  legacyPlan.identity = computeRuntimePlanIdentity(legacyPlan);
+  assert.deepEqual(await validateRuntimePlan(legacyPlan, { ...data, allowCreativeRevisions: true }), {
+    status: 'valid', shots: 20, blocks: 1, authoringUnits: 3, route: 'hyperframes',
+  });
   await writeFile(data.runtimeExecutableFiles.hyperframes, '#!/bin/sh\nexit 9\n');
   await assert.rejects(validateRuntimePlan(plan, data), /runtime executable hash differs/u);
   await writeFile(data.runtimeExecutableFiles.hyperframes, '#!/bin/sh\nexit 0\n');
   const recipeFile = path.join(data.recipesDirectory, 'S02.json');
   const changedRecipe = JSON.parse(await readFile(recipeFile, 'utf8'));
-  changedRecipe.truth.spokenFacts[0] = 'Mutated after planning.';
+  changedRecipe.creativeProposal.motionIdea = 'Builder revised this visual motion after viewing.';
   await writeFile(recipeFile, `${JSON.stringify(changedRecipe)}\n`);
   await assert.rejects(validateRuntimePlan(plan, data), /Recipe identity differs/u);
+  assert.deepEqual(await validateRuntimePlan(plan, { ...data, allowCreativeRevisions: true }), {
+    status: 'valid', shots: 20, blocks: 1, authoringUnits: 3, route: 'hyperframes',
+  });
+  changedRecipe.craftIntent = ['appeal', 'timing'];
+  await writeFile(recipeFile, `${JSON.stringify(changedRecipe)}\n`);
+  await assert.rejects(
+    validateRuntimePlan(plan, { ...data, allowCreativeRevisions: true }),
+    /Recipe non-creative identity differs/u,
+  );
+  changedRecipe.craftIntent = recipe('S02', 1, 'C01').craftIntent;
+  changedRecipe.truth.spokenFacts[0] = 'Mutated after planning.';
+  await writeFile(recipeFile, `${JSON.stringify(changedRecipe)}\n`);
+  await assert.rejects(
+    validateRuntimePlan(plan, { ...data, allowCreativeRevisions: true }),
+    /Recipe truth identity differs/u,
+  );
 
   const repairedRecipe = recipe('S02', 1, 'C01');
   await writeFile(recipeFile, `${JSON.stringify(repairedRecipe)}\n`);

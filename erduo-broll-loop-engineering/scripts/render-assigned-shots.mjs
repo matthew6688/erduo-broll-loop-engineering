@@ -49,8 +49,12 @@ function runtimePlanInputs(productionRoot, recipesDirectory, plan) {
     representativeScenesFile: path.join(director, 'representative-scenes.json'),
     motionMapFile: path.join(director, 'motion-map.json'),
     recipesDirectory: path.resolve(recipesDirectory),
+    allowCreativeRevisions: true,
     originalSrtFile: path.resolve(root, plan?.sourceContext?.originalSrt?.locator ?? '00-input/original.srt'),
     originalDesignFile: path.resolve(root, plan?.sourceContext?.originalDesign?.locator ?? '00-input/original-design.md'),
+    ...(plan?.sourceContext?.presenterSource?.locator ? {
+      presenterSourceFile: path.resolve(root, plan.sourceContext.presenterSource.locator),
+    } : {}),
   };
 }
 

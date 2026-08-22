@@ -4,9 +4,11 @@
   "title": "Presenter and B-roll composition receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "inputs", "mix", "output"],
+  "required": ["schemaVersion", "compositionScope", "authorizationUse", "inputs", "mix", "output"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
+    "compositionScope": { "enum": ["canary", "full-production"] },
+    "authorizationUse": { "enum": ["internal-canary", "publishing"] },
     "inputs": {
       "type": "object",
       "additionalProperties": false,

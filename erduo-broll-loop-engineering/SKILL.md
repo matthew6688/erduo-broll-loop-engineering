@@ -47,12 +47,14 @@ when preflight returns `run-onboarding-diagnostic`.
 ## Creative-loop production
 
 1. Dispatch Director with the complete original SRT/design, task constraints,
-   optional media index, and at most two selected references. Director writes
+   optional media index, approved presenter source contract when digital-presenter
+   output is requested, and at most two selected references. Director writes
    semantic chapters, shared direction, Recipe v4 files with immutable `truth`
    and revisable `creativeProposal`, a compact motion map, and three
    representative choices. Director never writes `authoring.solo`.
 2. Parent finalizes Director identities, generates the production profile, and
-   runs `plan-runtime.mjs`. Normal authoring units are contiguous chapters of
+   runs `plan-runtime.mjs`, passing `--presenter-source` for digital-presenter
+   work so its hash-closed context reaches Lead and Builders. Normal authoring units are contiguous chapters of
    5–8 shots and roughly 35–70 seconds; semantic shot and final media boundaries
    remain one shot. A normal 15–24-shot film should not become one Agent per
    shot. Never hand-edit generated plans or assignments.
@@ -61,7 +63,8 @@ when preflight returns `run-onboarding-diagnostic`.
    `search`, `generate`, or `mixed` route open. A global external-material ban
    requires an actual user, capability, authorization, or cost restriction.
 4. Dispatch the Lead with the complete original SRT/design, motion map, exactly
-   three representative Recipes, and shared asset/font index. Lead builds three
+   three representative Recipes, shared asset/font index, and any bound presenter
+   source context. Lead builds three
    final samples: native graphic/type, real-or-generated material fusion, and
    information-dense interface/process/data. Lead also supplies the design's
    runnable signature motion, reusable material/motion capabilities, and a
@@ -73,7 +76,8 @@ when preflight returns `run-onboarding-diagnostic`.
 6. Build only the five-shot creative canary first. Each Chapter Builder receives
    the complete original SRT/design, its chapter truth/proposals, neighboring
    seams, Lead samples/capability index, shared assets/fonts, open material
-   routes, exact runtime, output paths, and standard command.
+   routes, exact runtime, output paths, standard command, and any bound presenter
+   source context.
 7. Each Chapter Builder owns understand → choose → build → render → view → revise
    for its contiguous shots. It may revise `creativeProposal` with one concise
    reason but cannot change `truth`. It runs only the Parent standard command,
@@ -95,8 +99,11 @@ when preflight returns `run-onboarding-diagnostic`.
     `delivery-index.json`. Build a full Master only when requested, from the
     unchanged validated shots. For an approved digital presenter, register the
     local media with `create-presenter-source.mjs`, then use
-    `assemble-presenter-broll.mjs` and a contiguous edit plan to switch between
-    presenter video and validated silent shots. Keep exactly one canonical
+    Director and Builder own `creativeProposal.presenterTreatment` for every
+    Recipe. After their final revisions, Parent runs
+    `create-presenter-edit-plan.mjs` to mechanically compile and bind those
+    decisions, then `assemble-presenter-broll.mjs` to switch between presenter
+    video and validated silent shots. Parent never hand-authors cut times. Keep exactly one canonical
     presenter audio stream and write the composition receipt. Never weaken the
     silent direct-shot contract. `broll-shot-export` is legacy-only.
 

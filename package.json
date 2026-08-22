@@ -21,6 +21,7 @@
     "validate:runtime-plan": "node erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs",
     "validate:visual-lock": "node erduo-broll-loop-engineering/scripts/validate-visual-lock.mjs",
     "create:presenter-source": "node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs",
+    "create:presenter-edit-plan": "node erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs",
     "assemble:presenter-broll": "node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs",
     "gate:builder-assignment": "node erduo-broll-loop-engineering/scripts/gate-builder-assignment.mjs",
     "validate:frozen-blocks": "node erduo-broll-loop-engineering/scripts/validate-frozen-blocks.mjs",

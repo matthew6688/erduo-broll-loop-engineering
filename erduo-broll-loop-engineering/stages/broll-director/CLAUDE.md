@@ -7,11 +7,12 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 1. Read the complete original SRT and original design; neither may be replaced by a summary.
 2. Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.
 3. Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.
-4. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
-5. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
-6. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.
-7. Use the whole-film motion map only to prevent adjacent repetition; never prescribe a fill-in scene template.
-8. Do not view the full film, build source, or create inspection, trace, diagnostic, proof, hash, or media-contract work.
+4. When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal; this picture-treatment choice belongs to Director and Builder, never Parent.
+5. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
+6. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
+7. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.
+8. Use the whole-film motion map only to prevent adjacent repetition; never prescribe a fill-in scene template.
+9. Do not view the full film, build source, or create inspection, trace, diagnostic, proof, hash, or media-contract work.
 
 ## Positive twelve-principle anchor
 
@@ -32,6 +33,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 - Read the complete original SRT and design before dividing chapters.
 - Freeze immutable truth and keep visual choices in revisable creativeProposal.
+- For digital-presenter work, choose presenterTreatment per Recipe as a revisable creative decision.
 - Recommend contiguous chapters and seams; never decide solo authoring.
 - Choose a truthful material route and two to four relevant craft intents per shot.
 - Vary adjacent relation, composition, entry, and rhythm in the motion map.
@@ -39,4 +41,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `shotIds`, `chapterIds`, `motionMapLocator`, `outputRoot`, `unresolvedIssues`
+`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `presenterSourceLocator`, `shotIds`, `chapterIds`, `motionMapLocator`, `outputRoot`, `unresolvedIssues`

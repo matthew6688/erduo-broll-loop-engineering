@@ -3,6 +3,16 @@
 
 ### Added
 
+- Digital-presenter picture treatment is now a first-class, revisable Recipe
+  v4 creative proposal. Director proposes `presenter`, `broll`, or `mixed`;
+  the owning Builder may revise it after viewing.
+- `create-presenter-edit-plan.mjs` mechanically compiles those final Recipe
+  decisions and binds the result to the Runtime Plan, presenter source, and
+  every Recipe identity.
+- Runtime Plan v4 optionally binds the approved presenter source and propagates
+  its locator, hashes, duration, authorization, and approval scope into every
+  Lead/Builder assignment.
+
 - `scripts/audit-shot-motion.mjs` measures frame-to-frame difference on
   delivered shots and reports still tails beyond the declared readable hold,
   mid-shot still runs, and action windows with no development. Covers the gap
@@ -23,6 +33,14 @@
   render without repeating a declaration in every Recipe.
 
 ### Changed
+
+- `assemble-presenter-broll.mjs` now accepts only compiled edit-plan v2 and
+  rejects stale Runtime Plan, presenter source, Recipe, SRT, or output-profile
+  bindings. Parent no longer owns or hand-authors presenter cut decisions.
+- Operational validation accepts schema-valid Builder changes to
+  `creativeProposal` while continuing to reject any immutable Recipe truth
+  drift. Full-production composition now requires publishing authorization and
+  full-production user approval.
 
 - The canary hard gate additionally requires both audits to report no signal.
 - `references/parent-review-checklist.md` gains a rendered evidence section.

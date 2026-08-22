@@ -158,12 +158,21 @@ decoded. `delivery-index.json` is the sequence truth. Complete preview and any
 requested silent B-roll Master use only unchanged validated shot files. In the
 optional digital-presenter path, Parent first registers a locally downloaded,
 approved presenter source whose SRT, portrait, narration, media hashes, and
-single audio stream are closed. `assemble-presenter-broll.mjs` may then replace
+single audio stream are closed. Runtime planning receives that contract through
+`--presenter-source` and binds its locator, contract hash, approved media hash,
+duration, authorization use, and approval scope into every Lead/Builder packet.
+Director writes and the owning Builder may
+revise `creativeProposal.presenterTreatment` after viewing. Parent must run
+`create-presenter-edit-plan.mjs` after final Recipe revisions; it may not invent
+or hand-edit cut times. `assemble-presenter-broll.mjs` may then replace
 picture intervals only with unchanged validated silent shots inside their SRT
 windows, while preserving exactly one presenter audio stream. Its composition
 receipt binds the presenter contract, edit plan, delivery index, used shot
 media, mix durations, output hash, and full audiovisual decode. This final
 composition does not change or weaken any direct-shot contract.
+Full-production composition additionally requires `publishing` authorization
+and `full-production` user approval; canary/internal permission cannot be
+promoted by changing an output filename.
 
 Technical checks may report objective defects but never appeal, metaphor
 quality, animation weight, twelve-principle compliance, or user preference.

@@ -318,6 +318,7 @@ const SKILL_FILES = [
   'erduo-broll-loop-engineering/scripts/render-assigned-shots.mjs',
   'erduo-broll-loop-engineering/scripts/assemble-shot-preview.mjs',
   'erduo-broll-loop-engineering/scripts/create-presenter-source.mjs',
+  'erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs',
   'erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs',
   'erduo-broll-loop-engineering/scripts/presenter-media-lib.mjs',
   'erduo-broll-loop-engineering/scripts/backend-inspection.mjs',
