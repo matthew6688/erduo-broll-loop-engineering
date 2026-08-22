@@ -138,10 +138,11 @@ proof tools.
 ## Creative ownership
 
 `truth` contains timing, source cues, spoken facts, audience outcome, required
-readable result, chapter, and seams. It is immutable. `creativeProposal`
-contains metaphor, objects, composition, motion idea, material route, key
-states, and rationale. The owning Builder may replace it when the new solution
-serves truth better and records one concise reason.
+readable result, optional readable hold, chapter, and seams. It is immutable.
+`creativeProposal` contains metaphor, objects, composition, motion idea,
+material route, key states, rationale, and optional traceable on-screen text.
+The owning Builder may replace it when the new solution serves truth better and
+records one concise reason.
 
 One Chapter Builder controls composition change, pacing, material choice, and
 adjacent handoffs across normally 5–8 shots. It uses Lead capabilities without

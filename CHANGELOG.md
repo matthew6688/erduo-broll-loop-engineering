@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+- Aligned current workflow/checklist/role documentation with the v1.0.1
+  HyperFrames-default, required-original-design, open material-route, five-shot
+  canary, Recipe v4, and rendered-evidence contracts. Added a regression test
+  that rejects the superseded `auto` default, optional-design, mandatory-Pexels,
+  and Recipe v3 wording on current instruction surfaces.
+- Added the rendered-evidence files and project Agent rules to the explicit
+  release closure, and serialized the repository test command so the two
+  Remotion E2E files cannot concurrently replace the same fixture dependencies.
+
 ## 1.0.1 — 2026-08-19
 
 - 修正 2026-08-18 技术通过但视觉失败的候选实现：保留逐镜直出和 Parent 机械媒体检查，把创作边界恢复为一名 Chapter Builder 负责通常 `5–8` 个连续镜头的完整“理解—选择—制作—观看—修改”闭环。

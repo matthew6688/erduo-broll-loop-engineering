@@ -82,7 +82,9 @@ test('Parent, orchestration, and stage Skills expose the reset contract', async 
 
   assert.match(director, /schemaVersion:"4\.0\.0"/u);
   assert.match(director, /truth:\{chapterId,srtWindowMs/u);
+  assert.match(director, /readableHold\?:\{startMs,endMs\}/u);
   assert.match(director, /creativeProposal:\{metaphor,objects/u);
+  assert.match(director, /visibleText\?:\[\{text,source,objectRef\?\}/u);
   assert.match(director, /`craftIntent` \(choose 2–4\)/u);
   assert.match(director, /Never write `authoring\.solo`/u);
 
@@ -100,6 +102,24 @@ test('Parent, orchestration, and stage Skills expose the reset contract', async 
     assert.doesNotMatch(text, /erduoInspectionCompositions|data-erduo-(?:trace|role|focus|layer|visual|motions)/u, name);
   }
   assert.match(remotion, /Do not create `src\/inspection\.tsx`/u);
+});
+
+test('current workflow references cannot regress to pre-v1.0.1 production policy', async () => {
+  const workflow = await readSkill('references/prompt-first-workflow.md');
+  const review = await readSkill('references/parent-review-checklist.md');
+  const current = `${workflow}\n${review}`;
+
+  assert.match(workflow, /New productions default to `hyperframes`/u);
+  assert.match(workflow, /complete original SRT and complete original design/u);
+  assert.match(workflow, /five-shot creative canary/u);
+  assert.match(workflow, /audit-shot-motion\.mjs/u);
+  assert.match(workflow, /audit-onscreen-text\.mjs/u);
+  assert.match(review, /Recipe v4 files/u);
+  assert.doesNotMatch(current, /Default runtime intent to `auto`/u);
+  assert.doesNotMatch(current, /new projects default to `auto`/u);
+  assert.doesNotMatch(current, /A separate design file or preset is never required/u);
+  assert.doesNotMatch(current, /Recipe v3 files are schema-valid/u);
+  assert.doesNotMatch(current, /Assets and Pexels Agent on every production run/u);
 });
 
 test('documented Recipe v4 Planner commands include every direct creative input', async () => {

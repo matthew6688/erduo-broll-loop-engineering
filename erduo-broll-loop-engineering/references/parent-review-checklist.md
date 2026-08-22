@@ -4,15 +4,16 @@ Start from the compact receipt/handoff. Inspect an actual artifact only to
 answer a concrete contract or technical question. The Parent does not perform
 an independent aesthetic review, commission a review Agent, assign craft
 scores, or require extra screenshot evidence. Visual taste has two user gates:
-the three representative scenes for direction and the complete shot-assembled
-preview for the film as a whole.
+the Lead samples plus five-shot canary before full production, and the complete
+shot-assembled preview for the film as a whole.
 
 ## Goal and environment
 
 - Output directory and shot/preview/optional-master targets are new and
   non-overwriting.
-- Runtime selection is validated; new projects default to `auto` and ambiguous
-  existing evidence stops.
+- Runtime selection is validated; new projects default to `hyperframes`,
+  Remotion and `auto` require explicit selection, and ambiguous existing
+  evidence stops.
 - Cached installation readiness matches this release and host; the lightweight
   preflight closes the current SRT, project, target and required backend facts.
 - Pexels remains outside readiness and is checked only when Assets reaches a
@@ -33,15 +34,14 @@ preview for the film as a whole.
   roles, materials/depth, motif semantics, rhythm, safe-area policy, lazy
   defaults to avoid, and at least three content-appropriate composition
   families once.
-- Recipe v3 files are schema-valid compact shot deltas: beat-level primary
-  focus, start/turn/result/hold key states, element lifecycles, composition
-  family, hero-frame relationship, visible `microBeats[]`, shot-specific
-  material need, one content-related reason for every required capability,
-  optional locators, neighbor handoff, and readable hold. They do not repeat
-  global rules or contain runtime APIs.
-- A micro-beat changes subject, topology, scale, depth, material state,
-  relationship, or attention; deliberate stillness is explicit. Beat-count
-  heuristics are not a pass/fail score.
+- Recipe v4 files are schema-valid closed objects with immutable `truth` and a
+  revisable `creativeProposal`. Truth closes timing, source cues, spoken facts,
+  audience outcome, required readable result, chapter, seams, and optional
+  `readableHold`. The proposal carries metaphor, objects, composition, motion,
+  material route, key states, rationale, and optional traceable `visibleText`.
+- Every Recipe selects two to four relevant `craftIntent` values. They guide
+  creation and are not scores, routing evidence, or a requirement to force all
+  twelve principles into every shot.
 - Every shot records a concrete first-read anchor, visible action, and readable
   result. A shot normally spans about 5–12 seconds; one over 15 seconds has a
   content-driven `durationRationale` and real visible development.
@@ -66,6 +66,8 @@ preview for the film as a whole.
 - The Parent ran `plan-runtime.mjs` directly with Recipes, selection, narrative
   envelope, visual system, the three-shot `--representative-scenes` artifact,
   `--motion-map`,
+  complete `--original-srt` and `--original-design` inputs, the selected
+  backend's verified executable,
   `--production-profile`, and an unused production
   root. No Runtime Planner Agent was dispatched.
 - The plan and every Builder assignment carry the generated profile's same hash
@@ -88,8 +90,8 @@ preview for the film as a whole.
 
 - The Assets stage inspected supplied material and closed project-local fonts,
   licenses, hashes, and provenance even when external acquisition was unused.
-- Empty/native-MG material needs produced a compact no-search decision; they
-  did not invoke generation or Pexels.
+- Known shared files, fonts, licenses, and derivatives were frozen without
+  closing shot-specific `native|provided|search|generate|mixed` routes.
 - Non-empty needs followed only suitable routes: user material, authorized
   controllable generation, Pexels for suitable stock, then runtime-native
   structural support. Fact/brand/logo/web/UI needs used an appropriate factual
@@ -102,12 +104,12 @@ preview for the film as a whole.
 ## Each focused Builder
 
 - Each required backend's Lead packet passed the deterministic assignment gate,
-  built only its assigned representative Recipes, and returned moving scenes
-  plus directly importable runtime-native shared source and identity.
-- `04-visual-lock/visual-lock.json` binds the three scenes, representative
-  reasons, source identities, assets/fonts, and the user's approved or explicit
-  skipped decision. Every production packet passed the gate against that
-  unchanged contract; no full-film Director witness is required.
+  built only its three representative Recipes, supplied runnable signature
+  motion and a compact capability index, opened the real sheets/previews, and
+  returned `accepted|revised`.
+- Full production remained blocked until the five-shot canary passed its
+  technical/viewing gates and the user selected this version for at least three
+  of five shots. No legacy visual-lock state or skipped decision bypassed it.
 - Hybrid shares only runtime-neutral visual tokens. HyperFrames and Remotion
   have separate source locators and identities.
 
@@ -115,9 +117,10 @@ preview for the film as a whole.
   anchor of at most eight lines, and fixed compression recovery fields. The
   Agent did not reread parent/other stage Skills, generic craft references,
   schemas, validators, or catalogs.
-- The fresh Agent owns one validated authoring unit only and read only its unit
-  Recipes, immediate seam summaries, shared narrative/visual-system locators,
-  frozen assets/fonts, and 0–2 selected references.
+- The fresh Agent owns one validated authoring unit only and directly reads the
+  complete original SRT/design plus its unit Recipes, immediate seam summaries,
+  Lead samples/capability index, frozen assets/fonts, and 0–2 selected
+  references.
 - It did not load all film Recipes, full catalogs, or unrelated references.
 - The Agent did not create capture, trace, lint, screenshot, frame-scan,
   render, hash, probe, decode, manifest, contract, receipt, or proof tooling.
@@ -126,9 +129,9 @@ preview for the film as a whole.
 - The maximum visible hero frame was authored first, then attention, causal
   action, dependent follow-through, settle, and readable hold. This created no
   approval artifact or aesthetic checklist.
-- Each shot uses one primary craft grammar, preserves Recipe timing and
-  micro-beats, is deterministic/seekable, and records runtime implementation
-  decisions and faithful variances.
+- Each shot preserves Recipe `truth`, applies only its selected `craftIntent`,
+  is deterministic/seekable, and records a concise reason for any revised
+  `creativeProposal` or material route.
 - Ordinary media drives geometry, crop, mask, path, annotation, palette,
   depth, or state; it is not a generic thumbnail/card/title background.
 - Every assigned `shotId` has editable source and its own direct runtime render
@@ -183,15 +186,16 @@ preview for the film as a whole.
 - After approval, the ordered high-quality shot directory is the default
   delivery. Any requested Master is newly assembled from those same unchanged
   shots to an unused path; it is optional and never copied from preview.
-- The representative scenes are the user's early visual-direction stop and the
-  complete composition preview is the final aesthetic stop. There is no default
-  full-film Director witness, and script checks do not claim aesthetic approval.
+- The Lead samples and five-shot canary are the user's early visual-direction
+  stop; the complete composition preview is the final aesthetic stop. There is
+  no default full-film Director witness, and script checks do not claim
+  aesthetic approval.
 - Every delivered shot passes FFprobe and complete decode. An optional Master,
   when requested, also passes them. Technical facts are not aesthetic approval.
 
 ## Final report
 
-Report ordered shot and index locators, preview locator, objective media facts,
-continuous coverage, material/font sources, optional Master or legacy-export
-locators, and honest limitations. Do not add a post-render aesthetic review or
-ask the user to approve a second time.
+Report canary status and user choice first, then ordered shot and index locators,
+preview locator, objective media facts, continuous coverage, material/font
+sources, optional Master or legacy-export locators, Builder viewing conclusions,
+and honest limitations. Do not add an extra post-approval aesthetic review.

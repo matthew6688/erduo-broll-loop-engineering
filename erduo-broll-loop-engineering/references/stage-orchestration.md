@@ -66,8 +66,9 @@ Director, Lead, and every Chapter Builder receive readable locators and SHA-256
 identities for the complete original SRT and original design. Neither may be
 replaced by narrative/visual summaries. Each Builder packet also contains:
 
-1. its contiguous chapter and each shot's immutable `truth` plus revisable
-   `creativeProposal`;
+1. its contiguous chapter and each shot's immutable `truth` (including any
+   declared readable hold) plus revisable `creativeProposal` and traceable
+   on-screen-text declarations;
 2. previous/next and chapter-boundary seams;
 3. all three Lead sample locators, matching shared source, and the short
    content-relation capability index;

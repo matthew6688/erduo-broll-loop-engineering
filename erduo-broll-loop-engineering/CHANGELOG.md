@@ -27,6 +27,10 @@
 - The canary hard gate additionally requires both audits to report no signal.
 - `references/parent-review-checklist.md` gains a rendered evidence section.
 - `references/motion-layout-lint.md` names the backends it cannot cover.
+- Current workflow, review checklist, Director contract, and generated role
+  charter now agree on the HyperFrames default, required original design,
+  open material routes, five-shot canary, and Recipe v4 rendered-evidence
+  fields.
 
 ### Notes
 

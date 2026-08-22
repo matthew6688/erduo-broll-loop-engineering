@@ -2,11 +2,13 @@
 
 ## Inputs and output
 
-- Talking-head mode requires a matching edited source video and SRT.
-- Faceless mode requires an SRT.
+- Talking-head mode requires a complete original SRT, complete original design,
+  and matching edited source video.
+- Faceless mode requires a complete original SRT and complete original design.
 - User images, videos, logos, screenshots, ordinary references, and explicit
   brand restrictions are optional.
-- A separate design file or preset is never required.
+- The original design is a required creative input. A preset is optional and
+  cannot replace it.
 - When the user does not specify a delivery location, create one new
   timestamped directory beside the SRT using its basename plus
   `-broll-YYYYMMDD-HHMMSS`, with a unique suffix when needed.
@@ -21,13 +23,15 @@
 
 ## Runtime contract
 
-Default runtime intent to `auto`. Read the runtime contract, validate Director
-recipes, then run the deterministic post-Director planner and validator.
+New productions default to `hyperframes`. Remotion requires explicit opt-in or
+a canary assignment; `auto` is experimental and explicit only. Read the runtime
+contract, validate Director recipes, then run the deterministic post-Director
+planner and validator.
 HyperFrames and Remotion are independent production routes; missing targeted
 local readiness is `action-required`. Auto may resolve to one backend or
 hybrid. HyperFrames and Remotion keep separate source; the Parent exchanges
 only independently verified shot files and never nests or translates runtime
-source.
+source. A backend failure never silently reroutes.
 
 The Director authors one runtime-neutral Shot Recipe per shot. The Assets
 stage preserves runtime-neutral material roles and objective media facts. Each
@@ -158,11 +162,15 @@ fallback. No query and no `patternRef` is a complete valid result; do not write
 per-shot no-pattern decisions. Pattern selection never replaces the shot's
 content-specific visual logic.
 
-Every Recipe v3 records a primary focus for each beat, start/turn/result/hold
-states, each element group's destination, and one content-related reason for
-every required capability. `motion-map.json` maps every Recipe exactly once and
-contains only the compact relation/action/composition/entry/rhythm/settle facts
-Lead needs to detect repetition.
+Every Recipe v4 separates immutable `truth` from a revisable
+`creativeProposal`. Truth carries timing, source cues, spoken facts, audience
+outcome, required readable result, chapter, seams, and an optional immutable
+readable hold. The proposal carries metaphor, objects, composition, motion,
+material route, key states, rationale, and optional traceable on-screen text.
+Each Recipe selects only two to four relevant `craftIntent` values.
+`motion-map.json` maps every Recipe exactly once and contains only the compact
+relation/action/composition/entry/rhythm/settle facts Lead needs to detect
+repetition.
 
 The visual direction arises from the current content, audience, goal, and
 optional material. It is not selected from a bundled theme. The shot plan must
@@ -172,32 +180,34 @@ adjacent variation, and safe handling of uncertain terms. The Recipe set uses
 integer milliseconds, validates against the repository schema, maps one-to-one
 to the shot plan, and contains no runtime APIs or component syntax.
 
-## 2. Mandatory material collection
+## 2. Shared asset freeze and open shot routes
 
-Dispatch a fresh Assets and Pexels Agent on every production run. It must:
+Dispatch one Assets Agent on every production run. It must:
 
 1. inspect available user material;
-2. consider suitable controllable generation;
-3. perform real Pexels image and video searches;
-4. evaluate relevance and composition before selection;
-5. download every selected external item locally;
-6. bind every selected item to planned shots and a composition-use plan;
-7. source and freeze licensed project fonts.
+2. freeze known shared media, reusable derivatives, licenses, and provenance;
+3. source and freeze licensed project fonts;
+4. preserve one live `native`, `provided`, `search`, `generate`, or `mixed`
+   route for every shot;
+5. record a real user, capability, authorization, or cost fact for any global
+   route restriction.
 
-A real Pexels search may produce zero selected items. The Agent explains the
-search and rejections instead of forcing weak media. Selected media records its
-subject, focal point, crop, safe overlay area, brightness, color temperature,
-depth, movement, title relationship, source, creator, local path, and shot
-binding.
+Assets does not pre-run every shot-specific search or generation route. A
+Chapter Builder may choose or revise that route while building and records one
+concise reason plus provenance. When a real shot need selects Pexels, the search
+may produce zero selected items; preserve the search and rejection facts rather
+than forcing weak media. Selected media records its subject, focal point, crop,
+safe overlay area, brightness, color temperature, depth, movement, title
+relationship, source, creator, local path, and shot binding.
 
 For a selected pattern, Assets reads only that card and verifies its concrete
 material preconditions. Missing screenshots, UI states, paired states, layers,
 data, masks, or depth inputs invoke the declared fallback or return to the
 Director; they are not replaced with fabricated or unrelated media.
 
-When controllable generation is unavailable, record that fact and continue to
-Pexels. Do not impose a fixed search count, but preserve evidence of real image
-and video searches plus the selection or rejection reasoning.
+When controllable generation or Pexels is unavailable, record that scoped fact.
+It blocks only the affected route; it does not silently force a global native
+material policy.
 
 ## 3. Runtime planning and targeted readiness
 
@@ -229,6 +239,9 @@ node scripts/plan-runtime.mjs \
   --visual-system <broll-production/01-director/visual-system.json> \
   --representative-scenes <broll-production/01-director/representative-scenes.json> \
   --motion-map <broll-production/01-director/motion-map.json> \
+  --original-srt <broll-production/00-input/original.srt> \
+  --original-design <broll-production/00-input/original-design.md> \
+  --hyperframes-executable <verified-absolute-hyperframes-cli> \
   --production-profile <broll-production/production-profile.json> \
   --production-root <broll-production>
 ```
@@ -243,12 +256,25 @@ preflight reports a missing or changed backend fact.
 
 ## 4. Unit building
 
-Dispatch each generated assignment packet to its named backend Builder.
+Run the Lead assignment first. Lead builds exactly three final samples—native
+graphic/type, real-or-generated material fusion, and information-dense
+interface/process/data—plus runnable signature motion and a short capability
+index. Lead opens all three real sheets and short previews, repairs defects, and
+returns `accepted` or `revised`.
+
+Next dispatch only the five-shot creative canary from the generated assignment
+packets. Full production remains blocked until every technical and viewing gate
+passes and the user chooses this version for at least three of five shots.
+After that approval, dispatch the remaining chapter packets to their named
+backend Builders.
+
 The assignment already injects the matching role prompt, a source-authoring
 anchor of at most eight lines, compression recovery fields, exact paths, and one
 standard command. A Lead also receives the whole-film compact motion map but
-only the three representative Recipes; a production Builder receives only its
-unit Recipes and seams.
+only the three representative Recipes. Every Lead and Chapter Builder receives
+direct locators and identities for the complete original SRT and design; a
+Chapter Builder additionally receives its unit Recipes, neighboring seams,
+Lead samples/capability index, and shared assets/fonts.
 
 HyperFrames Builders use the release-pinned runtime. Remotion Builders keep
 source isolated but reuse the production-root toolchain for an identical
@@ -287,6 +313,12 @@ every generated shot record. Missing, duplicate, undecodable, identity-drifted,
 or out-of-order shot media closes the gate instead of being silently repaired by
 cutting a unit or Master.
 
+Before showing the canary, Parent also runs `audit-shot-motion.mjs` and
+`audit-onscreen-text.mjs` over the delivered files. These audits report frozen
+action, overlong still tails, and untraceable or production-scaffolding text as
+risk signals. A clean report is a mechanical prerequisite, never aesthetic
+approval.
+
 ## 6. Preview and default delivery
 
 Once every shot contract passes, Parent assembles the complete low-cost preview
@@ -306,8 +338,9 @@ node scripts/assemble-shot-preview.mjs \
 millisecond windows, local frame mapping, source/Recipe/profile identities,
 codec, decode, and continuous SRT coverage must close before preview assembly.
 The Director does not watch the complete dynamic preview or write a full-film
-witness. The user judges aesthetics using the three representative scenes,
-per-shot six-frame sheets, and complete preview.
+witness. The user first chooses the five-shot canary, then judges the approved
+full production using the Lead samples, per-shot six-frame sheets, and complete
+preview.
 
 After approval, the ordered high-quality shot directory is the default formal
 delivery. A full-length master is optional and must be assembled from the same

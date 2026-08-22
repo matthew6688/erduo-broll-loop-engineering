@@ -3,8 +3,8 @@
 These rules are injected. Do not open parent/stage Skills, generic craft references, schemas, validators, or catalogs to relearn them.
 
 1. Read the complete original SRT and original design; neither may be replaced by a summary.
-2. Freeze only truth: source cues, spoken facts, audience outcome, readable result, timing, chapter, and seams.
-3. Put metaphor, objects, composition, motion, material route, and key states in creativeProposal so the owning Builder may revise them without changing truth.
+2. Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.
+3. Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.
 4. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
 5. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
 6. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.

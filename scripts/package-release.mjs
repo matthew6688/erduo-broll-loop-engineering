@@ -219,6 +219,7 @@ const SHOTCRAFT_REMOTION_RELEASE = loadShotcraftRemotionManifest(MODULE_ROOT);
 
 const ROOT_FILES = [
   '.gitignore',
+  'AGENTS.md',
   'CHANGELOG.md',
   'CONTRIBUTING.md',
   'docs/V1.0.0-BENCHMARK.md',
@@ -249,6 +250,7 @@ const SCRIPT_FILES = [
 ];
 
 const SKILL_FILES = [
+  'erduo-broll-loop-engineering/CHANGELOG.md',
   'erduo-broll-loop-engineering/SKILL.md',
   'erduo-broll-loop-engineering/agents/openai.yaml',
   'erduo-broll-loop-engineering/references/animation-craft.md',
@@ -289,13 +291,17 @@ const SKILL_FILES = [
   'erduo-broll-loop-engineering/references/runtime/shot-pattern.schema.json',
   'erduo-broll-loop-engineering/references/runtime/shot-media.schema.json',
   'erduo-broll-loop-engineering/references/runtime/remotion-project.schema.json',
+  'erduo-broll-loop-engineering/references/runtime/rendered-evidence-audit.schema.json',
   'erduo-broll-loop-engineering/references/remotion-backend.md',
+  'erduo-broll-loop-engineering/references/rendered-evidence-audits.md',
   'erduo-broll-loop-engineering/scripts/detect-runtime.mjs',
   'erduo-broll-loop-engineering/scripts/config.mjs',
   'erduo-broll-loop-engineering/scripts/doctor.mjs',
   'erduo-broll-loop-engineering/scripts/lib.mjs',
   'erduo-broll-loop-engineering/scripts/production-preflight.mjs',
   'erduo-broll-loop-engineering/scripts/assemble-frozen-production.mjs',
+  'erduo-broll-loop-engineering/scripts/audit-onscreen-text.mjs',
+  'erduo-broll-loop-engineering/scripts/audit-shot-motion.mjs',
   'erduo-broll-loop-engineering/scripts/collect-production-metrics.mjs',
   'erduo-broll-loop-engineering/scripts/create-production-profile.mjs',
   'erduo-broll-loop-engineering/scripts/frozen-media-policy.mjs',
