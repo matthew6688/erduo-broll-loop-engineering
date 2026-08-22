@@ -71,3 +71,7 @@ export function parseCliPairs(argv) {
   }
   return options;
 }
+
+export function presenterKindOf(source) {
+  return source?.presenterKind === 'human' ? 'human' : 'digital';
+}

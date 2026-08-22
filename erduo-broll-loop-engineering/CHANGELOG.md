@@ -3,6 +3,10 @@
 
 ### Added
 
+- Provider-neutral Presenter Source now distinguishes `presenterKind=human|digital`.
+  A local camera edit and a downloaded digital-human render reuse the same
+  Recipes, edit-plan compiler, compositor, and receipt contracts. Each source
+  still requires its own hash-bound Runtime Plan and compiled edit plan.
 - Digital-presenter picture treatment is now a first-class, revisable Recipe
   v4 creative proposal. Director proposes `presenter`, `broll`, or `mixed`;
   the owning Builder may revise it after viewing.

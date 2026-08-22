@@ -11,7 +11,7 @@ import {
   commandFailure, hashFile, probeAndDecode, readJson, requireRegularFile, runCommand,
 } from './shot-media-lib.mjs';
 import {
-  parseCliPairs, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot,
+  parseCliPairs, presenterKindOf, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot,
 } from './presenter-media-lib.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
@@ -77,7 +77,8 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
   const plannedPresenter = runtimePlan.sourceContext?.presenterSource;
   if (!plannedPresenter || plannedPresenter.locator !== sourceRecord.locator
     || plannedPresenter.sha256 !== plan.presenterSource.sha256
-    || plannedPresenter.mediaSha256 !== source.media.sha256) {
+    || plannedPresenter.mediaSha256 !== source.media.sha256
+    || presenterKindOf(plannedPresenter) !== presenterKindOf(source)) {
     throw new Error('bound runtime plan presenter source differs from the composition source');
   }
   const expectedOutput = {
@@ -268,6 +269,7 @@ export async function assemblePresenterBroll({
       schemaVersion: '1.0.0',
       compositionScope: plan.compositionScope,
       authorizationUse: source.authorization.use,
+      presenterKind: presenterKindOf(source),
       inputs: {
         presenterSourceSha256: await hashFile(sourcePath),
         deliveryIndexSha256: await hashFile(indexPath),

@@ -30,6 +30,7 @@ import {
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { roleInjection } from './generate-role-files.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
+import { presenterKindOf } from './presenter-media-lib.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
@@ -921,6 +922,7 @@ async function bindPresenterContext(productionRoot, presenterSourceFile) {
     durationMs: source.media.durationMs,
     authorizationUse: source.authorization.use,
     approvalScope: source.approval.scope,
+    presenterKind: presenterKindOf(source),
   };
 }
 

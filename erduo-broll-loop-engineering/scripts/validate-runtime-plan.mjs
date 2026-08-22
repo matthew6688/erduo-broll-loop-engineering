@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { validateMezzaninePolicy } from './frozen-media-policy.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
-import { resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
+import { presenterKindOf, resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
 import {
   computeRecipeIdentity,
   computeRecipeNonCreativeIdentity,
@@ -164,6 +164,7 @@ async function verifyPresenterSourceBinding(binding, file, productionRoot) {
     || binding.durationMs !== source.media.durationMs
     || binding.authorizationUse !== source.authorization.use
     || binding.approvalScope !== source.approval.scope
+    || presenterKindOf(binding) !== presenterKindOf(source)
     || source.approval.approvedMediaSha256 !== source.media.sha256) {
     throw new Error('presenter source contract facts differ from the planned binding');
   }

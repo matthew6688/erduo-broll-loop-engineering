@@ -49,12 +49,13 @@ export async function probeAudioVisual(file, {
 }
 
 export async function createPresenterSource({
-  productionRoot, inputFile, outputFile, provider,
+  productionRoot, inputFile, outputFile, provider, presenterKind,
   srtFile, portraitFile, narrationFile, alignment, authorization, approval,
   ffmpeg = 'ffmpeg', ffprobe = 'ffprobe', runner = runCommand,
 }) {
-  if (!productionRoot || !inputFile || !outputFile || !provider || !srtFile || !portraitFile || !narrationFile) {
-    throw new Error('presenter source requires productionRoot, inputFile, outputFile, provider, srtFile, portraitFile, and narrationFile');
+  if (!productionRoot || !inputFile || !outputFile || !provider || !presenterKind
+    || !srtFile || !portraitFile || !narrationFile) {
+    throw new Error('presenter source requires productionRoot, inputFile, outputFile, provider, presenterKind, srtFile, portraitFile, and narrationFile');
   }
   const [input, srt, portrait, narration, output] = await Promise.all([
     resolveExistingRegularWithinRoot(productionRoot, inputFile, 'presenter input'),
@@ -67,7 +68,7 @@ export async function createPresenterSource({
   const facts = await probeAudioVisual(input.absolute, { ffmpeg, ffprobe, runner, label: 'presenter input' });
   const mediaSha256 = await hashFile(input.absolute);
   const value = {
-    schemaVersion: '1.0.0', provider,
+    schemaVersion: '1.0.0', presenterKind, provider,
     inputIdentity: {
       srt: { file: srt.locator, sha256: await hashFile(srt.absolute) },
       portrait: { file: portrait.locator, sha256: await hashFile(portrait.absolute) },
@@ -92,7 +93,8 @@ async function main() {
   const options = parseCliPairs(process.argv.slice(2));
   const result = await createPresenterSource({
     productionRoot: options['production-root'], inputFile: options.input, outputFile: options.output,
-    provider: options.provider, srtFile: options.srt, portraitFile: options.portrait,
+    provider: options.provider, presenterKind: options['presenter-kind'],
+    srtFile: options.srt, portraitFile: options.portrait,
     narrationFile: options.narration,
     alignment: { method: options.alignment, status: 'confirmed' },
     authorization: { likeness: options.likeness, voice: options.voice, use: options.use },

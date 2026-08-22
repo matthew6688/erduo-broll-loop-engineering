@@ -48,7 +48,8 @@
           "mediaSha256": { "$ref": "#/$defs/sha256" },
           "durationMs": { "type": "integer", "minimum": 1 },
           "authorizationUse": { "enum": ["internal-canary", "publishing"] },
-          "approvalScope": { "enum": ["canary", "full-production"] }
+          "approvalScope": { "enum": ["canary", "full-production"] },
+          "presenterKind": { "enum": ["human", "digital"] }
         }
       }
       }

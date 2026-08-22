@@ -1,5 +1,20 @@
 # HeyGen 数字人接入研究
 
+## 2026-08-23 Presenter-kind host canary
+
+在 macOS Apple Silicon、Node.js 22 和 HyperFrames-first 策略下，使用同一条中文旁白与
+获授权肖像完成了真实 HeyGen image presenter canary：H.264 MP4、1280×720、25 fps、
+68.154 秒，唯一 AAC 音轨为 48 kHz 双声道；旁白来自本地 XTTS，使用本地 Whisper
+large-v3 对齐。打开六个分布帧后，人物身份、背景与口播运动保持稳定。媒体、肖像、旁白、
+SRT、API 凭据、任务 ID 与私人路径均不进入仓库。
+
+`presenterKind=human` 复用相同的本地单视频/单音轨合同、Runtime Plan 绑定、Recipe
+presenter treatment、edit-plan compiler、compositor 与 receipt。集成测试覆盖了这条完整
+受控链路并断言最终唯一音轨。本次没有新拍一条真人机位素材，所以真人路径目前是受控端到端
+证据，不冒充新的真实宿主媒体 canary；未来真人母片必须显式登记为 `human`，遗漏类型会被
+拒绝。真人与数字人之间切换时，Recipes 与已验证静音 B-roll 可复用，但必须为新来源重新
+生成 hash-bound Runtime Plan 和 edit plan。
+
 更新时间：2026-08-23
 
 ## 结论

@@ -156,8 +156,8 @@ needed by the original owner.
 Every final shot is directly rendered from its own runtime entry and fully
 decoded. `delivery-index.json` is the sequence truth. Complete preview and any
 requested silent B-roll Master use only unchanged validated shot files. In the
-optional digital-presenter path, Parent first registers a locally downloaded,
-approved presenter source whose SRT, portrait, narration, media hashes, and
+optional presenter path, Parent first registers a local human camera edit or
+approved digital render whose `presenterKind`, SRT, portrait, narration, media hashes, and
 single audio stream are closed. Runtime planning receives that contract through
 `--presenter-source` and binds its locator, contract hash, approved media hash,
 duration, authorization use, and approval scope into every Lead/Builder packet.

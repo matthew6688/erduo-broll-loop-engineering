@@ -19,8 +19,9 @@ Agent.
 ## Inputs and runtime policy
 
 Require the complete original SRT and original design. Talking-head mode also
-requires the matching edited video. Digital-presenter mode requires a locally
-downloaded presenter video with exactly one audio stream plus explicit likeness
+requires the matching edited video. Presenter mode accepts either a local human
+camera edit (`presenterKind=human`) or an approved digital-presenter render
+(`presenterKind=digital`). Both require exactly one audio stream plus explicit likeness
 and voice authorization, hashes for the source SRT/portrait/narration, and an
 identity/voice/lip-sync approval scoped to canary or full production. Ask once
 for optional user media and explicit
@@ -47,13 +48,13 @@ when preflight returns `run-onboarding-diagnostic`.
 ## Creative-loop production
 
 1. Dispatch Director with the complete original SRT/design, task constraints,
-   optional media index, approved presenter source contract when digital-presenter
+   optional media index, approved presenter source contract when presenter
    output is requested, and at most two selected references. Director writes
    semantic chapters, shared direction, Recipe v4 files with immutable `truth`
    and revisable `creativeProposal`, a compact motion map, and three
    representative choices. Director never writes `authoring.solo`.
 2. Parent finalizes Director identities, generates the production profile, and
-   runs `plan-runtime.mjs`, passing `--presenter-source` for digital-presenter
+   runs `plan-runtime.mjs`, passing `--presenter-source` for presenter
    work so its hash-closed context reaches Lead and Builders. Normal authoring units are contiguous chapters of
    5–8 shots and roughly 35–70 seconds; semantic shot and final media boundaries
    remain one shot. A normal 15–24-shot film should not become one Agent per
@@ -97,7 +98,7 @@ when preflight returns `run-onboarding-diagnostic`.
     aesthetic decision.
 11. Deliver ordered independent shot files, editable source, provenance, and
     `delivery-index.json`. Build a full Master only when requested, from the
-    unchanged validated shots. For an approved digital presenter, register the
+    unchanged validated shots. For an approved human or digital presenter, register the
     local media with `create-presenter-source.mjs`, then use
     Director and Builder own `creativeProposal.presenterTreatment` for every
     Recipe. After their final revisions, Parent runs

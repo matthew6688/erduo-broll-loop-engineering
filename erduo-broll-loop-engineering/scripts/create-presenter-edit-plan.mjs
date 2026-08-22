@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { validateSchemaValue } from './runtime-schema-validator.mjs';
 import { hashFile, readJson } from './shot-media-lib.mjs';
 import {
-  parseCliPairs, resolveExistingDirectoryWithinRoot, resolveExistingRegularWithinRoot,
+  parseCliPairs, presenterKindOf, resolveExistingDirectoryWithinRoot, resolveExistingRegularWithinRoot,
   resolveNewOutputWithinRoot,
 } from './presenter-media-lib.mjs';
 import { validateRuntimePlan } from './validate-runtime-plan.mjs';
@@ -148,6 +148,9 @@ export async function createPresenterEditPlan({
     || plannedPresenter.authorizationUse !== presenterSource.authorization.use
     || plannedPresenter.approvalScope !== presenterSource.approval.scope) {
     throw new Error('runtime plan is not bound to the current presenter source contract');
+  }
+  if (presenterKindOf(plannedPresenter) !== presenterKindOf(presenterSource)) {
+    throw new Error('runtime plan presenter kind differs from the current presenter source contract');
   }
   if (!['canary', 'full-production'].includes(compositionScope)) {
     throw new Error('compositionScope must be canary or full-production');

@@ -62,7 +62,7 @@
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
-- 可选数字人模式可把任意供应商已经下载到本地的带声 MP4 登记为 provider-neutral presenter source；这不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
+- 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。数字人导入不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
 
 输出规格不会让 Parent 手写 JSON。默认规格与竖屏 1080×1920、25 fps
 规格都由同一个脚本确定生成：
@@ -81,10 +81,10 @@ node erduo-broll-loop-engineering/scripts/create-production-profile.mjs \
 传入计划。画幅、帧率、音频和输出格式随后以同一个哈希写进计划、每个
 Builder 任务和成片校验；明确的竖屏或其他帧率不会退回默认 4K/30。
 
-### 可选：数字人 + B-roll 最终合成
+### 可选：真人或数字人 + B-roll 最终合成
 
-数字人不是新的 B-roll 渲染后端。先把已经获授权、已经下载到生产目录的带声数字人
-MP4 登记为 provider-neutral source。Director 在每个 Recipe 的
+Presenter 不是新的 B-roll 渲染后端。真人机位成片或已经获授权、已经下载到生产目录的
+数字人成片，都先登记为同一种 provider-neutral source。Director 在每个 Recipe 的
 `creativeProposal.presenterTreatment` 中提出 `presenter|broll|mixed`，Chapter Builder
 看片后可以修订。Parent 只能从最终 Recipes 机械编译连续、无空隙的 edit plan，不能手写
 切点。合成器会校验素材 hash、Runtime Plan、Recipe 身份、
@@ -100,7 +100,7 @@ node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
   --srt /path/to/broll-production/00-inputs/presenter/source.srt \
   --portrait /path/to/broll-production/00-inputs/presenter/portrait.png \
   --narration /path/to/broll-production/00-inputs/presenter/narration.wav \
-  --provider heygen --alignment local-whisper \
+  --presenter-kind digital --provider heygen --alignment local-whisper \
   --likeness confirmed --voice confirmed --use internal-canary \
   --approval-scope canary --identity-approval approved \
   --voice-approval approved --lip-sync-approval approved --approved-by user
@@ -124,7 +124,9 @@ node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs \
 
 `presenterTreatment.mode=mixed` 时，`brollWindows` 使用该 Recipe SRT window 内的绝对
 毫秒窗口；`presenter` 和 `broll` 则覆盖整镜。编译器会用 Runtime Plan、presenter source
-和全部最终 Recipes 的哈希封闭 edit plan，任何后续漂移都会阻止合成。建议短视频让数字人承担开场、章节锚点
+和全部最终 Recipes 的哈希封闭 edit plan，任何后续漂移都会阻止合成。真人与数字人可复用
+同一套 Recipes、B-roll、编译器和合成器；切换 Presenter Source 后必须重新生成 Runtime Plan
+与 edit plan，让新来源的 hash、时长和授权重新闭合。建议短视频让主持人承担开场、章节锚点
 和结尾，约占 15–25%；其余 75–85% 用信息图、界面、素材与证据型 B-roll 覆盖。
 正式发布必须用 `--scope full-production`，且 presenter source 同时具有 `publishing`
 授权和 `full-production` 用户批准；canary/internal 合同不能生成正式发布合成。

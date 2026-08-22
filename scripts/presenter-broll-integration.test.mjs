@@ -127,13 +127,34 @@ test('compositor preserves one presenter audio stream while switching to validat
   const runner = controlledRunner(calls);
   const sourceFile = path.join(presenterDirectory, 'presenter-source.json');
   await createPresenterSource({
-    productionRoot, inputFile: presenterFile, outputFile: sourceFile, provider: 'heygen',
+    productionRoot, inputFile: presenterFile, outputFile: sourceFile, provider: 'heygen', presenterKind: 'digital',
     srtFile, portraitFile, narrationFile,
     alignment: { method: 'local-whisper', status: 'confirmed' },
     authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'internal-canary' },
     approval: { scope: 'canary', approvedBy: 'user', identity: 'approved', voice: 'approved', lipSync: 'approved' },
     runner,
   });
+  const digitalContract = JSON.parse(await readFile(sourceFile, 'utf8'));
+  assert.equal(digitalContract.presenterKind, 'digital');
+  await assert.rejects(createPresenterSource({
+    productionRoot, inputFile: presenterFile,
+    outputFile: path.join(presenterDirectory, 'ambiguous-presenter-source.json'),
+    provider: 'camera', srtFile, portraitFile, narrationFile,
+    alignment: { method: 'local-whisper', status: 'confirmed' },
+    authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'internal-canary' },
+    approval: { scope: 'canary', approvedBy: 'user', identity: 'approved', voice: 'approved', lipSync: 'approved' },
+    runner,
+  }), /requires.*presenterKind/u);
+  const humanSourceFile = path.join(presenterDirectory, 'human-presenter-source.json');
+  await createPresenterSource({
+    productionRoot, inputFile: presenterFile, outputFile: humanSourceFile,
+    provider: 'camera', presenterKind: 'human', srtFile, portraitFile, narrationFile,
+    alignment: { method: 'local-whisper', status: 'confirmed' },
+    authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'internal-canary' },
+    approval: { scope: 'canary', approvedBy: 'user', identity: 'approved', voice: 'approved', lipSync: 'approved' },
+    runner,
+  });
+  assert.equal(JSON.parse(await readFile(humanSourceFile, 'utf8')).presenterKind, 'human');
   const shotHash = sha(await readFile(shotFile));
   const contract = {
     schemaVersion: '1.0.0', order: 1, shotId: 'S01', unitId: 'U001',
@@ -195,6 +216,7 @@ test('compositor preserves one presenter audio stream while switching to validat
         durationMs: presenterSourceContract.media.durationMs,
         authorizationUse: presenterSourceContract.authorization.use,
         approvalScope: presenterSourceContract.approval.scope,
+        presenterKind: presenterSourceContract.presenterKind,
       },
     },
     productionProfile: { raster: { width: 640, height: 360 }, fps: { numerator: 30, denominator: 1 } },
@@ -209,7 +231,8 @@ test('compositor preserves one presenter audio stream while switching to validat
   }), /requires publishing authorization and full-production approval/u);
   const publishingSourceFile = path.join(presenterDirectory, 'publishing-presenter-source.json');
   await createPresenterSource({
-    productionRoot, inputFile: presenterFile, outputFile: publishingSourceFile, provider: 'heygen',
+    productionRoot, inputFile: presenterFile, outputFile: publishingSourceFile,
+    provider: 'heygen', presenterKind: 'digital',
     srtFile, portraitFile, narrationFile,
     alignment: { method: 'local-whisper', status: 'confirmed' },
     authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'publishing' },
@@ -223,6 +246,7 @@ test('compositor preserves one presenter audio stream while switching to validat
     sha256: sha(await readFile(publishingSourceFile)), mediaSha256: publishingSource.media.sha256,
     durationMs: publishingSource.media.durationMs, authorizationUse: 'publishing',
     approvalScope: 'full-production',
+    presenterKind: 'digital',
   };
   publishingRuntimePlan.identity = computeRuntimePlanIdentity(publishingRuntimePlan);
   const publishingRuntimePlanFile = path.join(runtimePlanDirectory, 'publishing-runtime-plan.json');
@@ -291,9 +315,41 @@ test('compositor preserves one presenter audio stream while switching to validat
   const receipt = JSON.parse(await readFile(receiptFile, 'utf8'));
   assert.equal(receipt.compositionScope, 'canary');
   assert.equal(receipt.authorizationUse, 'internal-canary');
+  assert.equal(receipt.presenterKind, 'digital');
   assert.equal(receipt.mix.brollDurationMs, 2000);
   assert.equal(receipt.mix.presenterDurationMs, 2000);
   assert.equal(receipt.output.fullDecode, 'passed');
+  const humanPresenterSource = JSON.parse(await readFile(humanSourceFile, 'utf8'));
+  const humanRuntimePlan = structuredClone(runtimePlan);
+  humanRuntimePlan.sourceContext.presenterSource = {
+    locator: '00-inputs/presenter/human-presenter-source.json',
+    sha256: sha(await readFile(humanSourceFile)),
+    mediaSha256: humanPresenterSource.media.sha256,
+    durationMs: humanPresenterSource.media.durationMs,
+    authorizationUse: humanPresenterSource.authorization.use,
+    approvalScope: humanPresenterSource.approval.scope,
+    presenterKind: 'human',
+  };
+  humanRuntimePlan.identity = computeRuntimePlanIdentity(humanRuntimePlan);
+  const humanRuntimePlanFile = path.join(runtimePlanDirectory, 'human-runtime-plan.json');
+  const humanEditPlanFile = path.join(productionRoot, 'human-presenter-edit-plan.json');
+  const humanOutputFile = path.join(deliveryRoot, 'human-presenter-broll-master.mp4');
+  const humanReceiptFile = path.join(deliveryRoot, 'human-presenter-broll-master.receipt.json');
+  await writeFile(humanRuntimePlanFile, `${JSON.stringify(humanRuntimePlan)}\n`);
+  await createPresenterEditPlan({
+    productionRoot, runtimePlanFile: humanRuntimePlanFile, recipesDirectory,
+    presenterSourceFile: humanSourceFile, outputFile: humanEditPlanFile,
+    compositionScope: 'canary', verifyRuntimePlan: async () => ({ status: 'valid' }),
+  });
+  const humanResult = await assemblePresenterBroll({
+    productionRoot, deliveryRoot, presenterSourceFile: humanSourceFile,
+    deliveryIndexFile, editPlanFile: humanEditPlanFile,
+    outputFile: humanOutputFile, receiptFile: humanReceiptFile, runner,
+  });
+  assert.equal(humanResult.mediaFacts.audioStreams, 1);
+  const humanReceipt = JSON.parse(await readFile(humanReceiptFile, 'utf8'));
+  assert.equal(humanReceipt.presenterKind, 'human');
+  assert.equal(humanReceipt.output.audioStreams, 1);
   const source = JSON.parse(await readFile(sourceFile, 'utf8'));
   assert.equal(source.inputIdentity.srt.sha256, sha('SRT'));
   assert.equal(source.approval.lipSync, 'approved');
