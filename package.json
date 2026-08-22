@@ -20,6 +20,8 @@
     "plan:runtime": "node erduo-broll-loop-engineering/scripts/plan-runtime.mjs",
     "validate:runtime-plan": "node erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs",
     "validate:visual-lock": "node erduo-broll-loop-engineering/scripts/validate-visual-lock.mjs",
+    "create:presenter-source": "node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs",
+    "assemble:presenter-broll": "node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs",
     "gate:builder-assignment": "node erduo-broll-loop-engineering/scripts/gate-builder-assignment.mjs",
     "validate:frozen-blocks": "node erduo-broll-loop-engineering/scripts/validate-frozen-blocks.mjs",
     "metrics:record": "node erduo-broll-loop-engineering/scripts/record-production-event.mjs",
@@ -30,6 +32,6 @@
     "test:motion-layout": "node --test scripts/motion-layout-lint.test.mjs",
     "test:remotion-trace": "node --test scripts/remotion-dom-trace.e2e.test.mjs",
     "test:remotion-canary": "node --test scripts/remotion-canary.e2e.test.mjs",
-    "test": "node --test --test-concurrency=1 scripts/test.mjs scripts/creative-loop-delivery.test.mjs scripts/creative-loop-planner.test.mjs scripts/creative-loop-roles.test.mjs scripts/metrics-media.test.mjs scripts/motion-layout-lint.test.mjs scripts/remotion-dom-trace.e2e.test.mjs scripts/remotion-canary.e2e.test.mjs scripts/role-motion-map.test.mjs scripts/shot-native-delivery.test.mjs scripts/v1-planner-visual-lock.test.mjs"
+    "test": "node --test --test-concurrency=1 scripts/test.mjs scripts/creative-loop-delivery.test.mjs scripts/creative-loop-planner.test.mjs scripts/creative-loop-roles.test.mjs scripts/metrics-media.test.mjs scripts/motion-layout-lint.test.mjs scripts/presenter-broll-integration.test.mjs scripts/remotion-dom-trace.e2e.test.mjs scripts/remotion-canary.e2e.test.mjs scripts/role-motion-map.test.mjs scripts/shot-native-delivery.test.mjs scripts/v1-planner-visual-lock.test.mjs"
   }
 }

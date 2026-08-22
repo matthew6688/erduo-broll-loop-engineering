@@ -19,7 +19,11 @@ Agent.
 ## Inputs and runtime policy
 
 Require the complete original SRT and original design. Talking-head mode also
-requires the matching edited video. Ask once for optional user media and explicit
+requires the matching edited video. Digital-presenter mode requires a locally
+downloaded presenter video with exactly one audio stream plus explicit likeness
+and voice authorization, hashes for the source SRT/portrait/narration, and an
+identity/voice/lip-sync approval scoped to canary or full production. Ask once
+for optional user media and explicit
 brand, audio, privacy, output, material-service, and runtime constraints. Pass
 the original SRT/design files and identities directly to Director, Lead, and
 every Chapter Builder; no intermediate summary may replace them.
@@ -89,7 +93,12 @@ when preflight returns `run-onboarding-diagnostic`.
     aesthetic decision.
 11. Deliver ordered independent shot files, editable source, provenance, and
     `delivery-index.json`. Build a full Master only when requested, from the
-    unchanged validated shots. `broll-shot-export` is legacy-only.
+    unchanged validated shots. For an approved digital presenter, register the
+    local media with `create-presenter-source.mjs`, then use
+    `assemble-presenter-broll.mjs` and a contiguous edit plan to switch between
+    presenter video and validated silent shots. Keep exactly one canonical
+    presenter audio stream and write the composition receipt. Never weaken the
+    silent direct-shot contract. `broll-shot-export` is legacy-only.
 
 ## Canary hard gate
 

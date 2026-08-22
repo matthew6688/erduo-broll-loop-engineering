@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/presenter-source.schema.json",
+  "title": "Provider-neutral presenter source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "provider", "inputIdentity", "alignment", "authorization", "approval", "media"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "provider": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "inputIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["srt", "portrait", "narration"],
+      "properties": {
+        "srt": { "$ref": "#/$defs/inputFile" },
+        "portrait": { "$ref": "#/$defs/inputFile" },
+        "narration": { "$ref": "#/$defs/inputFile" }
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "status"],
+      "properties": {
+        "method": { "enum": ["local-whisper", "provided"] },
+        "status": { "const": "confirmed" }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["likeness", "voice", "use"],
+      "properties": {
+        "likeness": { "const": "confirmed" },
+        "voice": { "const": "confirmed" },
+        "use": { "enum": ["internal-canary", "publishing"] }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "approvedBy", "approvedMediaSha256", "identity", "voice", "lipSync"],
+      "properties": {
+        "scope": { "enum": ["canary", "full-production"] },
+        "approvedBy": { "const": "user" },
+        "approvedMediaSha256": { "$ref": "#/$defs/sha256" },
+        "identity": { "const": "approved" },
+        "voice": { "const": "approved" },
+        "lipSync": { "const": "approved" }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256", "durationMs", "width", "height", "fps", "videoCodec", "audioCodec", "sampleRate", "channels", "fullDecode"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[^/].+\\.mp4$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "durationMs": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 2 },
+        "height": { "type": "integer", "minimum": 2 },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "videoCodec": { "type": "string", "minLength": 1 },
+        "audioCodec": { "type": "string", "minLength": 1 },
+        "sampleRate": { "type": "integer", "minimum": 8000 },
+        "channels": { "type": "integer", "minimum": 1 },
+        "fullDecode": { "const": "passed" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "inputFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

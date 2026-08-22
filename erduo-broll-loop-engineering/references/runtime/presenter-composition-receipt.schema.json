@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/presenter-composition-receipt.schema.json",
+  "title": "Presenter and B-roll composition receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "inputs", "mix", "output"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presenterSourceSha256", "deliveryIndexSha256", "editPlanSha256", "shotMedia"],
+      "properties": {
+        "presenterSourceSha256": { "$ref": "#/$defs/sha256" },
+        "deliveryIndexSha256": { "$ref": "#/$defs/sha256" },
+        "editPlanSha256": { "$ref": "#/$defs/sha256" },
+        "shotMedia": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shotId", "sha256"],
+            "properties": {
+              "shotId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "mix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["durationMs", "presenterDurationMs", "brollDurationMs", "segments"],
+      "properties": {
+        "durationMs": { "type": "integer", "minimum": 1 },
+        "presenterDurationMs": { "type": "integer", "minimum": 0 },
+        "brollDurationMs": { "type": "integer", "minimum": 0 },
+        "segments": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256", "durationMs", "width", "height", "fps", "codec", "audioStreams", "fullDecode"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "durationMs": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 2 },
+        "height": { "type": "integer", "minimum": 2 },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "codec": { "const": "h264" },
+        "audioStreams": { "const": 1 },
+        "fullDecode": { "const": "passed" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

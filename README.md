@@ -62,6 +62,7 @@
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
+- 可选数字人模式可把任意供应商已经下载到本地的带声 MP4 登记为 provider-neutral presenter source；这不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
 
 输出规格不会让 Parent 手写 JSON。默认规格与竖屏 1080×1920、25 fps
 规格都由同一个脚本确定生成：
@@ -79,6 +80,43 @@ node erduo-broll-loop-engineering/scripts/create-production-profile.mjs \
 父流程必须把生成文件通过 `plan-runtime.mjs --production-profile <文件>`
 传入计划。画幅、帧率、音频和输出格式随后以同一个哈希写进计划、每个
 Builder 任务和成片校验；明确的竖屏或其他帧率不会退回默认 4K/30。
+
+### 可选：数字人 + B-roll 最终合成
+
+数字人不是新的 B-roll 渲染后端。先把已经获授权、已经下载到生产目录的带声数字人
+MP4 登记为 provider-neutral source；再用一个连续、无空隙的 edit plan 指定哪些时间保留
+数字人，哪些时间由 `delivery-index.json` 中的静音 shot 覆盖。合成器会校验素材 hash、
+逐镜合同、SRT window、完整音视频解码、输出帧率与唯一音轨。
+
+```bash
+node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
+  --production-root /path/to/broll-production \
+  --input /path/to/broll-production/00-inputs/presenter/presenter.mp4 \
+  --output /path/to/broll-production/00-inputs/presenter/presenter-source.json \
+  --srt /path/to/broll-production/00-inputs/presenter/source.srt \
+  --portrait /path/to/broll-production/00-inputs/presenter/portrait.png \
+  --narration /path/to/broll-production/00-inputs/presenter/narration.wav \
+  --provider heygen --alignment local-whisper \
+  --likeness confirmed --voice confirmed --use internal-canary \
+  --approval-scope canary --identity-approval approved \
+  --voice-approval approved --lip-sync-approval approved --approved-by user
+
+node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs \
+  --production-root /path/to/broll-production \
+  --presenter-source /path/to/broll-production/00-inputs/presenter/presenter-source.json \
+  --edit-plan /path/to/broll-production/presenter-edit-plan.json \
+  --delivery-index /path/to/broll-production/05-delivery/delivery-index.json \
+  --output /path/to/broll-production/05-delivery/presenter-broll-master.mp4 \
+  --receipt /path/to/broll-production/05-delivery/presenter-broll-master.receipt.json
+```
+
+`presenter-edit-plan.json` 的每段为
+`{"kind":"presenter","startMs":0,"endMs":2400}` 或
+`{"kind":"broll","shotId":"S01","startMs":2400,"endMs":6100}`。
+B-roll 段必须落在该 shot 的绝对 SRT window 内。建议短视频让数字人承担开场、章节锚点
+和结尾，约占 15–25%；其余 75–85% 用信息图、界面、素材与证据型 B-roll 覆盖。
+首版只支持本地 MP4 的画面硬切；透明 WebM 数字人持续叠加在 B-roll 上属于后续 adapter，
+不能把本地导入能力表述为已经接通某家供应商 API。
 
 ## v1.0.1：恢复 Chapter Builder 创作闭环
 
@@ -132,6 +170,7 @@ SRT / 已剪视频 / 用户素材
   → 用户选择；通过后才按 5–8 镜章节展开全片
   → Parent 逐镜直渲染 + 媒体验证 + 6 格图 + chapter preview
   → 已验证 shot 文件按 delivery-index 装配完整预览
+  → 可选：数字人 presenter 音轨 + 已验证静音 B-roll 按 edit plan 合成
   → 用户批准
   → 默认交付 shot 目录；按需生成 Master
 ```
