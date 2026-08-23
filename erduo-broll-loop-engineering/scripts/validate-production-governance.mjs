@@ -78,6 +78,9 @@ function assertWorkflow(contract) {
   for (const family of contract.rules.requiredFontFamilies) {
     if (!allowedFonts.has(family.toLowerCase())) throw new Error(`required font ${family} is not allowed`);
   }
+  if (contract.rules.requireLogoReference && contract.rules.approvedLogoAssets.length === 0) {
+    throw new Error('requireLogoReference needs at least one approved Logo asset');
+  }
 }
 
 function assertTextRules(body, contract, label, {

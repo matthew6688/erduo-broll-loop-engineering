@@ -129,3 +129,33 @@ test('governance finalization never overwrites an existing lock', async (t) => {
     /EEXIST/u,
   );
 });
+
+test('a non-brand design may explicitly require no Logo without a fake asset binding', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'erduo-no-logo-governance-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  await mkdir(path.join(root, '00-inputs'), {recursive: true});
+  const authority = path.join(root, 'design-authority.md');
+  const design = path.join(root, '00-inputs', 'original-design.md');
+  const draft = path.join(root, 'draft.json');
+  await writeFile(authority, '# Original design authority\n');
+  await writeFile(design, '# Design\n#F2EFE7 #191A1D Noto Sans CJK SC Geist Mono\n');
+  await writeFile(draft, `${JSON.stringify({
+    schemaVersion: '1.0.0', status: 'active', profileId: 'original-design-only',
+    authorities: [{role: 'original-design-authority', locator: authority}],
+    originalDesign: {role: 'original-design', locator: '00-inputs/original-design.md'},
+    approval: {approvedBy: 'user', approvedAt: '2026-08-23T10:00:00+10:00', scope: 'brand-and-workflow-constraints'},
+    rules: {
+      allowedColors: ['#F2EFE7', '#191A1D'], requiredColors: ['#F2EFE7', '#191A1D'], forbiddenColors: [],
+      allowedFontFamilies: ['Noto Sans CJK SC', 'Geist Mono'], requiredFontFamilies: ['Noto Sans CJK SC', 'Geist Mono'],
+      approvedLogoAssets: [], requireLogoReference: false, forbiddenVisualTerms: ['glassmorphism'],
+    },
+    workflow: {
+      stages: ['director', 'runtime-plan', 'assets', 'lead', 'chapter-builder', 'parent-audits', 'user-canary', 'full-production'],
+      canaryShotCount: 5, minimumUserPreferredShots: 3,
+      fullProductionBlockedUntil: 'technical-and-user-passed', publicationRequiresExplicitApproval: true,
+    },
+  })}\n`);
+  const result = await finalizeProductionGovernance({productionRoot: root, draftFile: draft});
+  assert.equal(result.contract.rules.approvedLogoAssets.length, 0);
+  assert.equal((await validateProductionGovernance({productionRoot: root})).stage, 'design');
+});
