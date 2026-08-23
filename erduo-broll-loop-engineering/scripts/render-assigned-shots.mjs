@@ -254,13 +254,47 @@ async function remotionEntrypoint(sourceRoot) {
   throw new Error('Remotion source must contain a regular src/index entrypoint');
 }
 
-async function renderInvocation({ backend, target, sourceRoot, sourcePaths, output, frameCount, profile, hyperframes, remotion }) {
+function htmlDataAttribute(source, name) {
+  const match = new RegExp(`\\bdata-${name}\\s*=\\s*["']([^"']+)["']`, 'u').exec(source);
+  return match?.[1] ?? null;
+}
+
+export function validateHyperframesCompositionMetadata({source, target, shot, profile}) {
+  const expectedFps = fpsNumber(profile.fps);
+  const expectedDurationSeconds = framesForWindow(shot.window, profile.fps) / expectedFps;
+  const expected = {
+    'composition-id': target.id,
+    width: profile.raster.width,
+    height: profile.raster.height,
+    duration: expectedDurationSeconds,
+    fps: expectedFps,
+  };
+  const actual = Object.fromEntries(Object.keys(expected).map((name) => [name, htmlDataAttribute(source, name)]));
+  for (const [name, value] of Object.entries(actual)) {
+    if (value === null) throw new Error(`${shot.shotId} HyperFrames composition is missing data-${name}`);
+  }
+  if (actual['composition-id'] !== expected['composition-id']) {
+    throw new Error(`${shot.shotId} HyperFrames data-composition-id must equal its planned target`);
+  }
+  for (const name of ['width', 'height', 'duration', 'fps']) {
+    const value = Number(actual[name]);
+    if (!Number.isFinite(value) || Math.abs(value - expected[name]) > 1e-6) {
+      const unit = name === 'duration' ? ' seconds' : '';
+      throw new Error(`${shot.shotId} HyperFrames data-${name} must equal ${expected[name]}${unit}`);
+    }
+  }
+}
+
+async function renderInvocation({ backend, target, shot, sourceRoot, sourcePaths, output, frameCount, profile, hyperframes, remotion }) {
   if (target.id !== path.basename(target.id) || target.id.startsWith('.')) {
     throw new Error(`${target.id} is not a safe runtime target id`);
   }
   if (backend === 'hyperframes') {
     const composition = `compositions/${target.id}.html`;
     if (!sourcePaths.has(composition)) throw new Error(`${target.id} has no source-bound HyperFrames composition`);
+    validateHyperframesCompositionMetadata({
+      source: await readFile(path.join(sourceRoot, composition), 'utf8'), target, shot, profile,
+    });
     return {
       executable: hyperframes,
       args: [
@@ -646,7 +680,7 @@ async function renderAssignedShotsInternal({
   } else {
     for (const descriptor of pending) {
       const invocation = await renderInvocation({
-        backend: descriptor.shot.runtime, target: descriptor.target, sourceRoot: absoluteSourceRoot,
+        backend: descriptor.shot.runtime, target: descriptor.target, shot: descriptor.shot, sourceRoot: absoluteSourceRoot,
         sourcePaths: sourceBinding.paths, output: descriptor.output, frameCount: descriptor.frameCount,
         profile: plan.productionProfile, hyperframes, remotion,
       });

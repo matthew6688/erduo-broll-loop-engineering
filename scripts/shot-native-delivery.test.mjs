@@ -5,11 +5,17 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { renderAssignedShots } from '../erduo-broll-loop-engineering/scripts/render-assigned-shots.mjs';
+import {
+  renderAssignedShots,
+  validateHyperframesCompositionMetadata,
+} from '../erduo-broll-loop-engineering/scripts/render-assigned-shots.mjs';
 import { validateShotMedia } from '../erduo-broll-loop-engineering/scripts/validate-shot-media.mjs';
 import { assembleShotPreview } from '../erduo-broll-loop-engineering/scripts/assemble-shot-preview.mjs';
 import { canonicalJson, validateSchemaValue } from '../erduo-broll-loop-engineering/scripts/runtime-schema-validator.mjs';
-import { runCommand } from '../erduo-broll-loop-engineering/scripts/shot-media-lib.mjs';
+import {
+  runCommand,
+  semanticSamplePoints,
+} from '../erduo-broll-loop-engineering/scripts/shot-media-lib.mjs';
 import { writeProductionPlan } from '../erduo-broll-loop-engineering/scripts/plan-runtime.mjs';
 import { computeRepresentativeScenesIdentity } from '../erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs';
 import { prepareSharedToolchain } from '../erduo-broll-loop-engineering/scripts/remotion-toolchain.mjs';
@@ -108,7 +114,7 @@ async function fixture(t, { runtime = 'hyperframes' } = {}) {
     })}\n`);
     if (runtime === 'hyperframes') {
       await mkdir(path.join(sourceRoot, 'compositions'), { recursive: true });
-      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<html data-shot="${shot.shotId}"></html>\n`);
+      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<main data-composition-id="${shot.shotId}" data-width="640" data-height="360" data-duration="1" data-fps="30"></main>\n`);
     }
   }
   const representativeScenes = {
@@ -271,12 +277,55 @@ test('renderer invokes one native shot target and verifies one complete media fi
   assert.equal(validation.shots, 3);
 });
 
+test('HyperFrames metadata rejects millisecond duration before an expensive render starts', () => {
+  assert.throws(() => validateHyperframesCompositionMetadata({
+    source: '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>',
+    target: {id: 'S02', mode: 'direct-runtime-render'},
+    shot: {shotId: 'S02', window: {startMs: 1000, endMs: 2000}},
+    profile: {raster: {width: 640, height: 360}, fps: {numerator: 30, denominator: 1}},
+  }), /S02 HyperFrames data-duration must equal 1 seconds/u);
+});
+
+test('HyperFrames metadata quantizes duration from absolute SRT frame boundaries', () => {
+  assert.throws(() => validateHyperframesCompositionMetadata({
+    source: '<main data-composition-id="S02" data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',
+    target: {id: 'S02', mode: 'direct-runtime-render'},
+    shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
+    profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
+  }), /S02 HyperFrames data-duration must equal 18\.48 seconds/u);
+  assert.doesNotThrow(() => validateHyperframesCompositionMetadata({
+    source: '<main data-composition-id="S02" data-width="1280" data-height="720" data-duration="18.48" data-fps="25"></main>',
+    target: {id: 'S02', mode: 'direct-runtime-render'},
+    shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
+    profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
+  }));
+});
+
+test('semantic sheets clamp a colliding result and settle-tail inside the final legal frame', () => {
+  const samples = semanticSamplePoints({
+    shotId: 'S02', microBeats: [], readableHold: {startMs: 21000, endMs: 21000},
+  }, {startMs: 2500, endMs: 21000}, {numerator: 25, denominator: 1}, 462);
+  assert.deepEqual(samples.map(({frame}) => frame), [0, 46, 185, 347, 460, 461]);
+});
+
 test('Parent generates source identity and refuses a production unit self-built evidence tool', async (t) => {
   const value = await fixture(t);
   await writeFile(path.join(value.sourceRoot, 'capture-proof.mjs'), 'export default true;\n');
   await assert.rejects(
     renderAssignedShots({ ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }),
     /forbidden self-built evidence tool.*capture-proof\.mjs/u,
+  );
+});
+
+test('Parent rejects browser-blocked file URLs before HyperFrames can silently fall back', async (t) => {
+  const value = await fixture(t);
+  await writeFile(
+    path.join(value.sourceRoot, 'compositions', 'S02.html'),
+    '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1" data-fps="30" style="background:url(\'file:///outside/font.otf\')"></main>\n',
+  );
+  await assert.rejects(
+    renderAssignedShots({ ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }),
+    /browser-blocked file URL.*copy the frozen asset inside sourceRoot/u,
   );
 });
 
@@ -292,7 +341,7 @@ test('Parent refreshes its generated source manifest after a concrete pre-render
     /controlled first render failure/u,
   );
   const firstManifest = await readFile(value.sourceManifestFile, 'utf8');
-  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main>repaired S01</main>\n');
+  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1" data-fps="30">repaired S01</main>\n');
   const result = await renderAssignedShots({
     ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
   });

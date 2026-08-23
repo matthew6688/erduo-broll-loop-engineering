@@ -329,6 +329,36 @@ test('Builder handoff requires a compact accepted or revised receipt bound to a 
   );
 });
 
+test('an all-canary Builder receipt binds the canary-suffixed chapter preview even without deferred shots', async (t) => {
+  const productionRoot = await temporaryRoot(t);
+  const workDirectory = '03-build/U001';
+  const viewReceiptLocator = `${workDirectory}/view-receipt.json`;
+  const handoffLocator = `${workDirectory}/handoff.md`;
+  const viewedLocator = '05-delivery/chapter-previews/U001.canary.mp4';
+  await Promise.all([
+    mkdir(path.join(productionRoot, workDirectory), {recursive: true}),
+    mkdir(path.join(productionRoot, '05-delivery', 'chapter-previews'), {recursive: true}),
+  ]);
+  await writeFile(path.join(productionRoot, viewedLocator), 'all-canary chapter preview');
+  await writeFile(path.join(productionRoot, handoffLocator), '# U001 handoff\n- view-receipt: view-receipt.json\n');
+  const recipeBindings = [{shotId: 'S02', recipeIdentity: '2'.repeat(64), truthIdentity: 'b'.repeat(64)}];
+  const assignment = {
+    assignmentId: 'U001', unitId: 'U001', planIdentity: '9'.repeat(64), shotIds: ['S02'],
+    canaryPhase: {mode: 'canary-first', shotIds: ['S02'], deferredShotIds: []},
+    output: {workDirectory, handoff: handoffLocator, viewReceipt: viewReceiptLocator},
+  };
+  const receipt = {
+    schemaVersion: '1.0.0', planIdentity: assignment.planIdentity,
+    assignmentId: 'U001', unitId: 'U001', shotIds: ['S02'], recipeBindings,
+    decision: 'accepted', viewedArtifact: {kind: 'chapter-preview', locator: viewedLocator},
+    viewedSha256: await hashFile(path.join(productionRoot, viewedLocator)), creativeProposalChanges: [],
+  };
+  await writeFile(path.join(productionRoot, viewReceiptLocator), `${JSON.stringify(receipt)}\n`);
+  assert.equal((await validateBuilderViewReceipt({
+    assignment, productionRoot, recipeBindings, expectedShotIds: assignment.shotIds,
+  })).decision, 'accepted');
+});
+
 test('chapter preview concatenates only the authoring unit direct-shot contracts and fully decodes it', async (t) => {
   const productionRoot = await temporaryRoot(t);
   const deliveryRoot = path.join(productionRoot, '05-delivery');

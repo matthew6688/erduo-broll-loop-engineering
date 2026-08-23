@@ -73,6 +73,8 @@ const PRODUCTION_PROOF_TOKENS = [
   ['manual motion windows', /data-erduo-motions|\bmotionWindows?\b/iu],
 ];
 
+const UNSAFE_RUNTIME_ASSET_URL = /(?:\burl\(\s*["']?|\b(?:src|href)\s*=\s*["'])file:\/\//iu;
+
 export async function assertProductionSourcePolicy(sourceRoot) {
   const root = path.resolve(sourceRoot);
   const visit = async (directory) => {
@@ -92,6 +94,9 @@ export async function assertProductionSourcePolicy(sourceRoot) {
       }
       if (!/\.(?:[cm]?[jt]sx?|html|css|json)$/iu.test(locator)) continue;
       const body = await readFile(absolute, 'utf8');
+      if (UNSAFE_RUNTIME_ASSET_URL.test(body)) {
+        throw new Error(`production source contains browser-blocked file URL in ${locator}; copy the frozen asset inside sourceRoot`);
+      }
       const match = PRODUCTION_PROOF_TOKENS.find(([, pattern]) => pattern.test(body));
       if (match) throw new Error(`production source contains forbidden ${match[0]} in ${locator}`);
     }
@@ -169,8 +174,7 @@ export async function validateBuilderViewReceipt({
   const artifactFile = withinRoot(productionRoot, locator, 'viewed artifact');
   await requireRegularFile(artifactFile, 'viewed artifact');
   const isSubsetView = assignment?.canaryPhase?.mode === 'canary-first'
-    && exactArray(expectedShotIds, assignment.canaryPhase.shotIds)
-    && (assignment.canaryPhase.deferredShotIds?.length ?? 0) > 0;
+    && exactArray(expectedShotIds, assignment.canaryPhase.shotIds);
   const chapterPreview = `05-delivery/chapter-previews/${receiptUnitId}${isSubsetView ? '.canary' : ''}.mp4`;
   const sheetPattern = /^05-delivery\/checks\/[0-9]{3}-([A-Za-z0-9][A-Za-z0-9._-]*)\.semantic-check\.png$/u;
   const sheetMatch = sheetPattern.exec(locator);
@@ -601,8 +605,12 @@ export function semanticSamplePoints(recipe, window, fps, frameCount) {
   ];
   // Preserve semantic anchors while ensuring the six-frame sheet is actually six distinct frames.
   const frames = anchors.map(([, frame]) => frame);
-  for (let index = 1; index < frames.length; index += 1) frames[index] = Math.max(frames[index], frames[index - 1] + 1);
-  for (let index = frames.length - 2; index >= 0; index -= 1) frames[index] = Math.min(frames[index], frames[index + 1] - 1);
+  for (let index = 1; index < frames.length; index += 1) {
+    frames[index] = Math.min(frameCount - 1, Math.max(frames[index], frames[index - 1] + 1));
+  }
+  for (let index = frames.length - 2; index >= 0; index -= 1) {
+    frames[index] = Math.max(0, Math.min(frames[index], frames[index + 1] - 1));
+  }
   return anchors.map(([role], index) => ({
     role, frame: frames[index], localTimeMs: Math.round(frames[index] * frameMs),
   }));
