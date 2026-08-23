@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+- Added an immutable production-governance contract and lock for named brand
+  authorities and fixed workflows. Design, Director, and pre-render source
+  gates enforce bound authority/design/Logo hashes, palette, typography,
+  prohibited styles, exact stage order, and the 5-shot/3-choice user gate.
+- Runtime Plan v4 and every Lead/Builder assignment now carry the same
+  governance identities; standard rendering and plan validation fail closed
+  on drift. FengTalk productions are required by the parent Skill to use this
+  mechanism before Director dispatch.
+
 - Aligned current workflow/checklist/role documentation with the v1.0.1
   HyperFrames-default, required-original-design, open material-route, five-shot
   canary, Recipe v4, and rendered-evidence contracts. Added a regression test

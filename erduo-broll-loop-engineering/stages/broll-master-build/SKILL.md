@@ -14,9 +14,15 @@ runtime selection, or Parent-generated media contracts.
 Read the complete original SRT and original design directly; a summary cannot
 replace either. Use the assignment-selected role prompt, this assignment, its
 Recipes, chapter/seam context, shared asset/font index, Lead samples and
-capability index, exact HyperFrames runtime, and at most two selected
+capability index, exact HyperFrames runtime, the assignment-bound production
+governance contract when present, and at most two selected
 references. Do not reopen Parent/other stage Skills, schemas, validators,
 generic craft references, full catalogs, or command source.
+
+The governance contract is not a mood board. Use only its approved palette,
+fonts, Logo assets, and visual boundaries. The standard command revalidates the
+contract, Director visual system, and complete production source before any
+render; do not bypass, weaken, or recreate that check inside creative source.
 
 `truth` is immutable. `creativeProposal` is revisable: change its metaphor,
 objects, composition, motion, material route, or key states when a better

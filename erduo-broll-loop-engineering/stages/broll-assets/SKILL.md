@@ -11,7 +11,9 @@ Own shared material facts only. Do not change the SRT, design, shot truth,
 creative proposals, chapters, runtime, source, or delivery.
 
 Read the original design, user-provided media, validated Recipes, representative
-set, production plan, and ready environment facts. Inventory supplied files,
+set, production plan, ready environment facts, and the assignment-bound
+production governance contract when present. Its approved brand assets, font
+families, palette, and prohibitions are immutable shared facts. Inventory supplied files,
 identify genuinely cross-shot material, close project-local fonts and licenses,
 make reusable derivatives, and mark real gaps. Do not load full catalogs or
 copy demo media/source.

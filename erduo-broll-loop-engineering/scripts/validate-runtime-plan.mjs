@@ -9,6 +9,7 @@ import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.m
 import { validateMezzaninePolicy } from './frozen-media-policy.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
 import { presenterKindOf, resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
+import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
 import {
   computeRecipeIdentity,
   computeRecipeNonCreativeIdentity,
@@ -226,6 +227,14 @@ export async function verifyRuntimePlanInputs(plan, files = {}) {
     : files.narrativeEnvelopeFile
       ? path.dirname(path.dirname(path.resolve(files.narrativeEnvelopeFile)))
       : null;
+  const governance = await validateProductionGovernanceIfLocked({
+    productionRoot,
+    stage: 'director',
+    visualSystemFile: files.visualSystemFile,
+  });
+  if (canonicalJson(plan.sourceContext?.productionGovernance ?? null) !== canonicalJson(governance)) {
+    throw new Error('production governance binding differs from the current enforcement lock');
+  }
   await Promise.all([
     verifyRawSourceBinding(plan.sourceContext?.originalSrt, files.originalSrtFile, 'original SRT', productionRoot),
     verifyRawSourceBinding(plan.sourceContext?.originalDesign, files.originalDesignFile, 'original design', productionRoot),

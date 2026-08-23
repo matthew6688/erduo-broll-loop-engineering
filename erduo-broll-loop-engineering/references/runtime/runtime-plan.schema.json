@@ -51,6 +51,21 @@
           "approvalScope": { "enum": ["canary", "full-production"] },
           "presenterKind": { "enum": ["human", "digital"] }
         }
+      },
+      "productionGovernance": {
+        "type": "object", "additionalProperties": false,
+        "required": ["status", "stage", "profileId", "contractLocator", "contractSha256", "contractIdentity", "lockLocator", "lockSha256", "lockIdentity"],
+        "properties": {
+          "status": {"const": "passed"},
+          "stage": {"const": "director"},
+          "profileId": {"type": "string", "minLength": 1},
+          "contractLocator": {"const": "00-inputs/production-governance.json"},
+          "contractSha256": {"$ref": "#/$defs/sha256"},
+          "contractIdentity": {"$ref": "#/$defs/sha256"},
+          "lockLocator": {"const": "production-governance.lock.json"},
+          "lockSha256": {"$ref": "#/$defs/sha256"},
+          "lockIdentity": {"$ref": "#/$defs/sha256"}
+        }
       }
       }
     },

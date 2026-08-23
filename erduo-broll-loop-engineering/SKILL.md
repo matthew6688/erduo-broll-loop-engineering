@@ -29,6 +29,17 @@ brand, audio, privacy, output, material-service, and runtime constraints. Pass
 the original SRT/design files and identities directly to Director, Lead, and
 every Chapter Builder; no intermediate summary may replace them.
 
+When the user names a brand/design authority or requires a fixed process, use
+[production governance](references/production-governance.md). FengTalk work
+always requires it. Finalize `production-governance.lock.json` and
+`00-inputs/production-governance.json`, then pass the `design` gate before
+Director dispatch. A lock makes governance mandatory: planning automatically
+revalidates the Director visual system and identity-binds the result into the
+runtime plan and every assignment; every render automatically revalidates the
+complete creative source. Never delete, replace, weaken, or bypass a lock to
+finish a run. Authority, design, contract, or approved-asset drift requires a
+new production root.
+
 Create a fresh production directory beside the SRT. Use
 `create-production-profile.mjs` for all output choices; never hand-write profile
 JSON. Default to one independent H.264 MP4 per semantic shot, 3840×2160,
@@ -49,13 +60,17 @@ when preflight returns `run-onboarding-diagnostic`.
 
 1. Dispatch Director with the complete original SRT/design, task constraints,
    optional media index, approved presenter source contract when presenter
-   output is requested, and at most two selected references. Director writes
+   output is requested, the governance contract when locked, and at most two
+   selected references. The Parent must pass the governance `design` gate
+   before dispatch. Director writes
    semantic chapters, shared direction, Recipe v4 files with immutable `truth`
    and revisable `creativeProposal`, a compact motion map, and three
    representative choices. Director never writes `authoring.solo`.
 2. Parent finalizes Director identities, generates the production profile, and
    runs `plan-runtime.mjs`, passing `--presenter-source` for presenter
-   work so its hash-closed context reaches Lead and Builders. Normal authoring units are contiguous chapters of
+   work so its hash-closed context reaches Lead and Builders. When governance is
+   locked, planning must pass its automatic `director` gate and bind the exact
+   contract/lock identities. Normal authoring units are contiguous chapters of
    5–8 shots and roughly 35–70 seconds; semantic shot and final media boundaries
    remain one shot. A normal 15–24-shot film should not become one Agent per
    shot. Never hand-edit generated plans or assignments.
@@ -73,7 +88,8 @@ when preflight returns `run-onboarding-diagnostic`.
    is forbidden.
 5. Lead runs the assignment's standard command, opens all three six-frame
    sheets and short previews, repairs visible defects, and returns `accepted` or
-   `revised`. These sources become the final sources for their shots.
+   `revised`. The standard command must pass the automatic governance `source`
+   gate before rendering. These sources become the final sources for their shots.
 6. Build only the five-shot creative canary first. Each Chapter Builder receives
    the complete original SRT/design, its chapter truth/proposals, neighboring
    seams, Lead samples/capability index, shared assets/fonts, open material
@@ -112,6 +128,8 @@ when preflight returns `run-onboarding-diagnostic`.
 
 Before full production, require all of the following:
 
+- any production governance lock passes design, Director, and source checks and
+  its identities match the runtime plan and assignments;
 - 5/5 shots directly render and fully decode;
 - the owning Builder viewed every sheet or short preview and returned
   `accepted|revised`;

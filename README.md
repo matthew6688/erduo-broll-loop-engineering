@@ -64,6 +64,16 @@
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
 - 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。数字人导入不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
 
+### 品牌与流程强制门禁
+
+当用户指定品牌真源或要求固定流程时，Parent 必须先生成不可覆盖的
+`production-governance.lock.json` 与哈希绑定合同。设计稿在 Director 前过
+`design` 门；Director 的视觉系统在规划时自动过 `director` 门；所有标准
+渲染在启动前自动过 `source` 门。合同会把同一品牌、原始 design、Logo、
+颜色、字体、禁用风格和固定阶段写进 Runtime Plan 与每个 Builder 任务。
+任何真源或文件漂移都会失败关闭并要求新建 production root；不能靠一张
+人工 checklist 绕过。完整生产仍必须等用户对 5 镜头 canary 至少选择 3 镜。
+
 输出规格不会让 Parent 手写 JSON。默认规格与竖屏 1080×1920、25 fps
 规格都由同一个脚本确定生成：
 

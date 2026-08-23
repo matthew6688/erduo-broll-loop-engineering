@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/production-governance.schema.json",
+  "title": "Identity-bound production governance contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "profileId", "authorities", "originalDesign", "approval", "rules", "workflow", "identity"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "status": {"const": "active"},
+    "profileId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "authorities": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fileBinding"}},
+    "originalDesign": {"$ref": "#/$defs/fileBinding"},
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["approvedBy", "approvedAt", "scope"],
+      "properties": {
+        "approvedBy": {"const": "user"},
+        "approvedAt": {"type": "string", "minLength": 1},
+        "scope": {"const": "brand-and-workflow-constraints"}
+      }
+    },
+    "rules": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allowedColors", "requiredColors", "forbiddenColors", "allowedFontFamilies", "requiredFontFamilies", "approvedLogoAssets", "requireLogoReference", "forbiddenVisualTerms"],
+      "properties": {
+        "allowedColors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/color"}},
+        "requiredColors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/color"}},
+        "forbiddenColors": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/color"}},
+        "allowedFontFamilies": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "requiredFontFamilies": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "approvedLogoAssets": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fileBinding"}},
+        "requireLogoReference": {"type": "boolean"},
+        "forbiddenVisualTerms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "workflow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["stages", "canaryShotCount", "minimumUserPreferredShots", "fullProductionBlockedUntil", "publicationRequiresExplicitApproval"],
+      "properties": {
+        "stages": {"type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true, "items": {"enum": ["director", "runtime-plan", "assets", "lead", "chapter-builder", "parent-audits", "user-canary", "full-production"]}},
+        "canaryShotCount": {"const": 5},
+        "minimumUserPreferredShots": {"const": 3},
+        "fullProductionBlockedUntil": {"const": "technical-and-user-passed"},
+        "publicationRequiresExplicitApproval": {"const": true}
+      }
+    },
+    "identity": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "color": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+    "fileBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "locator", "sha256"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "locator": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

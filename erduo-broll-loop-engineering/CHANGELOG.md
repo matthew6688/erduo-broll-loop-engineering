@@ -3,6 +3,11 @@
 
 ### Added
 
+- Immutable production-governance contract and lock, with deterministic
+  `design`, `director`, and pre-render `source` gates. Runtime Plan v4 and all
+  assignments bind the same authority, original-design, approved-Logo, brand,
+  workflow, contract, and lock identities; any drift fails closed.
+
 - Provider-neutral Presenter Source now distinguishes `presenterKind=human|digital`.
   A local camera edit and a downloaded digital-human render reuse the same
   Recipes, edit-plan compiler, compositor, and receipt contracts. Each source

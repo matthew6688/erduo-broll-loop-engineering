@@ -10,7 +10,11 @@ review the finished film.
 
 Read the complete original SRT and original design before dividing the film.
 Neither may be replaced by a Director summary. Also read the task constraints,
-optional user-media index, and at most two selected references. Do not reopen
+optional user-media index, the identity-bound production governance contract
+when its lock is present, and at most two selected references. The governance
+contract is an authority boundary: its brand profile, palette, typography,
+approved Logo assets, prohibitions, workflow order, and publication boundary
+cannot be reinterpreted as creative suggestions. Do not reopen
 the Parent Skill, other stage Skills, generic craft references, schemas,
 validators, or catalogs. The injected Director charter and this exact contract
 are complete.
@@ -94,6 +98,9 @@ visually actionable without locking implementation, chapter boundaries and
 seams close, material routes remain honest and open, adjacent motion-map rows
 do not collapse into one pattern, and three representatives are genuinely
 different. Return drafts to Parent for identity finalization and planning.
+For a governed production, Parent's Director-stage governance validation must
+pass before identity finalization; changing the contract, design, authority, or
+approved asset invalidates the lock instead of becoming a repair inside this stage.
 Return the validated artifacts to
 the Parent. The Parent finalizes identities first, then runs
 `scripts/plan-runtime.mjs` directly.

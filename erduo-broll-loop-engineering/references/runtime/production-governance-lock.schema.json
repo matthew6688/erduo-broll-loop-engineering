@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/production-governance-lock.schema.json",
+  "title": "Production governance enforcement lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "contractLocator", "contractSha256", "contractIdentity", "identity"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "status": {"const": "required"},
+    "contractLocator": {"const": "00-inputs/production-governance.json"},
+    "contractSha256": {"$ref": "#/$defs/sha256"},
+    "contractIdentity": {"$ref": "#/$defs/sha256"},
+    "identity": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

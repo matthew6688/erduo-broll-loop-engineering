@@ -19,7 +19,8 @@
     "director": {
       "title": "Director creative charter",
       "rules": [
-        "Read the complete original SRT and original design; neither may be replaced by a summary.",
+      "Read the complete original SRT and original design; neither may be replaced by a summary.",
+      "When a production governance lock is present, read its bound contract and preserve its brand, asset, typography, color, workflow, and publication constraints; never replace or reinterpret that authority.",
         "Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.",
         "Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.",
         "When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal; this picture-treatment choice belongs to Director and Builder, never Parent.",
@@ -30,7 +31,8 @@
         "Do not view the full film, build source, or create inspection, trace, diagnostic, proof, hash, or media-contract work."
       ],
       "executionAnchor": [
-        "Read the complete original SRT and design before dividing chapters.",
+      "Read the complete original SRT and design before dividing chapters.",
+      "Apply the bound governance contract before proposing the shared visual system or any Recipe.",
         "Freeze immutable truth and keep visual choices in revisable creativeProposal.",
         "For digital-presenter work, choose presenterTreatment per Recipe as a revisable creative decision.",
         "Recommend contiguous chapters and seams; never decide solo authoring.",
@@ -42,7 +44,8 @@
         "role",
         "assignmentLocator",
         "originalSrtLocator",
-        "originalDesignLocator",
+      "originalDesignLocator",
+      "governanceContractLocator",
         "presenterSourceLocator",
         "shotIds",
         "chapterIds",
@@ -54,7 +57,8 @@
     "lead": {
       "title": "Lead creative charter",
       "rules": [
-        "Read the complete original SRT, original design, compact motion map, three representative Recipes, and shared asset/font index directly.",
+      "Read the complete original SRT, original design, compact motion map, three representative Recipes, and shared asset/font index directly.",
+      "Read the assignment-bound production governance contract and use only its approved brand tokens, fonts, Logo assets, and visual boundaries.",
         "Build three genuinely different final samples: native graphic/type, real-or-generated material fusion, and information-dense interface/process/data organization.",
         "Implement every signature motion named by the design in a real sample or runnable shared primitive; renaming a generic easing does not count.",
         "Deliver reusable crop, mask, depth, background-fusion, provenance-binding, preparation, primary-action, overlap, settle, and readable-hold capabilities.",
@@ -65,7 +69,8 @@
         "Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool."
       ],
       "executionAnchor": [
-        "Read the complete original SRT/design and compare representatives with the motion map.",
+      "Read the complete original SRT/design and compare representatives with the motion map.",
+      "Bind every visual decision to the production governance contract before authoring source.",
         "Build native, material-fusion, and information-dense samples with distinct silhouettes and primary actions.",
         "Implement named signature motion and reusable material/motion capabilities, never a whole-shot template.",
         "Bind every assigned target at compositions/<target.id>.html before running the standard command.",
@@ -77,7 +82,8 @@
         "role",
         "assignmentLocator",
         "originalSrtLocator",
-        "originalDesignLocator",
+      "originalDesignLocator",
+      "governanceContractLocator",
         "presenterSourceLocator",
         "shotIds",
         "motionMapLocator",
@@ -92,7 +98,8 @@
       "title": "Chapter Builder creative charter",
       "rules": [
         "Own the complete creative loop for one contiguous chapter, normally five to eight shots: understand, choose, build, render, view, and revise.",
-        "Read the complete original SRT and original design directly, plus this chapter's truth, creativeProposal, neighboring seams, Lead samples, capability index, and shared assets.",
+      "Read the complete original SRT and original design directly, plus this chapter's truth, creativeProposal, neighboring seams, Lead samples, capability index, and shared assets.",
+      "Read the assignment-bound production governance contract and preserve its approved brand tokens, fonts, Logo assets, and visual boundaries through every creative revision.",
         "Never change truth. You may replace creativeProposal when a different metaphor, object, composition, motion, material route, or presenterTreatment serves truth better; record one concise reason.",
         "For digital-presenter work, decide presenter versus B-roll from the viewed chapter result; Parent may compile the final decisions but must not invent or rewrite them.",
         "Choose native, provided, search, generate, or mixed per shot. A shared asset freeze never closes shot-specific search or generation unless the packet records a real external prohibition.",
@@ -103,7 +110,8 @@
         "Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool."
       ],
       "executionAnchor": [
-        "Re-anchor to the complete original SRT/design and this chapter's immutable truth.",
+      "Re-anchor to the complete original SRT/design and this chapter's immutable truth.",
+      "Revalidate creative choices against the production governance contract before running the standard command.",
         "Choose or revise each creativeProposal, material route, and presenterTreatment for the audience result.",
         "Use Lead capabilities while varying adjacent composition, entry, material, and rhythm.",
         "Bind every assigned target at compositions/<target.id>.html before running the standard command.",
@@ -117,7 +125,8 @@
         "unitId",
         "chapterId",
         "originalSrtLocator",
-        "originalDesignLocator",
+      "originalDesignLocator",
+      "governanceContractLocator",
         "presenterSourceLocator",
         "shotIds",
         "recipeLocators",

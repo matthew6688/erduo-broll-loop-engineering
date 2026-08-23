@@ -4,14 +4,15 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 1. Own the complete creative loop for one contiguous chapter, normally five to eight shots: understand, choose, build, render, view, and revise.
 2. Read the complete original SRT and original design directly, plus this chapter's truth, creativeProposal, neighboring seams, Lead samples, capability index, and shared assets.
-3. Never change truth. You may replace creativeProposal when a different metaphor, object, composition, motion, material route, or presenterTreatment serves truth better; record one concise reason.
-4. For digital-presenter work, decide presenter versus B-roll from the viewed chapter result; Parent may compile the final decisions but must not invent or rewrite them.
-5. Choose native, provided, search, generate, or mixed per shot. A shared asset freeze never closes shot-specific search or generation unless the packet records a real external prohibition.
-6. Use Lead capabilities without copying a sample layout; vary composition, entry, material, and rhythm across the chapter, and never repeat one skeleton for three consecutive shots.
-7. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
-8. Render every shot from its own runtime entry, then open every six-frame sheet and the chapter preview; revise actual low-level defects rather than merely logging them.
-9. Handoff requires one concise accepted or revised conclusion. If revised, name the real source change; do not write a long viewing essay.
-10. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
+3. Read the assignment-bound production governance contract and preserve its approved brand tokens, fonts, Logo assets, and visual boundaries through every creative revision.
+4. Never change truth. You may replace creativeProposal when a different metaphor, object, composition, motion, material route, or presenterTreatment serves truth better; record one concise reason.
+5. For digital-presenter work, decide presenter versus B-roll from the viewed chapter result; Parent may compile the final decisions but must not invent or rewrite them.
+6. Choose native, provided, search, generate, or mixed per shot. A shared asset freeze never closes shot-specific search or generation unless the packet records a real external prohibition.
+7. Use Lead capabilities without copying a sample layout; vary composition, entry, material, and rhythm across the chapter, and never repeat one skeleton for three consecutive shots.
+8. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
+9. Render every shot from its own runtime entry, then open every six-frame sheet and the chapter preview; revise actual low-level defects rather than merely logging them.
+10. Handoff requires one concise accepted or revised conclusion. If revised, name the real source change; do not write a long viewing essay.
+11. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
 
 ## Positive twelve-principle anchor
 
@@ -31,6 +32,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 ## Source-authoring anchor
 
 - Re-anchor to the complete original SRT/design and this chapter's immutable truth.
+- Revalidate creative choices against the production governance contract before running the standard command.
 - Choose or revise each creativeProposal, material route, and presenterTreatment for the audience result.
 - Use Lead capabilities while varying adjacent composition, entry, material, and rhythm.
 - Bind every assigned target at compositions/<target.id>.html before running the standard command.
@@ -40,4 +42,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `unitId`, `chapterId`, `originalSrtLocator`, `originalDesignLocator`, `presenterSourceLocator`, `shotIds`, `recipeLocators`, `leadSampleLocators`, `capabilityIndexLocator`, `assetIndexLocator`, `standardCommand`, `viewConclusion`, `unresolvedIssues`
+`role`, `assignmentLocator`, `unitId`, `chapterId`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `shotIds`, `recipeLocators`, `leadSampleLocators`, `capabilityIndexLocator`, `assetIndexLocator`, `standardCommand`, `viewConclusion`, `unresolvedIssues`

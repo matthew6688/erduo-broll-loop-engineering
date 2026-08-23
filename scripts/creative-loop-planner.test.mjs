@@ -19,6 +19,7 @@ import {
 } from '../erduo-broll-loop-engineering/scripts/gate-builder-assignment.mjs';
 import { writeProductionPlan } from '../erduo-broll-loop-engineering/scripts/plan-runtime.mjs';
 import { canonicalJson, validateSchemaValue } from '../erduo-broll-loop-engineering/scripts/runtime-schema-validator.mjs';
+import {finalizeProductionGovernance} from '../erduo-broll-loop-engineering/scripts/validate-production-governance.mjs';
 import {
   computeRuntimePlanIdentity,
   computeRepresentativeScenesIdentity,
@@ -223,6 +224,61 @@ test('Recipe v4 separates immutable truth from revisable creative proposal and r
   original.authoring = { solo: true, reason: 'No continuous camera.' };
   await writeFile(originalFile, `${JSON.stringify(original)}\n`);
   await assert.rejects(validateRecipeDirectory(data.recipesDirectory), /authoring\.solo is forbidden/u);
+});
+
+test('a governance lock is identity-bound into the runtime plan and every creative assignment', async (t) => {
+  const data = await fixture(t, {shotCount: 5});
+  const colors = ['#F6F2E8', '#171A18', '#0F4C5C', '#E85D34', '#DCE8E5', '#D9D2C3'];
+  const authority = path.join(data.productionRoot, 'canonical-brand.md');
+  const logo = path.join(data.productionRoot, 'fengtalk-wordmark-light.svg');
+  const draft = path.join(data.productionRoot, 'governance-draft.json');
+  await Promise.all([
+    writeFile(authority, '# Canonical brand\n'),
+    writeFile(logo, '<svg/>\n'),
+    writeFile(data.originalDesignFile, `${colors.join(' ')}\nNoto Sans SC Instrument Sans fengtalk-wordmark-light.svg\n`),
+    writeFile(data.visualSystemFile, `${JSON.stringify({
+      schemaVersion: '1.0.0', conceptAngle: 'Governed visual ownership', visualWorld: 'Bound brand world',
+      paletteRoles: colors.map((value, index) => ({role: `color-${index}`, value, use: `use-${index}`})),
+      typographyRoles: [
+        {role: 'display', family: 'Noto Sans SC', weight: '900', use: 'title', sourceLocator: '02-assets/noto.woff2'},
+        {role: 'latin', family: 'Instrument Sans', weight: '500', use: 'labels', sourceLocator: '02-assets/instrument.woff2'},
+      ],
+      materials: ['paper', 'fengtalk-wordmark-light.svg'],
+      depthPlan: {background: 'field', midground: 'evidence', foreground: 'focus'},
+      compositionFamilies, motifSemantics: [], rhythmCurve: [{startMs: 0, endMs: 45_000, character: 'develop'}],
+      prohibitedLazyDefaults: ['generic cards', 'glassmorphism', 'code rain'], safeAreaPolicy: 'Keep text readable.',
+    })}\n`),
+  ]);
+  await writeFile(draft, `${JSON.stringify({
+    schemaVersion: '1.0.0', status: 'active', profileId: 'fengtalk-harbor-signal',
+    authorities: [{role: 'canonical-brand', locator: authority}],
+    originalDesign: {role: 'original-design', locator: path.relative(data.productionRoot, data.originalDesignFile)},
+    approval: {approvedBy: 'user', approvedAt: '2026-08-23T09:30:00+10:00', scope: 'brand-and-workflow-constraints'},
+    rules: {
+      allowedColors: colors, requiredColors: colors, forbiddenColors: ['#B7F34A'],
+      allowedFontFamilies: ['Noto Sans SC', 'Instrument Sans', 'Instrument Serif'],
+      requiredFontFamilies: ['Noto Sans SC', 'Instrument Sans'],
+      approvedLogoAssets: [{role: 'light-wordmark', locator: logo}], requireLogoReference: true,
+      forbiddenVisualTerms: ['glassmorphism', 'code rain'],
+    },
+    workflow: {
+      stages: ['director', 'runtime-plan', 'assets', 'lead', 'chapter-builder', 'parent-audits', 'user-canary', 'full-production'],
+      canaryShotCount: 5, minimumUserPreferredShots: 3,
+      fullProductionBlockedUntil: 'technical-and-user-passed', publicationRequiresExplicitApproval: true,
+    },
+  })}\n`);
+  await finalizeProductionGovernance({productionRoot: data.productionRoot, draftFile: draft});
+  const result = await writeProductionPlan(data);
+  assert.equal(result.plan.sourceContext.productionGovernance.profileId, 'fengtalk-harbor-signal');
+  assert.match(result.plan.sourceContext.productionGovernance.contractSha256, /^[0-9a-f]{64}$/u);
+  const assignments = await Promise.all(result.assignments.map((locator) => (
+    readFile(path.join(data.productionRoot, locator), 'utf8').then(JSON.parse)
+  )));
+  assert.ok(assignments.every(({governanceContext, contextFiles}) => (
+    governanceContext.contractIdentity === result.plan.sourceContext.productionGovernance.contractIdentity
+      && contextFiles.productionGovernance === '00-inputs/production-governance.json'
+      && contextFiles.productionGovernanceLock === 'production-governance.lock.json'
+  )));
 });
 
 test('20 shot-media deliveries remain twenty shots but authoring is three contiguous chapter units', async (t) => {

@@ -5,14 +5,15 @@
 These rules are injected. Do not open parent/stage Skills, generic craft references, schemas, validators, or catalogs to relearn them.
 
 1. Read the complete original SRT and original design; neither may be replaced by a summary.
-2. Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.
-3. Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.
-4. When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal; this picture-treatment choice belongs to Director and Builder, never Parent.
-5. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
-6. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
-7. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.
-8. Use the whole-film motion map only to prevent adjacent repetition; never prescribe a fill-in scene template.
-9. Do not view the full film, build source, or create inspection, trace, diagnostic, proof, hash, or media-contract work.
+2. When a production governance lock is present, read its bound contract and preserve its brand, asset, typography, color, workflow, and publication constraints; never replace or reinterpret that authority.
+3. Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.
+4. Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.
+5. When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal; this picture-treatment choice belongs to Director and Builder, never Parent.
+6. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
+7. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
+8. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.
+9. Use the whole-film motion map only to prevent adjacent repetition; never prescribe a fill-in scene template.
+10. Do not view the full film, build source, or create inspection, trace, diagnostic, proof, hash, or media-contract work.
 
 ## Positive twelve-principle anchor
 
@@ -32,6 +33,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 ## Source-authoring anchor
 
 - Read the complete original SRT and design before dividing chapters.
+- Apply the bound governance contract before proposing the shared visual system or any Recipe.
 - Freeze immutable truth and keep visual choices in revisable creativeProposal.
 - For digital-presenter work, choose presenterTreatment per Recipe as a revisable creative decision.
 - Recommend contiguous chapters and seams; never decide solo authoring.
@@ -41,4 +43,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `presenterSourceLocator`, `shotIds`, `chapterIds`, `motionMapLocator`, `outputRoot`, `unresolvedIssues`
+`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `shotIds`, `chapterIds`, `motionMapLocator`, `outputRoot`, `unresolvedIssues`

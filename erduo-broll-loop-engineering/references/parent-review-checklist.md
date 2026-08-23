@@ -7,6 +7,20 @@ scores, or require extra screenshot evidence. Visual taste has two user gates:
 the Lead samples plus five-shot canary before full production, and the complete
 shot-assembled preview for the film as a whole.
 
+## Production governance
+
+- If a brand/design authority or fixed workflow was named, the production root
+  contains the non-overwritable governance lock and contract.
+- The `design` gate passed before Director dispatch.
+- Runtime planning bound the exact contract and lock hashes after the automatic
+  `director` gate.
+- Every Lead/Builder assignment contains the same governance context and file
+  locators.
+- Every standard render command passed the automatic `source` gate; no manual
+  validation receipt substitutes for it.
+- Any authority, design, approved Logo asset, contract, or lock drift stopped
+  the run and started a new production root.
+
 ## Goal and environment
 
 - Output directory and shot/preview/optional-master targets are new and

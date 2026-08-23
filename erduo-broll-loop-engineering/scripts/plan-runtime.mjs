@@ -31,6 +31,7 @@ import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.m
 import { roleInjection } from './generate-role-files.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
 import { presenterKindOf } from './presenter-media-lib.mjs';
+import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
@@ -547,12 +548,20 @@ export async function planRuntime({
     ...(representativeSceneData ? { representativeScenes: representativeSceneData.binding } : {}),
   };
   const inferredProductionRoot = path.dirname(path.dirname(path.resolve(narrativeEnvelopeFile)));
+  const governanceContext = planSchemaVersion === '4.0.0'
+    ? await validateProductionGovernanceIfLocked({
+      productionRoot: inferredProductionRoot,
+      stage: 'director',
+      visualSystemFile,
+    })
+    : null;
   const presenterContext = planSchemaVersion === '4.0.0'
     ? await bindPresenterContext(inferredProductionRoot, presenterSourceFile) : null;
   const sourceContext = planSchemaVersion === '4.0.0' ? {
     originalSrt: await bindOriginalInput(originalSrtFile, inferredProductionRoot, 'original SRT'),
     originalDesign: await bindOriginalInput(originalDesignFile, inferredProductionRoot, 'original design'),
     ...(presenterContext ? { presenterSource: presenterContext } : {}),
+    ...(governanceContext ? { productionGovernance: governanceContext } : {}),
   } : null;
   const productionProfile = bindProductionProfile(requestedProductionProfile);
   if (['3.0.0', '4.0.0'].includes(planSchemaVersion)) {
@@ -896,6 +905,9 @@ function creativeContext(plan) {
       assetIndex: '02-assets/asset-index.json',
       shotSpecificRoutes: ['native', 'provided', 'search', 'generate', 'mixed'],
     },
+    ...(plan.sourceContext.productionGovernance ? {
+      governanceContext: plan.sourceContext.productionGovernance,
+    } : {}),
   };
 }
 
@@ -1005,6 +1017,10 @@ export function buildBuilderAssignments(plan, {
         ...(plan.schemaVersion === '4.0.0' ? {
           originalSrt: plan.sourceContext.originalSrt.locator,
           originalDesign: plan.sourceContext.originalDesign.locator,
+          ...(plan.sourceContext.productionGovernance ? {
+            productionGovernance: plan.sourceContext.productionGovernance.contractLocator,
+            productionGovernanceLock: plan.sourceContext.productionGovernance.lockLocator,
+          } : {}),
           assetIndex: '02-assets/asset-index.json',
           leadCapabilityIndexes: [...new Set(plannedLeadSamples(plan).map(({ capabilityIndex }) => capabilityIndex))],
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
@@ -1122,6 +1138,10 @@ export function buildBuilderAssignments(plan, {
         ...(plan.schemaVersion === '4.0.0' ? {
           originalSrt: plan.sourceContext.originalSrt.locator,
           originalDesign: plan.sourceContext.originalDesign.locator,
+          ...(plan.sourceContext.productionGovernance ? {
+            productionGovernance: plan.sourceContext.productionGovernance.contractLocator,
+            productionGovernanceLock: plan.sourceContext.productionGovernance.lockLocator,
+          } : {}),
           assetIndex: '02-assets/asset-index.json',
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
         } : {}),

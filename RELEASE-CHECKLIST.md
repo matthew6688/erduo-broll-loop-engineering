@@ -40,6 +40,9 @@
 
 ### v1.0.1 creative-loop reset 阻断项
 
+- [ ] 指定品牌或固定流程的 production 已生成不可覆盖的 governance contract/lock；设计、Director、渲染前源码三道门均通过，Runtime Plan 与全部 assignment 的 identity 一致，漂移测试全部失败关闭。
+- [ ] FengTalk production 精确绑定 Harbor Signal 品牌真源、原始 design、获批 Logo、六色与指定字体；源码门拒绝未批准颜色、缺少指定字体/获批 Logo 引用或出现禁用视觉语言。
+- [ ] 固定阶段顺序为 Director → Runtime Plan → Assets → Lead → Chapter Builder → Parent audits → User canary → Full production；用户未对 5 镜头至少选择 3 镜前，全片继续保持阻断。
 - [x] v1.0.1 版本真源、README 徽章、五语安装链接、package/version/tag 与两个归档名已切到 v1.0.1。
 - [x] Recipe v4 schema/validator 已冻结 `truth` 与 `creativeProposal`，拒绝任何 `authoring.solo`；Planner 只按封闭技术原因生成 solo，并把普通 15–24 镜聚成连续 5–8 镜 chapters。
 - [x] Lead/Builder assignment 同时包含完整原始 SRT/design 的可读 locator 与 SHA-256、chapter truth/proposals、相邻 seam、三样片、能力索引、共享素材索引、开放素材路线、最小命令和 view-receipt target；同输入 forward canary 已验证摘要没有替代原件。

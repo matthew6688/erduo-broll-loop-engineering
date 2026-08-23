@@ -20,6 +20,10 @@
 - Never overwrite an existing directory, shot, contract, preview, attempt, or
   master path. `broll-shot-export` is legacy compatibility for pre-v1.0.1
   master-based runs, not the default shot path.
+- A named brand authority or fixed workflow requires the immutable production
+  governance contract and `design` gate before Director. Planning and standard
+  rendering automatically enforce the later `director` and `source` gates.
+  FengTalk productions always use this lock and start a new root on drift.
 
 ## Runtime contract
 

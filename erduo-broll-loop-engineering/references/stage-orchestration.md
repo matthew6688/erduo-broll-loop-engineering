@@ -19,6 +19,13 @@ is the creative boundary. Direct shot delivery never implies one Agent per shot.
 
 ## Runtime and gate order
 
+When the user names a brand authority or fixed workflow, finalize the
+production-governance contract and pass its `design` gate before Director.
+Planning automatically passes the `director` gate and binds the contract/lock
+identities into the plan and every assignment. Standard rendering automatically
+passes the `source` gate. Never delete, replace, weaken, or hand-edit that lock;
+drift requires a new production root.
+
 v1.0.1 production defaults to HyperFrames. Remotion requires explicit opt-in or
 a canary assignment. `auto` is experimental and explicit only. Failure never
 silently reroutes.

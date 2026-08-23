@@ -26,6 +26,18 @@ This 12-second concept film travels through one continuous world: SRT timing, se
 - Uses supplied media first and sources extra material only when a shot requires it.
 - Shows three final Lead samples and a five-shot user-choice canary before full production, directly renders each semantic shot, creates a six-frame sheet per shot, and assembles the preview from verified files.
 
+### Enforced brand and workflow governance
+
+When a user names a brand authority or fixed workflow, Parent first creates a
+non-overwritable governance contract and lock. A `design` gate runs before
+Director, planning automatically runs the `director` gate, and every standard
+render automatically runs the `source` gate. The same hash-bound authorities,
+original design, approved logos, palette, fonts, prohibited styles, and stage
+order are propagated into the Runtime Plan and every Builder assignment. Drift
+fails closed and requires a new production root; a manual checklist cannot
+substitute for these gates. Full production still waits for at least 3 of 5
+user-selected canary shots.
+
 ## v1.0.1: Restore the Chapter Builder Loop
 
 v1.0.1 is released. A semantic shot is still one independently decoded H.264 media boundary, while one Chapter Builder now owns the creative loop for normally 5–8 contiguous shots. It reads the complete original SRT and design, cannot change `truth`, may revise `creativeProposal` with one concise reason, and owns chapter composition, material, pacing, and seams.

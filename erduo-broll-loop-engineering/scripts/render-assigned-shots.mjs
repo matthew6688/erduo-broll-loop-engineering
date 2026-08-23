@@ -9,6 +9,7 @@ import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.m
 import { validateRuntimePlan } from './validate-runtime-plan.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import { prepareSharedToolchain, renderRemotionCompositions } from './remotion-toolchain.mjs';
+import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
 import {
   clearMinimalFailureEvidence,
   inspectAssignmentRuntime,
@@ -455,6 +456,12 @@ async function renderAssignedShotsInternal({
     prepareSourceManifest(absoluteSourceRoot, sourceManifestFile),
   ]);
   await validateRuntimePlan(plan, runtimePlanInputs(productionRoot, recipesDirectory, plan));
+  await validateProductionGovernanceIfLocked({
+    productionRoot,
+    stage: 'source',
+    visualSystemFile: path.join(path.resolve(productionRoot), '01-director', 'visual-system.json'),
+    sourceRoot: absoluteSourceRoot,
+  });
   if (assignment.planIdentity !== plan.identity) throw new Error('assignment does not bind the runtime plan');
   if (typeof assignment.sourceRoot !== 'string'
     || path.resolve(productionRoot, assignment.sourceRoot) !== absoluteSourceRoot) {
