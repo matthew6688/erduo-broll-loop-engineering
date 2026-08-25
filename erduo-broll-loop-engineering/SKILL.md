@@ -105,9 +105,14 @@ when preflight returns `run-onboarding-diagnostic`.
    sheets and short previews, repairs visible defects, and returns `accepted` or
    `revised`. The standard command must pass the automatic governance `source`
    gate and on-screen-text provenance gate before rendering, then pass the
-   Recipe/rhythm-aware motion gate after rendering. The Lead archives and
-   repairs its own failed attempt; the user is not asked to direct per-shot
-   repairs. These sources become the final sources for their shots.
+   Recipe/rhythm-aware motion gate after rendering. Before the first render it
+   must aggregate every deterministic per-shot runtime-metadata failure into
+   one Assignment Preflight result and write the hash-bound preflight receipt;
+   it may not fail one shot at a time. The Lead archives and repairs its own
+   failed attempt; the user is not asked to direct per-shot repairs. Only an
+   actual runtime render consumes the two-attempt assignment budget. A third
+   render is forbidden and returns the work to its Recipe or Runtime Plan.
+   These sources become the final sources for their shots.
 6. Build only the five-shot creative canary first. Each Chapter Builder receives
    the complete original SRT/design, its chapter truth/proposals, neighboring
    seams, Lead samples/capability index, shared assets/fonts, open material
@@ -119,7 +124,8 @@ when preflight returns `run-onboarding-diagnostic`.
    clears the same pre-render text and post-render motion gates, opens every
    six-frame sheet and its chapter preview, repairs real defects, and returns
    one concise `accepted` or `revised` viewing conclusion. `signals` or
-   `unmeasured` stays inside the Builder archive/revise/rerun loop.
+   `unmeasured` stays inside the Builder archive/revise/rerun loop, subject to
+   the same two-render-attempt ceiling; never continue a third render retry.
 8. Parent checks file/media facts, direct-shot coverage, FFprobe, full decode,
    hashes, source identity, contracts, and order. Success creates compact media
    facts only. Failure keeps the smallest `shotId + window + issue + image/log`
@@ -235,8 +241,12 @@ or user approval.
 The exact standard command owns the repeatable quality loop. It runs text
 provenance before spending render time, then rendered motion evidence before a
 Builder may record `accepted|revised`; the five-shot technical gate reopens and
-hash-verifies both reports. A production is not stable merely because Parent
-manually repaired one video's source.
+hash-verifies both reports. It also validates all active runtime targets before
+the first render, reports their deterministic failures together, writes
+`assignment-preflight.json`, and appends actual render starts/outcomes to
+`render-attempts.ndjson`. Preflight failures consume no render attempt; each
+Assignment has at most two actual render attempts. A production is not stable
+merely because Parent manually repaired one video's source.
 
 The creative owner must open actual sheets/previews and repair low-level errors:
 premature answers, coverage, accumulating old/new states, floating connectors,

@@ -83,13 +83,19 @@ blocked until all canary technical/visual-baseline conditions pass and the user
 selects this version for at least 3/5 shots. A failed canary returns to its
 original Lead or Chapter Builder; it never starts the full film.
 
-The assignment standard command is itself a quality loop. It performs
-source-only on-screen-text provenance before render, rendered Recipe/rhythm
-motion evidence after render, and refuses a viewing conclusion while either
-report is `signals` or `unmeasured`. The owning Lead/Builder archives the
-attempt, revises owned source or allowed `creativeProposal` fields, and reruns.
-Parent does not hand-fix source, and the user sees only a gate-clean canary. The
-canary technical gate must hash-bind both passing reports.
+The assignment standard command is itself a quality loop. It performs one
+Assignment Preflight before render: runtime-plan/assignment/source/asset/
+governance/Recipe/text checks plus every active target's runtime metadata are
+validated, and all target failures are returned together. A passing preflight
+writes `checks/assignment-preflight.json`. Preflight failures consume no render
+attempt. The command then performs rendered Recipe/rhythm motion evidence and
+refuses a viewing conclusion while either rendered report is `signals` or
+`unmeasured`. Actual render starts and outcomes append to
+`checks/render-attempts.ndjson`; Lead and Builder receive at most two actual
+render attempts per Assignment and Runtime Plan. A third retry stops and
+returns to the Recipe or Runtime Plan. Parent does not hand-fix source, and the
+user sees only a gate-clean canary. The canary technical gate must hash-bind
+both passing rendered reports.
 
 ## Direct original context
 

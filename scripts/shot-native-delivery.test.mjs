@@ -295,6 +295,35 @@ test('HyperFrames metadata rejects millisecond duration before an expensive rend
   }), /S02 HyperFrames data-duration must equal 1 seconds/u);
 });
 
+test('assignment preflight reports every invalid HyperFrames composition before the first render', async (t) => {
+  const value = await fixture(t);
+  await Promise.all([
+    writeFile(
+      path.join(value.sourceRoot, 'compositions', 'S01.html'),
+      '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>\n',
+    ),
+    writeFile(
+      path.join(value.sourceRoot, 'compositions', 'S02.html'),
+      '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1"></main>\n',
+    ),
+    rm(value.sourceManifestFile),
+  ]);
+  const calls = [];
+  await assert.rejects(
+    renderAssignedShots({
+      ...value, sourceManifestFile: undefined,
+      runner: controlledRunner({calls}), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
+    }),
+    (error) => {
+      assert.match(error.message, /assignment preflight failed/iu);
+      assert.match(error.message, /S01.*data-duration/iu);
+      assert.match(error.message, /S02.*data-fps/iu);
+      return true;
+    },
+  );
+  assert.equal(calls.filter(({executable}) => executable === 'hyperframes').length, 0);
+});
+
 test('HyperFrames metadata quantizes duration from absolute SRT frame boundaries', () => {
   assert.throws(() => validateHyperframesCompositionMetadata({
     source: '<main data-composition-id="S02" data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',

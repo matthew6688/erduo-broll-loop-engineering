@@ -12,7 +12,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 8. Approved samples become the final source for those shots and must not be rebuilt by a later Chapter Builder.
 9. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
 10. Before render, every literal viewer-facing string must resolve to the original SRT, creativeProposal.visibleText, shared vocabulary, or fixed chrome; production scaffolding, shot counters, stage labels, and undeclared English chrome are forbidden.
-11. Treat standard-command onscreen-text or shot-motion revision reports as part of your own build loop: revise source or allowed creativeProposal fields, archive the failed attempt, and rerun before recording a viewing conclusion.
+11. Treat the standard command's aggregated Assignment Preflight and rendered text/motion revision reports as one bounded build loop: fix every reported preflight issue together, then use at most two actual render attempts; a third render is forbidden and returns to the Recipe or Runtime Plan.
 12. In the final view receipt, decision=revised means at least one Recipe creativeProposal field changed and every such change is listed; implementation-only source repairs stay in the internal attempt archive and end with decision=accepted when the bound creativeProposal is unchanged.
 13. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
 

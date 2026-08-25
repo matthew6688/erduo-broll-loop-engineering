@@ -3,6 +3,14 @@
 
 ### Added
 
+- Assignment Preflight now validates every active runtime target before the
+  first render, reports all deterministic target metadata failures together,
+  and writes a plan/source/asset-bound receipt. Preflight failures consume no
+  render attempt. Runtime Plan v4 Lead/Builder Assignments append render
+  attempts to a mechanical log and stop after two actual render attempts,
+  returning a third failure to the Recipe or Runtime Plan instead of retrying
+  indefinitely.
+
 - Installed CLI entrypoints now resolve symbolic links before deciding whether
   to run. Invoking the Skill through its `.codex/skills` link can no longer
   return silently; a real symlink invocation is covered by regression tests.

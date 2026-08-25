@@ -14,6 +14,7 @@ import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
 import {auditOnscreenText} from './audit-onscreen-text.mjs';
 import {auditShotMotion} from './audit-shot-motion.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {beginRenderAttempt, finishRenderAttempt} from './render-attempt-budget.mjs';
 import {
   clearMinimalFailureEvidence,
   inspectAssignmentRuntime,
@@ -345,6 +346,44 @@ function contentIdentity(value) {
   return `sha256:${createHash('sha256').update(canonicalJson(value)).digest('hex')}`;
 }
 
+async function writeAssignmentPreflightReceipt({
+  productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds,
+}) {
+  const receipt = {
+    schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity,
+    assignmentId: assignment.assignmentId, runtime: assignment.runtime,
+    sourceIdentity: sourceBinding.identity, sharedAssetsIdentity: sharedAssets.identity,
+    profileIdentity: `sha256:${plan.productionProfile.identity}`,
+    shotIds: [...renderShotIds],
+    checks: [
+      'runtime-plan', 'assignment-scope', 'production-source-policy', 'source-closure',
+      'shared-assets', 'production-governance', 'recipe-windows', 'runtime-metadata',
+      ...(plan.schemaVersion === '4.0.0' ? ['onscreen-text-provenance'] : []),
+    ],
+  };
+  receipt.identity = contentIdentity(receipt);
+  const directory = path.join(
+    path.resolve(productionRoot), assignment.output.workDirectory, 'checks',
+  );
+  const file = path.join(directory, 'assignment-preflight.json');
+  const body = `${JSON.stringify(receipt, null, 2)}\n`;
+  await mkdir(directory, {recursive: true});
+  try {
+    const existing = await readJson(file, 'assignment preflight receipt');
+    if (canonicalJson(existing) === canonicalJson(receipt)) return {file, receipt, cached: true};
+  } catch (error) {
+    if (error?.cause?.code !== 'ENOENT' && error?.code !== 'ENOENT' && !/ENOENT/u.test(error?.message ?? '')) throw error;
+  }
+  const temporary = `${file}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await writeFile(temporary, body, {flag: 'wx'});
+    await rename(temporary, file);
+  } finally {
+    await rm(temporary, {force: true});
+  }
+  return {file, receipt, cached: false};
+}
+
 async function tryFinalizeCanaryTechnicalGate({
   plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema,
   ffmpeg, ffprobe, runner, auditText = auditOnscreenText, auditMotion = auditShotMotion,
@@ -526,6 +565,7 @@ async function renderAssignedShotsInternal({
   inspectRuntime = inspectAssignmentRuntime,
   auditText = auditOnscreenText,
   auditMotion = auditShotMotion,
+  executionState = {},
 }) {
   const absoluteSourceRoot = path.resolve(sourceRoot);
   await assertProductionSourcePolicy(absoluteSourceRoot);
@@ -620,6 +660,7 @@ async function renderAssignedShotsInternal({
       skillUsageFile: `${output}.skill-usage.json`,
     };
   });
+  const activeDescriptors = descriptors.filter(({shot}) => renderShotIds.includes(shot.shotId));
 
   if (plan.schemaVersion === '4.0.0' && renderShotIds.length > 0) {
     const preflightOutput = path.join(
@@ -635,6 +676,28 @@ async function renderAssignedShotsInternal({
       throw new Error(`assignment onscreen-text preflight requires revision: ${textPreflight.status}; report=${preflightOutput}`);
     }
   }
+
+  const invocationResults = await Promise.allSettled(activeDescriptors.map(async (descriptor) => ({
+    shotId: descriptor.shot.shotId,
+    invocation: await renderInvocation({
+      backend: descriptor.shot.runtime, target: descriptor.target, shot: descriptor.shot,
+      sourceRoot: absoluteSourceRoot, sourcePaths: sourceBinding.paths,
+      output: descriptor.output, frameCount: descriptor.frameCount,
+      profile: plan.productionProfile, hyperframes, remotion,
+    }),
+  })));
+  const invocationErrors = invocationResults.flatMap((result, index) => (
+    result.status === 'rejected'
+      ? [`${activeDescriptors[index].shot.shotId}: ${result.reason?.message ?? String(result.reason)}`]
+      : []
+  ));
+  if (invocationErrors.length > 0) {
+    throw new Error(`assignment preflight failed before rendering:\n- ${invocationErrors.join('\n- ')}`);
+  }
+  const renderInvocationByShot = new Map(invocationResults.map(({value}) => [value.shotId, value.invocation]));
+  const preflightReceipt = await writeAssignmentPreflightReceipt({
+    productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds,
+  });
 
   const validateBoundContract = async (descriptor, contract, { decode = true } = {}) => {
     const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, semanticCheckFile, skillUsageFile } = descriptor;
@@ -670,7 +733,6 @@ async function renderAssignedShotsInternal({
     }
   };
 
-  const activeDescriptors = descriptors.filter(({shot}) => renderShotIds.includes(shot.shotId));
   const recovered = new Set();
   for (const descriptor of activeDescriptors) {
     const states = await Promise.all([
@@ -747,6 +809,11 @@ async function renderAssignedShotsInternal({
       project: absoluteSourceRoot, productionRoot,
       receiptPath: path.join(path.resolve(productionRoot), '.remotion-toolchains', 'receipts', `${assignmentKey}.json`),
     });
+    if (plan.schemaVersion === '4.0.0') {
+      executionState.renderAttempt = await beginRenderAttempt({
+        productionRoot, assignment, planIdentity: plan.identity, sourceIdentity: sourceBinding.identity,
+      });
+    }
     backendReceipt = await renderRemotionUnit({
       productionRoot, project: absoluteSourceRoot, entryPoint,
       publicDirectory: sharedAssets.directory,
@@ -759,12 +826,14 @@ async function renderAssignedShotsInternal({
       onRendered: async ({ shotId }) => finalizeShot(pending.find(({ shot }) => shot.shotId === shotId)),
     });
   } else {
-    for (const descriptor of pending) {
-      const invocation = await renderInvocation({
-        backend: descriptor.shot.runtime, target: descriptor.target, shot: descriptor.shot, sourceRoot: absoluteSourceRoot,
-        sourcePaths: sourceBinding.paths, output: descriptor.output, frameCount: descriptor.frameCount,
-        profile: plan.productionProfile, hyperframes, remotion,
+    if (pending.length > 0 && plan.schemaVersion === '4.0.0') {
+      executionState.renderAttempt = await beginRenderAttempt({
+        productionRoot, assignment, planIdentity: plan.identity, sourceIdentity: sourceBinding.identity,
       });
+    }
+    for (const descriptor of pending) {
+      const invocation = renderInvocationByShot.get(descriptor.shot.shotId);
+      if (!invocation) throw new Error(`${descriptor.shot.shotId} has no passing assignment preflight invocation`);
       const rendered = await runner(invocation);
       if (rendered.code !== 0) throw commandFailure(`${descriptor.shot.shotId} direct runtime render`, rendered);
       await finalizeShot(descriptor);
@@ -828,7 +897,7 @@ async function renderAssignedShotsInternal({
             chapterPreview: chapterPreview.preview,
             sixFrameSheets: viewedContracts.map(({semanticCheck}) => semanticCheck.contactSheet),
             viewReceipt: assignment.output.viewReceipt,
-            sourceManifest: sourceBinding.manifestFile,
+            sourceManifest: sourceBinding.manifestFile, preflightReceipt: preflightReceipt.file,
           };
         }
         throw error;
@@ -847,6 +916,7 @@ async function renderAssignedShotsInternal({
           status: 'view-required', shots: contracts.length, shotIds: receiptShotIds,
           sixFrameSheets: contracts.map(({semanticCheck}) => semanticCheck.contactSheet),
           viewReceipt: assignment.output.viewReceipt, sourceManifest: sourceBinding.manifestFile,
+          preflightReceipt: preflightReceipt.file,
         };
       }
       throw error;
@@ -862,7 +932,7 @@ async function renderAssignedShotsInternal({
       shots: contracts.length, contractFiles, chapterPreview: chapterPreview?.preview,
       canaryPreview: canaryTechnicalGate?.canaryPreview?.locator ?? null,
       canaryTechnicalGate: canaryTechnicalGate?.identity ?? null,
-      sourceManifest: sourceBinding.manifestFile, viewReceipt,
+      sourceManifest: sourceBinding.manifestFile, preflightReceipt: preflightReceipt.file, viewReceipt,
       ...(inspectionReceipt ? {inspectionReceipt} : {}),
     };
   }
@@ -875,7 +945,7 @@ async function renderAssignedShotsInternal({
       if (error.cause?.code === 'ENOENT' || /ENOENT/u.test(error.message)) {
         return {
           status: 'unit-shots-ready', shots: contracts.length, contractFiles,
-          sourceManifest: sourceBinding.manifestFile,
+          sourceManifest: sourceBinding.manifestFile, preflightReceipt: preflightReceipt.file,
           chapterPreview: chapterPreview?.preview, viewReceipt,
           ...(inspectionReceipt ? {inspectionReceipt} : {}),
         };
@@ -910,6 +980,7 @@ async function renderAssignedShotsInternal({
   return {
     status: 'shots-ready', shots: allContracts.length, contractFiles: allContractFiles,
     deliveryIndex: deliveryIndexFile, sourceManifest: sourceBinding.manifestFile,
+    preflightReceipt: preflightReceipt.file,
     backendReceipt, chapterPreview: chapterPreview?.preview, viewReceipt,
     ...(inspectionReceipt ? {inspectionReceipt} : {}),
   };
@@ -917,11 +988,25 @@ async function renderAssignedShotsInternal({
 
 export async function renderAssignedShots(options) {
   const assignment = await readJson(path.resolve(options.assignmentFile), 'assignment');
+  const executionState = {};
   try {
-    const result = await renderAssignedShotsInternal(options);
+    const result = await renderAssignedShotsInternal({...options, executionState});
+    if (executionState.renderAttempt) {
+      await finishRenderAttempt({...executionState.renderAttempt, status: 'passed'});
+    }
     await clearMinimalFailureEvidence({productionRoot: options.productionRoot, assignment});
     return result;
   } catch (error) {
+    if (executionState.renderAttempt) {
+      try {
+        await finishRenderAttempt({
+          ...executionState.renderAttempt, status: 'failed',
+          detailCode: /shot-motion/iu.test(error.message) ? 'shot-motion' : 'render-or-postflight',
+        });
+      } catch (attemptError) {
+        error.message = `${error.message}\nrender-attempt closure also failed: ${attemptError.message}`;
+      }
+    }
     await writeMinimalFailureEvidence({
       productionRoot: options.productionRoot, assignment, sourceIdentity: null, error,
     });
