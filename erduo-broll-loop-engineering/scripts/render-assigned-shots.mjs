@@ -270,6 +270,23 @@ function htmlDataAttribute(source, name) {
   return match?.[1] ?? null;
 }
 
+function hyperframesCompositionRoot(source, compositionId) {
+  const tags = source.match(/<[^!][^>]*\bdata-composition-id\s*=\s*["'][^"']+["'][^>]*>/giu) ?? [];
+  return tags.find((tag) => htmlDataAttribute(tag, 'composition-id') === compositionId) ?? null;
+}
+
+function parentTraversalAssetPaths(source) {
+  const paths = [];
+  const patterns = [
+    /\b(?:src|href)\s*=\s*["']\s*(\.\.\/[^"']*)["']/giu,
+    /url\(\s*["']?(\.\.\/[^)"']*)["']?\s*\)/giu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) paths.push(match[1].trim());
+  }
+  return [...new Set(paths)];
+}
+
 export function validateHyperframesCompositionMetadata({source, target, shot, profile}) {
   const expectedFps = fpsNumber(profile.fps);
   const expectedDurationSeconds = framesForWindow(shot.window, profile.fps) / expectedFps;
@@ -281,18 +298,38 @@ export function validateHyperframesCompositionMetadata({source, target, shot, pr
     fps: expectedFps,
   };
   const actual = Object.fromEntries(Object.keys(expected).map((name) => [name, htmlDataAttribute(source, name)]));
+  const failures = [];
   for (const [name, value] of Object.entries(actual)) {
-    if (value === null) throw new Error(`${shot.shotId} HyperFrames composition is missing data-${name}`);
+    if (value === null) failures.push(`composition is missing data-${name}`);
   }
-  if (actual['composition-id'] !== expected['composition-id']) {
-    throw new Error(`${shot.shotId} HyperFrames data-composition-id must equal its planned target`);
+  if (actual['composition-id'] !== null && actual['composition-id'] !== expected['composition-id']) {
+    failures.push('data-composition-id must equal its planned target');
   }
   for (const name of ['width', 'height', 'duration', 'fps']) {
+    if (actual[name] === null) continue;
     const value = Number(actual[name]);
     if (!Number.isFinite(value) || Math.abs(value - expected[name]) > 1e-6) {
       const unit = name === 'duration' ? ' seconds' : '';
-      throw new Error(`${shot.shotId} HyperFrames data-${name} must equal ${expected[name]}${unit}`);
+      failures.push(`data-${name} must equal ${expected[name]}${unit}`);
     }
+  }
+  const root = hyperframesCompositionRoot(source, target.id);
+  if (root) {
+    const start = htmlDataAttribute(root, 'start');
+    if (start === null) failures.push('root composition is missing data-start="0"');
+    else if (Number(start) !== 0) failures.push('root composition data-start must equal 0');
+    const hasNoTimeline = /\bdata-no-timeline(?=[\s=/]|$)/iu.test(root);
+    const registersTimeline = /window\s*\.\s*__timelines\s*\[/u.test(source);
+    if (!hasNoTimeline && !registersTimeline) {
+      failures.push('root composition must declare data-no-timeline or register window.__timelines');
+    }
+  }
+  const traversalPaths = parentTraversalAssetPaths(source);
+  if (traversalPaths.length > 0) {
+    failures.push(`asset paths must not use parent traversal: ${traversalPaths.join(', ')}`);
+  }
+  if (failures.length > 0) {
+    throw new Error(`${shot.shotId} HyperFrames ${failures.join('; ')}`);
   }
 }
 

@@ -123,7 +123,7 @@ async function fixture(t, { runtime = 'hyperframes' } = {}) {
     })}\n`);
     if (runtime === 'hyperframes') {
       await mkdir(path.join(sourceRoot, 'compositions'), { recursive: true });
-      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<main data-composition-id="${shot.shotId}" data-width="640" data-height="360" data-duration="1" data-fps="30"></main>\n`);
+      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<main data-composition-id="${shot.shotId}" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30"></main>\n`);
     }
   }
   const representativeScenes = {
@@ -289,7 +289,7 @@ test('renderer invokes one native shot target and verifies one complete media fi
 
 test('HyperFrames metadata rejects millisecond duration before an expensive render starts', () => {
   assert.throws(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 1000, endMs: 2000}},
     profile: {raster: {width: 640, height: 360}, fps: {numerator: 30, denominator: 1}},
@@ -301,11 +301,11 @@ test('assignment preflight reports every invalid HyperFrames composition before 
   await Promise.all([
     writeFile(
       path.join(value.sourceRoot, 'compositions', 'S01.html'),
-      '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>\n',
+      '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1000" data-fps="30" style="background:url(\'../fonts/fixture.woff2\')"></main>\n',
     ),
     writeFile(
       path.join(value.sourceRoot, 'compositions', 'S02.html'),
-      '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1"></main>\n',
+      '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1"></main>\n',
     ),
     rm(value.sourceManifestFile),
   ]);
@@ -318,6 +318,9 @@ test('assignment preflight reports every invalid HyperFrames composition before 
     (error) => {
       assert.match(error.message, /assignment preflight failed/iu);
       assert.match(error.message, /S01.*data-duration/iu);
+      assert.match(error.message, /S01.*data-start/iu);
+      assert.match(error.message, /S01.*data-no-timeline.*window\.__timelines/iu);
+      assert.match(error.message, /S01.*parent traversal.*\.\.\/fonts/iu);
       assert.match(error.message, /S02.*data-fps/iu);
       return true;
     },
@@ -327,13 +330,13 @@ test('assignment preflight reports every invalid HyperFrames composition before 
 
 test('HyperFrames metadata quantizes duration from absolute SRT frame boundaries', () => {
   assert.throws(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
     profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
   }), /S02 HyperFrames data-duration must equal 18\.48 seconds/u);
   assert.doesNotThrow(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-width="1280" data-height="720" data-duration="18.48" data-fps="25"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="1280" data-height="720" data-duration="18.48" data-fps="25"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
     profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
@@ -360,7 +363,7 @@ test('Parent rejects browser-blocked file URLs before HyperFrames can silently f
   const value = await fixture(t);
   await writeFile(
     path.join(value.sourceRoot, 'compositions', 'S02.html'),
-    '<main data-composition-id="S02" data-width="640" data-height="360" data-duration="1" data-fps="30" style="background:url(\'file:///outside/font.otf\')"></main>\n',
+    '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30" style="background:url(\'file:///outside/font.otf\')"></main>\n',
   );
   await assert.rejects(
     renderAssignedShots({ ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }),
@@ -380,7 +383,7 @@ test('Parent refreshes its generated source manifest after a concrete pre-render
     /controlled first render failure/u,
   );
   const firstManifest = await readFile(value.sourceManifestFile, 'utf8');
-  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1" data-fps="30">repaired S01</main>\n');
+  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main data-composition-id="S01" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30">repaired S01</main>\n');
   const result = await renderAssignedShots({
     ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
   });
@@ -399,7 +402,7 @@ test('Parent archives a complete prior delivery before rerendering a revised sha
   await Promise.all([
     writeFile(
       path.join(value.sourceRoot, 'compositions', 'S01.html'),
-      '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1" data-fps="30">revised</main>\n',
+      '<main data-composition-id="S01" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30">revised</main>\n',
     ),
     rm(path.join(value.deliveryRoot, 'delivery-index.json')),
   ]);

@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- HyperFrames Assignment Preflight now aggregates strict runtime requirements
+  for root `data-start="0"`, timeline opt-out/registration, and parent-traversing
+  asset paths before invoking the renderer, so deterministic source failures do
+  not consume the bounded render-attempt budget.
+
 - Assignment recovery now verifies and atomically archives a complete prior
   delivery before a source-only or Recipe-only second render. Partial output or
   unrelated identity drift remains fail-closed, while the bounded two-attempt

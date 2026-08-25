@@ -88,7 +88,10 @@ Assignment Preflight before render: runtime-plan/assignment/source/asset/
 governance/Recipe/text checks plus every active target's runtime metadata are
 validated, and all target failures are returned together. A passing preflight
 writes `checks/assignment-preflight.json`. Preflight failures consume no render
-attempt. The command then performs rendered Recipe/rhythm motion evidence and
+attempt. HyperFrames metadata validation includes the strict runtime's root
+`data-start="0"`, either `data-no-timeline` or a timeline registry, and rejection
+of parent-traversing `../` asset references in addition to raster/fps/duration
+binding. The command then performs rendered Recipe/rhythm motion evidence and
 refuses a viewing conclusion while either rendered report is `signals` or
 `unmeasured`. Actual render starts and outcomes append to
 `checks/render-attempts.ndjson`; Lead and Builder receive at most two actual
