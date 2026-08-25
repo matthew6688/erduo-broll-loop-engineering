@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- Assignment recovery now verifies and atomically archives a complete prior
+  delivery before a source-only or Recipe-only second render. Partial output or
+  unrelated identity drift remains fail-closed, while the bounded two-attempt
+  creative loop no longer requires manual deletion or in-place overwrite.
+
 - Added a repository-level operating model for faceless, human-presenter, and
   digital-presenter production. It records the verified vertical baseline,
   the separate 16:9 production-profile path, HeyGen watermark/account boundary,

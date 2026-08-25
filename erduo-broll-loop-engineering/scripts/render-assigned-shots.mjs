@@ -384,6 +384,69 @@ async function writeAssignmentPreflightReceipt({
   return {file, receipt, cached: false};
 }
 
+async function archiveRevisionDeliveries({productionRoot, assignment, sourceBinding, entries}) {
+  const workDirectory = ensureWithin(
+    path.resolve(productionRoot), assignment.output.workDirectory, 'assignment work directory',
+  );
+  const archiveIdentity = createHash('sha256').update(canonicalJson({
+    assignmentId: assignment.assignmentId,
+    newSourceIdentity: sourceBinding.identity,
+    deliveries: entries.map(({contract, mismatches}) => ({
+      shotId: contract.shotId, sourceIdentity: contract.sourceIdentity,
+      recipeIdentity: contract.recipeIdentity, mediaSha256: contract.media.sha256, mismatches,
+    })),
+  })).digest('hex');
+  const attemptsRoot = path.join(workDirectory, 'attempts');
+  const finalDirectory = path.join(attemptsRoot, `revision-${archiveIdentity.slice(0, 16)}`);
+  try {
+    await lstat(finalDirectory);
+    throw new Error(`revision archive already exists for ${assignment.assignmentId}`);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  const temporaryDirectory = `${finalDirectory}.tmp-${process.pid}-${Date.now()}`;
+  const moved = [];
+  try {
+    await Promise.all([
+      mkdir(path.join(temporaryDirectory, 'shots'), {recursive: true}),
+      mkdir(path.join(temporaryDirectory, 'checks'), {recursive: true}),
+    ]);
+    for (const {descriptor} of entries) {
+      const files = [
+        [descriptor.output, path.join(temporaryDirectory, 'shots', path.basename(descriptor.output))],
+        [descriptor.contractFile, path.join(temporaryDirectory, 'shots', path.basename(descriptor.contractFile))],
+        [descriptor.semanticCheckFile, path.join(temporaryDirectory, 'checks', path.basename(descriptor.semanticCheckFile))],
+        ...(await exists(descriptor.skillUsageFile)
+          ? [[descriptor.skillUsageFile, path.join(temporaryDirectory, 'shots', path.basename(descriptor.skillUsageFile))]]
+          : []),
+      ];
+      for (const [source, destination] of files) {
+        await rename(source, destination);
+        moved.push([source, destination]);
+      }
+    }
+    const receipt = {
+      schemaVersion: '1.0.0', status: 'archived', reason: 'source-or-recipe-revision',
+      assignmentId: assignment.assignmentId, planIdentity: assignment.planIdentity,
+      previousSourceIdentities: [...new Set(entries.map(({contract}) => contract.sourceIdentity))].sort(),
+      nextSourceIdentity: sourceBinding.identity,
+      shotIds: entries.map(({descriptor}) => descriptor.shot.shotId),
+      files: moved.map(([, destination]) => path.relative(temporaryDirectory, destination).split(path.sep).join('/')).sort(),
+    };
+    receipt.identity = contentIdentity(receipt);
+    await writeFile(path.join(temporaryDirectory, 'archive.json'), `${JSON.stringify(receipt, null, 2)}\n`, {flag: 'wx'});
+    await mkdir(attemptsRoot, {recursive: true});
+    await rename(temporaryDirectory, finalDirectory);
+    return {directory: finalDirectory, receipt};
+  } catch (error) {
+    for (const [source, destination] of moved.reverse()) {
+      try { await rename(destination, source); } catch { /* retain the original failure */ }
+    }
+    await rm(temporaryDirectory, {recursive: true, force: true});
+    throw error;
+  }
+}
+
 async function tryFinalizeCanaryTechnicalGate({
   plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema,
   ffmpeg, ffprobe, runner, auditText = auditOnscreenText, auditMotion = auditShotMotion,
@@ -699,7 +762,9 @@ async function renderAssignedShotsInternal({
     productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds,
   });
 
-  const validateBoundContract = async (descriptor, contract, { decode = true } = {}) => {
+  const validateBoundContract = async (descriptor, contract, {
+    decode = true, allowRevisionArchive = false,
+  } = {}) => {
     const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, semanticCheckFile, skillUsageFile } = descriptor;
     assertSchema(contract, shotSchema, `${shot.shotId} shot contract`);
     const expectedSamples = semanticSamplePoints(recipe, shot.window, plan.productionProfile.fps, frameCount);
@@ -712,7 +777,12 @@ async function renderAssignedShotsInternal({
     if (contract.media.path !== `shots/${basename}.mp4` || contract.semanticCheck.contactSheet !== `checks/${basename}.semantic-check.png`
       || contract.semanticCheck.sourceMedia !== contract.media.path
       || canonicalJson(contract.semanticCheck.samples) !== canonicalJson(expectedSamples)) mismatches.push('media/check binding');
-    if (mismatches.length) throw new Error(`${shot.shotId} existing delivery conflicts with the current plan: ${mismatches.join(', ')}`);
+    const revisionArchiveNeeded = mismatches.length > 0
+      && allowRevisionArchive
+      && mismatches.every((mismatch) => ['source identity', 'Recipe identity'].includes(mismatch));
+    if (mismatches.length && !revisionArchiveNeeded) {
+      throw new Error(`${shot.shotId} existing delivery conflicts with the current plan: ${mismatches.join(', ')}`);
+    }
     await Promise.all([
       requireRegularFile(output, `${shot.shotId} rendered media`),
       requireRegularFile(semanticCheckFile, `${shot.shotId} semantic contact sheet`),
@@ -731,9 +801,11 @@ async function renderAssignedShotsInternal({
         planIdentity: plan.identity, binding: plan.sourceContext.skillUsage,
       });
     }
+    return {revisionArchiveNeeded, mismatches};
   };
 
   const recovered = new Set();
+  const revisionArchives = [];
   for (const descriptor of activeDescriptors) {
     const states = await Promise.all([
       exists(descriptor.output), exists(descriptor.contractFile), exists(descriptor.semanticCheckFile),
@@ -741,13 +813,22 @@ async function renderAssignedShotsInternal({
     ]);
     if (states.every(Boolean)) {
       const contract = await readJson(descriptor.contractFile, `${descriptor.shot.shotId} shot contract`);
-      await validateBoundContract(descriptor, contract);
-      recovered.add(descriptor.shot.shotId);
-      contracts.push(contract);
-      contractFiles.push(descriptor.contractFile);
+      const validation = await validateBoundContract(descriptor, contract, {allowRevisionArchive: true});
+      if (validation.revisionArchiveNeeded) {
+        revisionArchives.push({descriptor, contract, mismatches: validation.mismatches});
+      } else {
+        recovered.add(descriptor.shot.shotId);
+        contracts.push(contract);
+        contractFiles.push(descriptor.contractFile);
+      }
     } else if (states.some(Boolean)) {
       throw new Error(`${descriptor.shot.shotId} has partial or conflicting recovery artifacts`);
     }
+  }
+  if (revisionArchives.length > 0) {
+    await archiveRevisionDeliveries({
+      productionRoot, assignment, sourceBinding, entries: revisionArchives,
+    });
   }
 
   const finalizeShot = async (descriptor) => {

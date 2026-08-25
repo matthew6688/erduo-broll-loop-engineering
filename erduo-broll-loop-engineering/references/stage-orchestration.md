@@ -93,9 +93,14 @@ refuses a viewing conclusion while either rendered report is `signals` or
 `unmeasured`. Actual render starts and outcomes append to
 `checks/render-attempts.ndjson`; Lead and Builder receive at most two actual
 render attempts per Assignment and Runtime Plan. A third retry stops and
-returns to the Recipe or Runtime Plan. Parent does not hand-fix source, and the
-user sees only a gate-clean canary. The canary technical gate must hash-bind
-both passing rendered reports.
+returns to the Recipe or Runtime Plan. If viewing a complete first delivery
+causes a source-only or Recipe-only revision, Parent reopens and verifies every
+old media/contract/sheet/Skill-sidecar binding and full decode, atomically moves
+the complete set into the Assignment's `attempts/revision-*/` archive, and only
+then starts the second render. Partial artifacts or any other identity drift
+still fail closed. Parent does not hand-fix source, and the user sees only a
+gate-clean canary. The canary technical gate must hash-bind both passing
+rendered reports.
 
 ## Direct original context
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { access, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -198,7 +198,8 @@ function controlledRunner({ facts = new Map(), calls = [], failDecodeShot = null
     if (executable === 'hyperframes') {
       assert.equal(args[0], 'render');
       assert.match(args[args.indexOf('--composition') + 1], /compositions\/S0[123]\.html$/u);
-      assert.ok(!args.some((value) => /master|unit-media|trim|ss|to=/iu.test(value)));
+      assert.ok(!args.some((value) => /(?:^|[\\/])(master|unit-media|trim)(?:[.\\/]|$)/iu.test(value)));
+      assert.ok(!args.some((value) => ['-ss', '-to'].includes(value) || value.startsWith('-to=')));
       const shotId = /S0[123]/u.exec(args.join(' '))[0];
       const durationMs = 1000;
       const frameCount = 30;
@@ -385,6 +386,45 @@ test('Parent refreshes its generated source manifest after a concrete pre-render
   });
   assert.equal(result.status, 'shots-ready');
   assert.notEqual(await readFile(value.sourceManifestFile, 'utf8'), firstManifest);
+});
+
+test('Parent archives a complete prior delivery before rerendering a revised shared source', async (t) => {
+  const value = await fixture(t);
+  const facts = new Map();
+  const first = await renderAssignedShots({
+    ...value, sourceManifestFile: undefined,
+    runner: controlledRunner({facts}), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
+  });
+  assert.equal(first.status, 'shots-ready');
+  await Promise.all([
+    writeFile(
+      path.join(value.sourceRoot, 'compositions', 'S01.html'),
+      '<main data-composition-id="S01" data-width="640" data-height="360" data-duration="1" data-fps="30">revised</main>\n',
+    ),
+    rm(path.join(value.deliveryRoot, 'delivery-index.json')),
+  ]);
+  const calls = [];
+  const second = await renderAssignedShots({
+    ...value, sourceManifestFile: undefined,
+    runner: controlledRunner({calls, facts}), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
+  });
+  assert.equal(second.status, 'shots-ready');
+  assert.equal(calls.filter(({executable}) => executable === 'hyperframes').length, 3);
+  const attemptsRoot = path.join(value.productionRoot, '04-visual-lock', 'hyperframes', 'attempts');
+  const attemptNames = await readdir(attemptsRoot);
+  assert.equal(attemptNames.length, 1);
+  const archive = path.join(attemptsRoot, attemptNames[0]);
+  const receipt = JSON.parse(await readFile(path.join(archive, 'archive.json'), 'utf8'));
+  assert.deepEqual(receipt.shotIds, ['S01', 'S02', 'S03']);
+  assert.equal(receipt.reason, 'source-or-recipe-revision');
+  for (const shotId of ['S01', 'S02', 'S03']) {
+    const basename = `${String(Number(shotId.slice(1))).padStart(3, '0')}-${shotId}`;
+    await Promise.all([
+      access(path.join(archive, 'shots', `${basename}.mp4`)),
+      access(path.join(archive, 'shots', `${basename}.shot-media.json`)),
+      access(path.join(archive, 'checks', `${basename}.semantic-check.png`)),
+    ]);
+  }
 });
 
 test('renderer rejects a hand-edited runtime plan whose validated identity no longer matches', async (t) => {

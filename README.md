@@ -64,7 +64,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - 后端规划、任务分发、逐镜渲染、6 格采样、媒体验证和预览准备由 Parent 直接运行脚本，不再启动 Runtime Planner、Integrator 或 Render Agent。
 - 一条生产任务共用素材库与相同依赖；Builder 保持源码隔离，不再复制完整工程和相同素材。
 - Builder 只交付可编辑源码和每镜直接渲染入口；不得自建截图、轨迹、逐帧、hash、FFprobe、decode、manifest、合同或通过证明工具。
-- 每个 Assignment 先执行聚合 Preflight，一次返回全部镜头级元数据错误；只有实际启动渲染才计入预算，Lead/Builder 每个 Assignment 最多两次实际渲染，禁止无限重试。
+- 每个 Assignment 先执行聚合 Preflight，一次返回全部镜头级元数据错误；只有实际启动渲染才计入预算，Lead/Builder 每个 Assignment 最多两次实际渲染。若第一次成品看片后只修改源码或 Recipe，Parent 会在第二次渲染前验证并归档完整旧成品，禁止覆盖和无限重试。
 - Parent 从每镜运行时源码直接生成独立 H.264 文件、`shot-media.json`、6 格语义检查图和全片 `delivery-index.json`；禁止从 unit 或 Master 二次切割冒充直出。
 - `production-metrics.json` 可汇总阶段耗时、Agent 调用、unit、文件/字节、渲染/解码/hash、失败/重试与可选宿主 Token；没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。

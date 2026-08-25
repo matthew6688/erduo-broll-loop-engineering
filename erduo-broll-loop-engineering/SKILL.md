@@ -246,7 +246,12 @@ the first render, reports their deterministic failures together, writes
 `assignment-preflight.json`, and appends actual render starts/outcomes to
 `render-attempts.ndjson`. Preflight failures consume no render attempt; each
 Assignment has at most two actual render attempts. A production is not stable
-merely because Parent manually repaired one video's source.
+merely because Parent manually repaired one video's source. When the creative
+owner revises only bound source or Recipe after viewing a complete first
+delivery, Parent must verify the old media, contract, semantic sheet, decode,
+hash, and Skill sidecar, then atomically archive that complete delivery under
+the Assignment work directory before the second render. Other identity drift
+and partial artifacts still fail closed; no delivery is overwritten in place.
 
 The creative owner must open actual sheets/previews and repair low-level errors:
 premature answers, coverage, accumulating old/new states, floating connectors,
