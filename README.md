@@ -64,6 +64,9 @@
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
 - 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。数字人导入不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
 
+真人/数字人双模式、竖屏/YouTube 横屏的生产边界、审批门禁、已验证能力和后续产品化顺序，
+见 [`docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`](docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md)。
+
 ### 品牌与流程强制门禁
 
 当用户指定品牌真源或要求固定流程时，Parent 必须先生成不可覆盖的

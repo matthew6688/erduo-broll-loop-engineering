@@ -1,5 +1,9 @@
 # HeyGen 数字人接入研究
 
+> 本文保留 Provider/API 调研细节。经过真实 VoxCPM + HeyGen + Erduo 样片验证后形成的
+> 双模式生产规范、画幅策略、门禁和复盘，见
+> [`PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`](PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md)。
+
 ## 2026-08-23 Presenter-kind host canary
 
 在 macOS Apple Silicon、Node.js 22 和 HyperFrames-first 策略下，使用同一条中文旁白与

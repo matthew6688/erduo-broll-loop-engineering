@@ -422,6 +422,7 @@ export const REPOSITORY_ONLY_FILES = Object.freeze([
   'docs/V0.8.0-IMPLEMENTATION-PLAN.md',
   'docs/V0.9.0-DESIGN.md',
   'docs/HYPERGEN-DIGITAL-HUMAN-INTEGRATION-RESEARCH.md',
+  'docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md',
   'docs/images/wechat-contact.jpg',
   'docs/images/workflow-zh.svg',
   'scripts/sync-video-shotcraft.mjs',

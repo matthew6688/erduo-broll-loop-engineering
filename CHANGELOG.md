@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Added a repository-level operating model for faceless, human-presenter, and
+  digital-presenter production. It records the verified vertical baseline,
+  the separate 16:9 production-profile path, HeyGen watermark/account boundary,
+  canonical-audio and lip-sync rebuild rules, subtitle closeout, and the staged
+  route to a real human canary and productized provider adapter.
+
 - Added an immutable production-governance contract and lock for named brand
   authorities and fixed workflows. Design, Director, and pre-render source
   gates enforce bound authority/design/Logo hashes, palette, typography,
