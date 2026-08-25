@@ -17,16 +17,23 @@ absolute difference between consecutive frames, and reports three signals:
 
 - **tail still exceeds declared hold** — the shot stopped earlier than it said
   it would;
-- **mid-shot still run** — the picture froze between beats;
-- **action window below energy floor** — nothing developed before the hold.
+- **mid-shot still run** — the picture stopped developing longer than one
+  Recipe/rhythm-sized beat permits;
+- **action window underdeveloped** — too little of the declared action window
+  contains visible development for the motion map's `calm`, `mixed`,
+  `progressive`, or `impact` rhythm.
 
 The hold comes from `truth.readableHold`. It lives in `truth`, not in the
 creative proposal, so a Builder cannot widen the hold to pass. When a Recipe
 declares none, the audit falls back to the motion map `settleMs` and records
 which source it used; with neither, the shot is reported `unmeasured`.
 
-The mean is taken over the action window only. Taken over the whole shot, a long
-legitimate hold dilutes it and a correct shot reads as a failure.
+The audit still records mean difference for diagnosis, but does not gate on one
+absolute mean-energy number. Sparse type, diagrams, footage, landscape, and
+vertical video occupy different pixel areas. The gate instead combines active
+frame ratio, the Recipe's key-state count, the motion-map rhythm, and the exact
+readable hold. Taken over the whole shot, a long legitimate hold would dilute
+all of those facts.
 
 ### Choosing `stillCutoff`
 
@@ -93,12 +100,16 @@ every Recipe.
 Only markup text is readable. Canvas, shader, and burnt-in bitmap text are
 listed as `unmeasured` rather than counted as clean.
 
-## Overriding thresholds
+## Where the audits run
 
-A project that needs different numbers puts them in its production profile
-under `renderedEvidence.motion`. The audit reads them when present and records
-`thresholdSource` in the report, so a run always says whether it used project
-numbers or the documented defaults. Because the profile identity is part of the
-plan identity, changing a threshold is visible in the plan rather than hidden in
-a command line. The profile generator does not emit the block; a project adds it
-deliberately or inherits the defaults.
+The assignment standard command runs on-screen-text provenance against authored
+source before render; no delivery contract is needed. It runs motion evidence
+after direct-shot render and before the Builder may record a viewing conclusion.
+`signals` and `unmeasured` both remain inside the owning Lead/Builder's
+archive/revise/rerun loop.
+
+The five-shot technical gate reruns both audits across the complete canary,
+requires `passed`, records both checks, and hash-binds both report files. Gate
+validation reopens the reports and verifies audit kind, Plan identity, exact
+five-shot order, status, and file hash. This prevents a Parent from passing the
+canary first and discovering a contradictory audit later.

@@ -20,6 +20,7 @@ import { writeProductionPlan } from '../erduo-broll-loop-engineering/scripts/pla
 import { computeRepresentativeScenesIdentity } from '../erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs';
 import { prepareSharedToolchain } from '../erduo-broll-loop-engineering/scripts/remotion-toolchain.mjs';
 import { inspectAssignmentRuntime } from '../erduo-broll-loop-engineering/scripts/backend-inspection.mjs';
+import {registerSkillUsage} from '../erduo-broll-loop-engineering/scripts/skill-usage.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const runtimeSchemas = path.join(root, 'erduo-broll-loop-engineering', 'references', 'runtime');
@@ -60,12 +61,20 @@ async function fixture(t, { runtime = 'hyperframes' } = {}) {
   const sourceRoot = path.join(productionRoot, '04-visual-lock', runtime, 'shared-source');
   const deliveryRoot = path.join(productionRoot, '05-delivery');
   const assetsRoot = path.join(productionRoot, '02-assets');
+  const inputsRoot = path.join(productionRoot, '00-inputs');
   await Promise.all([
+    mkdir(inputsRoot, {recursive: true}),
     mkdir(recipesDirectory, { recursive: true }),
     mkdir(sourceRoot, { recursive: true }),
     mkdir(deliveryRoot, { recursive: true }),
     mkdir(assetsRoot, { recursive: true }),
   ]);
+  const skillFile = path.join(base, 'authority', 'SKILL.md');
+  await mkdir(path.dirname(skillFile), {recursive: true});
+  await writeFile(skillFile, '---\nname: erduo-broll-loop-engineering\n---\n# Test authority\n');
+  const skillRegistration = await registerSkillUsage({
+    productionRoot, skillFile, skillName: 'erduo-broll-loop-engineering',
+  });
   await writeFile(path.join(assetsRoot, 'fixture-font.woff2'), 'fixture-font');
   const profileIdentity = sha('profile');
   const shots = [
@@ -137,7 +146,7 @@ async function fixture(t, { runtime = 'hyperframes' } = {}) {
   await writeFile(motionMapFile, `${JSON.stringify(motionMap)}\n`);
   const planned = await writeProductionPlan({
     productionRoot, recipesDirectory, selectionFile, narrativeEnvelopeFile, visualSystemFile,
-    representativeScenesFile, motionMapFile,
+    representativeScenesFile, motionMapFile, skillUsageFile: skillRegistration.file,
     productionProfile: {
       schemaVersion: '1.0.0', raster: runtime === 'remotion' ? { width: 320, height: 180 } : { width: 640, height: 360 }, fps: { numerator: 30, denominator: 1 },
       mezzanine: { container: 'mp4', codec: 'h264', encoder: 'libx264', pixelFormat: 'yuv420p', class: 'visually-lossless', preset: 'medium', crf: 12, gopFrames: 60, keyframeScenecut: false, upgradeReason: null, color: { space: 'bt709', transfer: 'bt709', primaries: 'bt709', range: 'tv' }, audio: { policy: 'silent', streams: 0, codec: null, sampleRate: null, channels: null } },

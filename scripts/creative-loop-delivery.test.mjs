@@ -22,7 +22,10 @@ import {
   validateBuilderViewReceipt,
   validateCanaryTechnicalGate,
 } from '../erduo-broll-loop-engineering/scripts/shot-media-lib.mjs';
-import {recordCanaryUserDecision} from '../erduo-broll-loop-engineering/scripts/validate-shot-media.mjs';
+import {
+  orderedAssignmentShotIds,
+  recordCanaryUserDecision,
+} from '../erduo-broll-loop-engineering/scripts/validate-shot-media.mjs';
 import {
   computeRecipeIdentity,
   computeRecipeTruthIdentity,
@@ -34,6 +37,21 @@ async function temporaryRoot(t) {
   return root;
 }
 
+test('full-production receipt order follows the runtime timeline after canary unlock', () => {
+  const plan = {
+    schemaVersion: '4.0.0',
+    shots: ['S01', 'S02', 'S03', 'S04', 'S05'].map((shotId) => ({shotId})),
+  };
+  const assignment = {
+    shotIds: ['S01', 'S04'],
+    canaryPhase: {deferredShotIds: ['S02', 'S03', 'S05']},
+  };
+  assert.deepEqual(
+    orderedAssignmentShotIds(plan, assignment),
+    ['S01', 'S02', 'S03', 'S04', 'S05'],
+  );
+});
+
 function gateIdentity(value) {
   const {identity: _identity, ...content} = value;
   return `sha256:${createHash('sha256').update(canonicalJson(content)).digest('hex')}`;
@@ -43,7 +61,7 @@ const fixturePlanVerification = async () => ({status: 'valid', recipes: 5});
 
 async function validCanaryClosure(t, {
   compositionCount = 3, materialCount = 2, signatureMotionCount = 2, wallTimeMinutes = 0,
-  includeLead = false,
+  includeLead = false, materialPolicy = null,
 } = {}) {
   const productionRoot = await temporaryRoot(t);
   const canaryShotIds = ['S01', 'S05', 'S07', 'S09', 'S15'];
@@ -65,7 +83,11 @@ async function validCanaryClosure(t, {
     },
     sourceContext: {
       originalSrt: {locator: '00-input/original.srt'},
-      originalDesign: {locator: '00-input/original-design.md'},
+      originalDesign: {locator: '00-input/original-design.md', sha256: 'a'.repeat(64)},
+      ...(materialPolicy ? {materialPolicy: {
+        approvedBy: 'user', scope: 'default-design-native-only', minimumMaterialShots: 0,
+        originalDesignSha256: 'a'.repeat(64), ...materialPolicy,
+      }} : {}),
     },
     ...(includeLead ? {leadProduction: {
       representativeScenes: [{shotId: 'S01', runtime: 'hyperframes'}],
@@ -217,7 +239,11 @@ async function validCanaryClosure(t, {
   const technical = {
     schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity, shotIds: canaryShotIds,
     canaryPreview: {locator: previewLocator, sha256: await hashFile(path.join(productionRoot, previewLocator)), fullDecode: 'passed'},
-    checks: {directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed', builderViews: 'passed'},
+    checks: {
+      directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed',
+      builderViews: 'passed', onscreenText: 'passed', shotMotion: 'passed',
+    },
+    auditBindings: {},
     contractBindings: await Promise.all(contracts.map(async ({contract, contractLocator}) => ({
       shotId: contract.shotId, contractLocator, contractSha256: await hashFile(path.join(productionRoot, contractLocator)),
       mediaSha256: contract.media.sha256, semanticCheckSha256: contract.semanticCheck.sha256,
@@ -234,6 +260,14 @@ async function validCanaryClosure(t, {
       },
     ],
   };
+  for (const [name, audit] of [['onscreenText', 'onscreen-text'], ['shotMotion', 'shot-motion']]) {
+    const locator = `05-delivery/checks/${audit}.audit.json`;
+    await writeFile(path.join(productionRoot, locator), `${JSON.stringify({
+      schemaVersion: '1.0.0', audit, planIdentity: plan.identity, status: 'passed',
+      thresholds: {}, thresholdSource: 'fixture', shots: canaryShotIds.map((shotId) => ({shotId, status: 'passed', measurements: {}, findings: []})),
+    })}\n`);
+    technical.auditBindings[name] = {locator, sha256: await hashFile(path.join(productionRoot, locator))};
+  }
   technical.identity = gateIdentity(technical);
   await writeFile(path.join(productionRoot, technicalLocator), `${JSON.stringify(technical)}\n`);
   if (wallTimeMinutes > 0) {
@@ -443,7 +477,14 @@ test('non-contiguous five-shot canary requires both technical evidence and a bou
     schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity,
     shotIds: canaryShotIds,
     canaryPreview: {locator: previewLocator, sha256: await hashFile(path.join(productionRoot, previewLocator)), fullDecode: 'passed'},
-    checks: {directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed', builderViews: 'passed'},
+    checks: {
+      directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed',
+      builderViews: 'passed', onscreenText: 'passed', shotMotion: 'passed',
+    },
+    auditBindings: {
+      onscreenText: {locator: '05-delivery/checks/onscreen-text.audit.json', sha256: '6'.repeat(64)},
+      shotMotion: {locator: '05-delivery/checks/shot-motion.audit.json', sha256: '7'.repeat(64)},
+    },
     contractBindings: canaryShotIds.map((shotId) => ({
       shotId, contractLocator: `05-delivery/shots/${shotId}.shot-media.json`, contractSha256: 'c'.repeat(64),
       mediaSha256: 'a'.repeat(64), semanticCheckSha256: 'b'.repeat(64), sourceIdentity: `sha256:${'d'.repeat(64)}`,
@@ -454,14 +495,14 @@ test('non-contiguous five-shot canary requires both technical evidence and a bou
   await writeFile(path.join(productionRoot, technicalLocator), `${JSON.stringify(technical)}\n`);
   await assert.rejects(
     validateCanaryTechnicalGate({plan, productionRoot, verifyPlanInputs: fixturePlanVerification}),
-    /contract|media|semantic|receipt|handoff/iu,
+    /audit|contract|media|semantic|receipt|handoff/iu,
     'a self-consistent gate with invented hashes and missing files must not unlock production',
   );
   await assert.rejects(
     resolveCanaryRenderShotIds({
       plan, assignment: fullAssignment, productionRoot, verifyPlanInputs: fixturePlanVerification,
     }),
-    /contract|media|semantic|receipt|handoff/iu,
+    /audit|contract|media|semantic|receipt|handoff/iu,
   );
 });
 
@@ -479,6 +520,8 @@ test('canary gate reopens every contract, media, sheet, receipt, and handoff ins
     [path.join(value.productionRoot, '05-delivery', 'shots', '001-S01.mp4'), /media hash/iu],
     [path.join(value.productionRoot, '05-delivery', 'checks', '001-S01.semantic-check.png'), /semantic check/iu],
     [path.join(value.productionRoot, value.technical.viewReceiptBindings.at(-1).locator), /receipt|valid JSON/iu],
+    [path.join(value.productionRoot, value.technical.auditBindings.onscreenText.locator), /onscreen-text audit binding/iu],
+    [path.join(value.productionRoot, value.technical.auditBindings.shotMotion.locator), /shot-motion audit binding/iu],
   ];
   for (const [file, pattern] of targets) {
     const original = await readFile(file);
@@ -514,6 +557,33 @@ test('canary creative closure enforces composition, material, signature-motion, 
       verifyPlanInputs: fixturePlanVerification,
     }), pattern);
   }
+});
+
+test('native-only material exception requires an explicit user policy bound to the original design', async (t) => {
+  const approved = await validCanaryClosure(t, {materialCount: 0, materialPolicy: {}});
+  const passed = await validateCanaryTechnicalGate({
+    plan: approved.plan, productionRoot: approved.productionRoot,
+    recipesDirectory: approved.recipesDirectory, runner: approved.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  });
+  assert.equal(passed.creativeChecks.materialShots, 0);
+  assert.equal(passed.creativeChecks.materialPolicy, 'user-approved-native-only');
+
+  const stale = await validCanaryClosure(t, {
+    materialCount: 0, materialPolicy: {originalDesignSha256: 'b'.repeat(64)},
+  });
+  await assert.rejects(validateCanaryTechnicalGate({
+    plan: stale.plan, productionRoot: stale.productionRoot,
+    recipesDirectory: stale.recipesDirectory, runner: stale.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  }), /verified user-approved native-only/iu);
+
+  const mixed = await validCanaryClosure(t, {materialCount: 1, materialPolicy: {}});
+  await assert.rejects(validateCanaryTechnicalGate({
+    plan: mixed.plan, productionRoot: mixed.productionRoot,
+    recipesDirectory: mixed.recipesDirectory, runner: mixed.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  }), /verified user-approved native-only/iu);
 });
 
 test('a canary representative shot requires the Lead receipt and cannot be impersonated by one Builder receipt', async (t) => {

@@ -2,7 +2,7 @@
 
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import {isDirectExecution} from './direct-execution.mjs';
 
 const ROLES = new Set(['primary', 'secondary', 'text', 'structural', 'decorative']);
 const MOTION_KINDS = new Set(['transition', 'continuous', 'cut']);
@@ -954,4 +954,4 @@ async function main() {
   if (result.status !== 'pass') process.exitCode = 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();
+if (isDirectExecution(import.meta.url)) await main();

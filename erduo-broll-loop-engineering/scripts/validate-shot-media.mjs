@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import { validateRuntimePlan } from './validate-runtime-plan.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
+import {verifyVideoSkillUsage} from './skill-usage.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 import {
   assertProductionSourcePolicy,
   assertMediaFacts,
@@ -28,6 +30,14 @@ import {
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shotSchemaFile = path.join(skillRoot, 'references', 'runtime', 'shot-media.schema.json');
 const deliverySchemaFile = path.join(skillRoot, 'references', 'runtime', 'delivery-index.schema.json');
+
+export function orderedAssignmentShotIds(plan, assignment) {
+  const scope = new Set([
+    ...assignment.shotIds,
+    ...(plan.schemaVersion === '4.0.0' ? assignment.canaryPhase?.deferredShotIds ?? [] : []),
+  ]);
+  return plan.shots.map(({shotId}) => shotId).filter((shotId) => scope.has(shotId));
+}
 
 function runtimePlanInputs(productionRoot, recipesDirectory, plan) {
   const root = path.resolve(productionRoot);
@@ -109,9 +119,7 @@ async function bindSourceIdentities({ sourceManifestFile, sourceManifestFiles = 
       if (binding.sourceRoot !== expectedSourceRoot) {
         throw new Error(`${assignment.assignmentId} source manifest points outside its planned sourceRoot`);
       }
-      const assignmentShotIds = plan.schemaVersion === '4.0.0'
-        ? [...new Set([...assignment.shotIds, ...(assignment.canaryPhase?.deferredShotIds ?? [])])]
-        : assignment.shotIds;
+      const assignmentShotIds = orderedAssignmentShotIds(plan, assignment);
       for (const shotId of assignmentShotIds) {
         if (identities.has(shotId)) throw new Error(`${shotId} is bound to multiple production source assignments`);
         identities.set(shotId, binding.identity);
@@ -290,6 +298,15 @@ export async function validateShotMedia({
     }
     if (errors.length) throw new Error(`${shot.shotId} contract differs from planned direct shot delivery: ${errors.join(', ')}`);
     await requireRegularFile(mediaFile, `${shot.shotId} media`);
+    if (plan.schemaVersion === '4.0.0' && !plan.sourceContext?.skillUsage) {
+      throw new Error('Recipe v4 shot validation requires runtime-plan skill usage binding');
+    }
+    if (plan.sourceContext?.skillUsage) {
+      await verifyVideoSkillUsage({
+        productionRoot, videoFile: mediaFile, planIdentity: plan.identity,
+        binding: plan.sourceContext.skillUsage,
+      });
+    }
     const facts = await probeAndDecode(mediaFile, {
       ffmpeg, ffprobe, runner, cwd: absoluteDelivery, shotId: shot.shotId,
     });
@@ -325,6 +342,11 @@ export async function validateShotMedia({
       plan, productionRoot, recipesDirectory, ffmpeg, ffprobe, runner,
     });
     if (!canaryTechnicalGate) throw new Error('canary technical gate has not passed; full production validation is blocked');
+    await verifyVideoSkillUsage({
+      productionRoot,
+      videoFile: path.join(path.resolve(productionRoot), canaryTechnicalGate.canaryPreview.locator),
+      planIdentity: plan.identity, binding: plan.sourceContext.skillUsage,
+    });
     canaryUserDecision = await validateCanaryUserDecision({
       plan, productionRoot, technicalGate: canaryTechnicalGate,
     });
@@ -338,15 +360,17 @@ export async function validateShotMedia({
     for (const assignment of assignments.filter((item) => (
       ['builder', 'lead'].includes(item.role) && item.planIdentity === plan.identity
     ))) {
-      const assignmentShotIds = [...new Set([
-        ...assignment.shotIds, ...(assignment.canaryPhase?.deferredShotIds ?? []),
-      ])];
+      const assignmentShotIds = orderedAssignmentShotIds(plan, assignment);
       const recipeBindings = assignmentShotIds.map((shotId) => creativeRecipeBinding(recipeByShotId.get(shotId)));
       await validateBuilderViewReceipt({
         assignment, productionRoot, recipeBindings, expectedShotIds: assignmentShotIds,
       });
       if (assignment.role === 'lead') continue;
       const previewFile = path.join(absoluteDelivery, 'chapter-previews', `${assignment.unitId}.mp4`);
+      await verifyVideoSkillUsage({
+        productionRoot, videoFile: previewFile, planIdentity: plan.identity,
+        binding: plan.sourceContext.skillUsage,
+      });
       const facts = await probeAndDecode(previewFile, {
         ffmpeg, ffprobe, runner, cwd: absoluteDelivery, shotId: `${assignment.unitId} chapter preview`,
       });
@@ -412,6 +436,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify({ status: result.status, shots: result.shots })}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

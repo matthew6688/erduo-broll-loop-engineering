@@ -27,7 +27,7 @@ Director、Assets、Lead、Chapter Builder、五镜头 canary、静音逐镜 B-r
 | 真人 + B-roll | 合同与集成测试已支持 | `presenterKind=human` 复用同一编译/合成链；仍应再做一条真实真人母片 canary |
 | 竖屏 9:16 | 已完成真实样片 | 1080×1920、30 fps |
 | 横屏 16:9 | 引擎支持，尚未完成本方案实片 canary | Erduo 默认 profile 为 3840×2160、30 fps，也可显式使用 1920×1080 |
-| 字幕 | 本次成片已完成 | 原 SRT 作为 sidecar truth，最后生成烧录字幕衍生版；尚未纳入官方 composition receipt |
+| 字幕 | 已纳入最终交付门禁 | 原 SRT 作为 sidecar truth；烧录字幕衍生版必须通过 SRT hash、时间、音轨连续性、响度和完整解码检查 |
 | HeyGen HTTP adapter | 未产品化 | 本次能调用 API，但任务状态、幂等、恢复、Webhook 和下载还没有仓库级 adapter |
 
 因此，对外应表述为“真人/数字人双模式剪辑与合成已成立”；不应表述为“HeyGen 全自动
@@ -103,6 +103,10 @@ Recipes 编译连续时间线，`assemble-presenter-broll.mjs` 按计划切换 p
 - 全片能否完整解码；
 - 字幕末尾是否超过最终媒体时长；
 - 人像是否自然彩色且没有意外裁切。
+
+其中可机械验证的项目由 `verify-presenter-delivery.mjs` 强制执行。它还要求字幕版的解码 PCM
+音频与主合成完全一致，从流程上阻止无声、错音轨或字幕导出时替换音频。字幕位置、口型、
+身份和审美仍由用户看片决定，自动门禁不能代替。
 
 发布、commit 或 push 是独立批准，不由技术成功自动触发。
 
@@ -184,7 +188,7 @@ SRT、旁白、授权、素材索引和部分叙事设计可以复用；已经�
 ## 8. 下一阶段产品化顺序
 
 1. **P0：无水印账户 canary**——重新生成三段 presenter，确认正式发布质量。
-2. **P0：官方字幕交付合同**——把 sidecar/burn-in、字幕安全区和 receipt 纳入仓库脚本。
+2. **P0：字幕安全区证据**——最终交付合同、SRT/音轨/响度/解码门禁已完成；下一步补字幕与主体文字碰撞证据。
 3. **P1：YouTube 横屏 canary**——同一 SRT 做 1920×1080 的三镜头 Lead + 五镜头 canary。
 4. **P1：真人实片 canary**——用一条真实真人母片验证 `presenterKind=human` 的完整交付。
 5. **P1：HeyGen adapter**——持久化 job state、幂等键、轮询/Webhook、恢复下载和费用 gate。

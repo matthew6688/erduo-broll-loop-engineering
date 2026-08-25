@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "used", "skill", "scope", "executionPolicy", "registeredBy", "identity"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "status": {"const": "required"},
+    "used": {"const": true},
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "locator", "sha256"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "locator": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "scope": {"const": "video-production"},
+    "executionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["designAuthority", "unapprovedCreativeAdditions", "presenterIntegration", "userAestheticApproval", "legacyBackfill"],
+      "properties": {
+        "designAuthority": {"const": "bound-original-design-only"},
+        "unapprovedCreativeAdditions": {"const": "forbidden"},
+        "presenterIntegration": {"const": "separate-post-baseline-stage"},
+        "userAestheticApproval": {"const": "required-before-full-production"},
+        "legacyBackfill": {"const": "forbidden"}
+      }
+    },
+    "registeredBy": {"const": "parent-producer"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

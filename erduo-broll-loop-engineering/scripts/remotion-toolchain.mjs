@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import {isDirectExecution} from './direct-execution.mjs';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import {
@@ -528,7 +529,7 @@ async function main(argv) {
   throw new Error(usage());
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`remotion-toolchain: ${error.message}\n`);
     process.exitCode = 1;

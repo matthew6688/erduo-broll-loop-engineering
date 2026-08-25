@@ -3,6 +3,34 @@
 
 ### Added
 
+- Installed CLI entrypoints now resolve symbolic links before deciding whether
+  to run. Invoking the Skill through its `.codex/skills` link can no longer
+  return silently; a real symlink invocation is covered by regression tests.
+- Lead and Builder receipts now state that `revised` records Recipe
+  `creativeProposal` changes, not implementation-only source repair. Canary
+  aggregation identifies the exact assignment whose receipt is invalid.
+- The v4 Lead assignment gate now validates a started receipt/handoff closure
+  with the same contract used by five-shot aggregation, preventing a false
+  `ready` result that fails only after Chapter Builder work completes.
+
+- Identity-bound `material-policy.json` support for the Skill's narrow
+  user-approved exception to the two-material-shot canary minimum. It is valid
+  only for the exact original DesignMD and an all-`native` five-shot canary;
+  absent, stale, or mixed-route policies fail closed.
+- Assignment standard commands now run source-only text provenance before
+  render and Recipe-key-state/motion-map-rhythm evidence after render. Canary
+  technical gates require and hash-bind both passing reports, so a late audit
+  can no longer contradict an earlier technical pass. Lead/Builder role
+  charters own the archive/revise/rerun loop instead of asking the user to
+  direct per-shot repairs.
+
+- `verify-presenter-delivery.mjs` and a closed final-delivery gate contract for
+  human/digital presenter productions. It rejects missing or replaced audio,
+  low loudness, subtitle drift from the bound original SRT, subtitle overrun,
+  stale composition/edit-plan/runtime bindings, media-fact drift, and decode
+  failure. Subtitled derivatives must preserve the approved composition's
+  decoded PCM audio exactly.
+
 - Immutable production-governance contract and lock, with deterministic
   `design`, `director`, and pre-render `source` gates. Runtime Plan v4 and all
   assignments bind the same authority, original-design, approved-Logo, brand,
@@ -67,6 +95,10 @@ replaces the user's canary choice.
 
 ### Fixed
 
+- `validate-shot-media.mjs` now orders a Builder's canary and deferred shots by
+  the runtime timeline, matching `render-assigned-shots.mjs`. Full-production
+  validation no longer rejects a valid view receipt merely because the
+  assignment packet lists canary shots before deferred shots.
 - `validate-shot-media.mjs` computed `truthIdentity` by hashing `recipe.truth`
   alone while `render-assigned-shots.mjs` hashed `{shotId, truth}`. A Builder
   view receipt could satisfy one validator or the other but never both, so

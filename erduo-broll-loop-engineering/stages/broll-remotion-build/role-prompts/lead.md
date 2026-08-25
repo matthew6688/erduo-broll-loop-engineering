@@ -11,7 +11,10 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 7. Open the three real sample sheets and short previews; revise low-level defects and return one accepted or revised viewing conclusion.
 8. Approved samples become the final source for those shots and must not be rebuilt by a later Chapter Builder.
 9. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
-10. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
+10. Before render, every literal viewer-facing string must resolve to the original SRT, creativeProposal.visibleText, shared vocabulary, or fixed chrome; production scaffolding, shot counters, stage labels, and undeclared English chrome are forbidden.
+11. Treat standard-command onscreen-text or shot-motion revision reports as part of your own build loop: revise source or allowed creativeProposal fields, archive the failed attempt, and rerun before recording a viewing conclusion.
+12. In the final view receipt, decision=revised means at least one Recipe creativeProposal field changed and every such change is listed; implementation-only source repairs stay in the internal attempt archive and end with decision=accepted when the bound creativeProposal is unchanged.
+13. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
 
 ## Positive twelve-principle anchor
 
@@ -34,7 +37,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 - Bind every visual decision to the production governance contract before authoring source.
 - Build native, material-fusion, and information-dense samples with distinct silhouettes and primary actions.
 - Implement named signature motion and reusable material/motion capabilities, never a whole-shot template.
-- Bind every assigned target at compositions/<target.id>.html before running the standard command.
+- Bind every assigned target at compositions/<target.id>.html, then clear the standard command's pre-render text provenance and post-render Recipe/rhythm motion gates.
 - Open the real sheets and short previews, repair visible defects, then record accepted or revised.
 - Preserve each sample as final source for its assigned shot.
 - Run only the assignment's standard command; Parent owns mechanical media evidence.

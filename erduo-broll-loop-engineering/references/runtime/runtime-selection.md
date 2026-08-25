@@ -66,6 +66,8 @@ node <skill-root>/scripts/plan-runtime.mjs \
   --motion-map <motion-map.json> \
   --original-srt <complete-original.srt> \
   --original-design <complete-original-design.md> \
+  --skill-usage <production-root>/00-inputs/skill-usage.json \
+  --canary-shot-ids <S01,S06,S07,S10,S12> \
   --hyperframes-executable <verified-absolute-hyperframes-cli> \
   --production-profile <broll-production/production-profile.json> \
   --production-root <broll-production>
@@ -74,6 +76,14 @@ node <skill-root>/scripts/plan-runtime.mjs \
 The normal command atomically writes schema-4
 `broll-production/01-runtime-plan/runtime-plan.json`, minimal Lead packets, and
 minimal Chapter Builder packets under `01-runtime-plan/assignments/`. Recipe v4
+governed production requires the `register-skill-usage.mjs` output. Planning
+reopens the real `SKILL.md`, verifies its hash and `used: true`, and binds the
+contract into the plan and every assignment. Missing or stale evidence fails.
+Recipe v4
+may receive an explicitly approved, comma-separated set of exactly five unique
+planned shot IDs through `--canary-shot-ids`; the planner validates and binds
+that set into the immutable plan and assignments. Omitting it preserves the
+deterministic default selection.
 requires the representative set, motion map, complete original SRT, and complete
 original design and the selected backend's verified executable together; use
 `--remotion-executable` for explicit Remotion. Omitting the representative set

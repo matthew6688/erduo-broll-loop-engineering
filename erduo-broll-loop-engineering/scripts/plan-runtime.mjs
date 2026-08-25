@@ -32,6 +32,8 @@ import { roleInjection } from './generate-role-files.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
 import { presenterKindOf } from './presenter-media-lib.mjs';
 import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
+import {verifySkillUsage} from './skill-usage.mjs';
+import {verifyMaterialPolicy} from './material-policy.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
@@ -496,8 +498,24 @@ function selectedExecutableLocator(selection, runtime, explicitFiles) {
   return explicitFiles?.[runtime] ?? null;
 }
 
-function selectCanaryShotIds(shots) {
+function selectCanaryShotIds(shots, requestedShotIds = null) {
   const available = new Set(shots.map(({ shotId }) => shotId));
+  if (requestedShotIds !== null) {
+    if (!Array.isArray(requestedShotIds) || requestedShotIds.length !== 5) {
+      throw new Error('explicit creative canary requires exactly five shot IDs');
+    }
+    if (new Set(requestedShotIds).size !== requestedShotIds.length) {
+      throw new Error('explicit creative canary shot IDs must be unique');
+    }
+    for (const shotId of requestedShotIds) {
+      if (typeof shotId !== 'string' || !available.has(shotId)) {
+        throw new Error(`explicit creative canary names unavailable shot ${String(shotId)}`);
+      }
+    }
+    return [...requestedShotIds].sort((left, right) => (
+      shots.findIndex(({ shotId }) => shotId === left) - shots.findIndex(({ shotId }) => shotId === right)
+    ));
+  }
   const preferred = CANARY_SHOT_PREFERENCES.filter((shotId) => available.has(shotId));
   if (preferred.length === 5) return preferred;
   const selected = [...preferred];
@@ -524,6 +542,9 @@ export async function planRuntime({
   originalSrtFile,
   originalDesignFile,
   presenterSourceFile,
+  skillUsageFile,
+  materialPolicyFile,
+  canaryShotIds: requestedCanaryShotIds = null,
   runtimeExecutableFiles = {},
   parentSoloReasons = {},
   matrixFile = defaultMatrix,
@@ -555,12 +576,25 @@ export async function planRuntime({
       visualSystemFile,
     })
     : null;
+  const skillUsageContext = planSchemaVersion === '4.0.0' && skillUsageFile
+    ? await verifySkillUsage({productionRoot: inferredProductionRoot, skillUsageFile})
+    : null;
+  if (planSchemaVersion === '4.0.0' && governanceContext && !skillUsageContext) {
+    throw new Error('governed video production requires a registered skill usage contract');
+  }
   const presenterContext = planSchemaVersion === '4.0.0'
     ? await bindPresenterContext(inferredProductionRoot, presenterSourceFile) : null;
+  const materialPolicyContext = planSchemaVersion === '4.0.0' && materialPolicyFile
+    ? await verifyMaterialPolicy({
+      productionRoot: inferredProductionRoot, materialPolicyFile, originalDesignFile,
+    })
+    : null;
   const sourceContext = planSchemaVersion === '4.0.0' ? {
     originalSrt: await bindOriginalInput(originalSrtFile, inferredProductionRoot, 'original SRT'),
     originalDesign: await bindOriginalInput(originalDesignFile, inferredProductionRoot, 'original design'),
     ...(presenterContext ? { presenterSource: presenterContext } : {}),
+    ...(skillUsageContext ? { skillUsage: skillUsageContext } : {}),
+    ...(materialPolicyContext ? { materialPolicy: materialPolicyContext } : {}),
     ...(governanceContext ? { productionGovernance: governanceContext } : {}),
   } : null;
   const productionProfile = bindProductionProfile(requestedProductionProfile);
@@ -740,14 +774,14 @@ export async function planRuntime({
           required: true,
           technicalLocator: '05-delivery/canary-technical-gate.json',
           userDecisionLocator: '05-delivery/canary-user-decision.json',
-          shotIds: selectCanaryShotIds(shots),
+          shotIds: selectCanaryShotIds(shots, requestedCanaryShotIds),
           fullProductionBlockedUntil: 'technical-and-user-passed',
         },
       } : {},
     );
     await validateRuntimePlan(plan, {
       narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-      originalSrtFile, originalDesignFile, presenterSourceFile,
+      originalSrtFile, originalDesignFile, presenterSourceFile, materialPolicyFile,
       productionRoot: inferredProductionRoot,
     });
     return plan;
@@ -805,7 +839,7 @@ export async function planRuntime({
         required: true,
         technicalLocator: '05-delivery/canary-technical-gate.json',
         userDecisionLocator: '05-delivery/canary-user-decision.json',
-        shotIds: selectCanaryShotIds(shots),
+        shotIds: selectCanaryShotIds(shots, requestedCanaryShotIds),
         fullProductionBlockedUntil: 'technical-and-user-passed',
       },
     } : {}),
@@ -814,7 +848,8 @@ export async function planRuntime({
   plan.identity = computeRuntimePlanIdentity(plan);
   await validateRuntimePlan(plan, {
     narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-    originalSrtFile, originalDesignFile, presenterSourceFile,
+    originalSrtFile, originalDesignFile, presenterSourceFile, materialPolicyFile,
+    skillUsageFile,
     productionRoot: inferredProductionRoot,
   });
   return plan;
@@ -907,6 +942,12 @@ function creativeContext(plan) {
     },
     ...(plan.sourceContext.productionGovernance ? {
       governanceContext: plan.sourceContext.productionGovernance,
+    } : {}),
+    ...(plan.sourceContext.skillUsage ? {
+      skillUsageContext: plan.sourceContext.skillUsage,
+    } : {}),
+    ...(plan.sourceContext.materialPolicy ? {
+      materialPolicyContext: plan.sourceContext.materialPolicy,
     } : {}),
   };
 }
@@ -1021,6 +1062,8 @@ export function buildBuilderAssignments(plan, {
             productionGovernance: plan.sourceContext.productionGovernance.contractLocator,
             productionGovernanceLock: plan.sourceContext.productionGovernance.lockLocator,
           } : {}),
+          ...(plan.sourceContext.skillUsage ? {skillUsage: plan.sourceContext.skillUsage.locator} : {}),
+          ...(plan.sourceContext.materialPolicy ? {materialPolicy: plan.sourceContext.materialPolicy.locator} : {}),
           assetIndex: '02-assets/asset-index.json',
           leadCapabilityIndexes: [...new Set(plannedLeadSamples(plan).map(({ capabilityIndex }) => capabilityIndex))],
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
@@ -1142,6 +1185,8 @@ export function buildBuilderAssignments(plan, {
             productionGovernance: plan.sourceContext.productionGovernance.contractLocator,
             productionGovernanceLock: plan.sourceContext.productionGovernance.lockLocator,
           } : {}),
+          ...(plan.sourceContext.skillUsage ? {skillUsage: plan.sourceContext.skillUsage.locator} : {}),
+          ...(plan.sourceContext.materialPolicy ? {materialPolicy: plan.sourceContext.materialPolicy.locator} : {}),
           assetIndex: '02-assets/asset-index.json',
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
         } : {}),
@@ -1232,10 +1277,10 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const name = argv[index];
     if (name === '--json') continue;
-    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--presenter-source', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
+    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--presenter-source', '--skill-usage', '--material-policy', '--canary-shot-ids', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
     const value = argv[index + 1];
     if (!value) throw new Error(`${name} requires a path`);
-    options[name.slice(2)] = path.resolve(value);
+    options[name.slice(2)] = name === '--canary-shot-ids' ? value : path.resolve(value);
     index += 1;
   }
   if (!options.recipes || !options.selection || !options['narrative-envelope'] || !options['visual-system']) throw new Error('--recipes, --selection, --narrative-envelope, and --visual-system are required');
@@ -1247,6 +1292,11 @@ function parseArgs(argv) {
     originalSrtFile: options['original-srt'],
     originalDesignFile: options['original-design'],
     presenterSourceFile: options['presenter-source'],
+    skillUsageFile: options['skill-usage'],
+    materialPolicyFile: options['material-policy'],
+    canaryShotIds: options['canary-shot-ids']
+      ? options['canary-shot-ids'].split(',').map((value) => value.trim()).filter(Boolean)
+      : null,
     runtimeExecutableFiles: {
       ...(options['hyperframes-executable'] ? { hyperframes: options['hyperframes-executable'] } : {}),
       ...(options['remotion-executable'] ? { remotion: options['remotion-executable'] } : {}),

@@ -18,12 +18,15 @@
     "validate:recipes": "node erduo-broll-loop-engineering/scripts/validate-shot-recipes.mjs",
     "create:production-profile": "node erduo-broll-loop-engineering/scripts/create-production-profile.mjs",
     "plan:runtime": "node erduo-broll-loop-engineering/scripts/plan-runtime.mjs",
+    "register:skill-usage": "node erduo-broll-loop-engineering/scripts/register-skill-usage.mjs",
+    "mark:video-skill-usage": "node erduo-broll-loop-engineering/scripts/mark-video-skill-usage.mjs",
     "validate:runtime-plan": "node erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs",
     "validate:visual-lock": "node erduo-broll-loop-engineering/scripts/validate-visual-lock.mjs",
     "validate:production-governance": "node erduo-broll-loop-engineering/scripts/validate-production-governance.mjs",
     "create:presenter-source": "node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs",
     "create:presenter-edit-plan": "node erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs",
     "assemble:presenter-broll": "node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs",
+    "verify:presenter-delivery": "node erduo-broll-loop-engineering/scripts/verify-presenter-delivery.mjs",
     "gate:builder-assignment": "node erduo-broll-loop-engineering/scripts/gate-builder-assignment.mjs",
     "validate:frozen-blocks": "node erduo-broll-loop-engineering/scripts/validate-frozen-blocks.mjs",
     "metrics:record": "node erduo-broll-loop-engineering/scripts/record-production-event.mjs",
@@ -34,6 +37,6 @@
     "test:motion-layout": "node --test scripts/motion-layout-lint.test.mjs",
     "test:remotion-trace": "node --test scripts/remotion-dom-trace.e2e.test.mjs",
     "test:remotion-canary": "node --test scripts/remotion-canary.e2e.test.mjs",
-    "test": "node --test --test-concurrency=1 scripts/test.mjs scripts/creative-loop-delivery.test.mjs scripts/creative-loop-planner.test.mjs scripts/creative-loop-roles.test.mjs scripts/metrics-media.test.mjs scripts/motion-layout-lint.test.mjs scripts/presenter-broll-integration.test.mjs scripts/production-governance.test.mjs scripts/remotion-dom-trace.e2e.test.mjs scripts/remotion-canary.e2e.test.mjs scripts/role-motion-map.test.mjs scripts/shot-native-delivery.test.mjs scripts/v1-planner-visual-lock.test.mjs"
+    "test": "node --test --test-concurrency=1 scripts/test.mjs scripts/creative-loop-delivery.test.mjs scripts/creative-loop-planner.test.mjs scripts/creative-loop-roles.test.mjs scripts/material-policy.test.mjs scripts/metrics-media.test.mjs scripts/motion-layout-lint.test.mjs scripts/presenter-broll-integration.test.mjs scripts/presenter-delivery-gate.test.mjs scripts/production-governance.test.mjs scripts/remotion-dom-trace.e2e.test.mjs scripts/remotion-canary.e2e.test.mjs scripts/rendered-evidence-gates.test.mjs scripts/role-motion-map.test.mjs scripts/shot-native-delivery.test.mjs scripts/skill-usage.test.mjs scripts/v1-planner-visual-lock.test.mjs"
   }
 }

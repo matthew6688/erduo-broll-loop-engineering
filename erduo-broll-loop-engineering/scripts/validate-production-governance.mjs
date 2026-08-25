@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {canonicalJson, validateSchemaValue} from './runtime-schema-validator.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const schemaRoot = path.join(skillRoot, 'references', 'runtime');
@@ -265,6 +266,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

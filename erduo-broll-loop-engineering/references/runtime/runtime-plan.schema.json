@@ -38,7 +38,7 @@
       "properties": {
         "originalSrt": { "$ref": "#/$defs/rawArtifact" },
       "originalDesign": { "$ref": "#/$defs/rawArtifact" },
-      "presenterSource": {
+    "presenterSource": {
         "type": "object",
         "additionalProperties": false,
         "required": ["locator", "sha256", "mediaSha256", "durationMs", "authorizationUse", "approvalScope"],
@@ -50,9 +50,36 @@
           "authorizationUse": { "enum": ["internal-canary", "publishing"] },
           "approvalScope": { "enum": ["canary", "full-production"] },
           "presenterKind": { "enum": ["human", "digital"] }
-        }
-      },
-      "productionGovernance": {
+      }
+    },
+    "skillUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256", "identity", "used", "skillName", "skillSha256"],
+      "properties": {
+        "locator": {"const": "00-inputs/skill-usage.json"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "identity": {"$ref": "#/$defs/sha256"},
+        "used": {"const": true},
+        "skillName": {"type": "string", "minLength": 1},
+        "skillSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "materialPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256", "identity", "approvedBy", "scope", "minimumMaterialShots", "originalDesignSha256"],
+      "properties": {
+        "locator": {"const": "00-inputs/material-policy.json"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "identity": {"$ref": "#/$defs/sha256"},
+        "approvedBy": {"const": "user"},
+        "scope": {"const": "default-design-native-only"},
+        "minimumMaterialShots": {"const": 0},
+        "originalDesignSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "productionGovernance": {
         "type": "object", "additionalProperties": false,
         "required": ["status", "stage", "profileId", "contractLocator", "contractSha256", "contractIdentity", "lockLocator", "lockSha256", "lockIdentity"],
         "properties": {

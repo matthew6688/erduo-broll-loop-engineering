@@ -10,6 +10,8 @@ import { validateMezzaninePolicy } from './frozen-media-policy.mjs';
 import { validateMotionMap } from './validate-motion-map.mjs';
 import { presenterKindOf, resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
 import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
+import {verifySkillUsage} from './skill-usage.mjs';
+import {verifyMaterialPolicy} from './material-policy.mjs';
 import {
   computeRecipeIdentity,
   computeRecipeNonCreativeIdentity,
@@ -234,6 +236,22 @@ export async function verifyRuntimePlanInputs(plan, files = {}) {
   });
   if (canonicalJson(plan.sourceContext?.productionGovernance ?? null) !== canonicalJson(governance)) {
     throw new Error('production governance binding differs from the current enforcement lock');
+  }
+  const skillUsage = plan.sourceContext?.skillUsage
+    ? await verifySkillUsage({productionRoot, skillUsageFile: files.skillUsageFile})
+    : null;
+  if (governance && !skillUsage) throw new Error('governed video production requires skill usage evidence');
+  if (canonicalJson(plan.sourceContext?.skillUsage ?? null) !== canonicalJson(skillUsage)) {
+    throw new Error('skill usage binding differs from the current registered contract');
+  }
+  const materialPolicy = plan.sourceContext?.materialPolicy
+    ? await verifyMaterialPolicy({
+      productionRoot, materialPolicyFile: files.materialPolicyFile,
+      originalDesignFile: files.originalDesignFile,
+    })
+    : null;
+  if (canonicalJson(plan.sourceContext?.materialPolicy ?? null) !== canonicalJson(materialPolicy)) {
+    throw new Error('material policy binding differs from the current approved contract');
   }
   await Promise.all([
     verifyRawSourceBinding(plan.sourceContext?.originalSrt, files.originalSrtFile, 'original SRT', productionRoot),
@@ -514,7 +532,7 @@ function parseArgs(argv) {
   }
   const allowed = new Set([
     '--plan', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map',
-    '--recipes', '--original-srt', '--original-design', '--production-root',
+    '--recipes', '--original-srt', '--original-design', '--material-policy', '--production-root',
   ]);
   const values = {};
   for (let index = 0; index < argv.length; index += 2) {
@@ -532,6 +550,7 @@ function parseArgs(argv) {
     recipesDirectory: values.recipes,
     originalSrtFile: values['original-srt'],
     originalDesignFile: values['original-design'],
+    materialPolicyFile: values['material-policy'],
     productionRoot: values['production-root'],
   };
 }

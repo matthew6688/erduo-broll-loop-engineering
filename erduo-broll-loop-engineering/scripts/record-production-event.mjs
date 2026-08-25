@@ -5,6 +5,7 @@ import { appendFile, lstat, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateSchemaValue } from './runtime-schema-validator.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const schemaPath = path.join(skillRoot, 'references', 'runtime', 'production-event.schema.json');
@@ -78,6 +79,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify({ status: 'recorded', eventId: event.eventId })}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

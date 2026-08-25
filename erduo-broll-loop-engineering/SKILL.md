@@ -46,6 +46,20 @@ JSON. Default to one independent H.264 MP4 per semantic shot, 3840×2160,
 30 fps, high quality, and silent for faceless work. A combined `master.mp4` is
 optional. Never overwrite.
 
+Every governed video production must register this exact `SKILL.md` with
+`register-skill-usage.mjs` before planning. Pass the resulting
+`00-inputs/skill-usage.json` to `plan-runtime.mjs` through `--skill-usage`.
+The registration fixes execution to the bound original DesignMD, forbids
+unapproved creative additions, keeps presenter integration after the approved
+pure-B-roll baseline, and forbids retroactive proof for legacy videos.
+The plan and every assignment bind the real Skill file hash. Every shot,
+chapter preview, canary, complete preview, presenter composition, subtitled
+derivative, and Master must have a same-name `*.skill-usage.json` sidecar bound
+to its own media hash and the immutable plan identity. Missing evidence,
+`used != true`, Skill drift, a stale media hash, or an unbound plan is a hard
+failure. A label or prose claim is not evidence, and old videos may not be
+backfilled to masquerade as compliant production.
+
 Runtime policy for v1.0.1:
 
 - production default: `hyperframes`;
@@ -66,8 +80,9 @@ when preflight returns `run-onboarding-diagnostic`.
    semantic chapters, shared direction, Recipe v4 files with immutable `truth`
    and revisable `creativeProposal`, a compact motion map, and three
    representative choices. Director never writes `authoring.solo`.
-2. Parent finalizes Director identities, generates the production profile, and
-   runs `plan-runtime.mjs`, passing `--presenter-source` for presenter
+2. Parent finalizes Director identities, registers the exact Skill usage,
+   generates the production profile, and runs `plan-runtime.mjs`, passing
+   `--skill-usage` always and `--presenter-source` for presenter
    work so its hash-closed context reaches Lead and Builders. When governance is
    locked, planning must pass its automatic `director` gate and bind the exact
    contract/lock identities. Normal authoring units are contiguous chapters of
@@ -89,7 +104,10 @@ when preflight returns `run-onboarding-diagnostic`.
 5. Lead runs the assignment's standard command, opens all three six-frame
    sheets and short previews, repairs visible defects, and returns `accepted` or
    `revised`. The standard command must pass the automatic governance `source`
-   gate before rendering. These sources become the final sources for their shots.
+   gate and on-screen-text provenance gate before rendering, then pass the
+   Recipe/rhythm-aware motion gate after rendering. The Lead archives and
+   repairs its own failed attempt; the user is not asked to direct per-shot
+   repairs. These sources become the final sources for their shots.
 6. Build only the five-shot creative canary first. Each Chapter Builder receives
    the complete original SRT/design, its chapter truth/proposals, neighboring
    seams, Lead samples/capability index, shared assets/fonts, open material
@@ -98,8 +116,10 @@ when preflight returns `run-onboarding-diagnostic`.
 7. Each Chapter Builder owns understand → choose → build → render → view → revise
    for its contiguous shots. It may revise `creativeProposal` with one concise
    reason but cannot change `truth`. It runs only the Parent standard command,
-   opens every six-frame sheet and its chapter preview, repairs real defects,
-   and returns one concise `accepted` or `revised` viewing conclusion.
+   clears the same pre-render text and post-render motion gates, opens every
+   six-frame sheet and its chapter preview, repairs real defects, and returns
+   one concise `accepted` or `revised` viewing conclusion. `signals` or
+   `unmeasured` stays inside the Builder archive/revise/rerun loop.
 8. Parent checks file/media facts, direct-shot coverage, FFprobe, full decode,
    hashes, source identity, contracts, and order. Success creates compact media
    facts only. Failure keeps the smallest `shotId + window + issue + image/log`
@@ -122,7 +142,12 @@ when preflight returns `run-onboarding-diagnostic`.
     decisions, then `assemble-presenter-broll.mjs` to switch between presenter
     video and validated silent shots. Parent never hand-authors cut times. Keep exactly one canonical
     presenter audio stream and write the composition receipt. Never weaken the
-    silent direct-shot contract. `broll-shot-export` is legacy-only.
+    silent direct-shot contract. When subtitles or another final video derivative
+    are delivered, Parent must run `verify-presenter-delivery.mjs` before showing
+    completion. The gate binds the final file to the composition receipt, Runtime
+    Plan, original SRT, and edit plan; requires one preserved decoded audio stream,
+    complete decode, acceptable loudness, and subtitle timing within the media.
+    `broll-shot-export` is legacy-only.
 
 ## Canary hard gate
 
@@ -130,6 +155,8 @@ Before full production, require all of the following:
 
 - any production governance lock passes design, Director, and source checks and
   its identities match the runtime plan and assignments;
+- the exact Skill usage contract is hash-bound into the plan and assignments,
+  and every delivered MP4 has a current `used: true` media-hash sidecar;
 - 5/5 shots directly render and fully decode;
 - the owning Builder viewed every sheet or short preview and returned
   `accepted|revised`;
@@ -137,10 +164,16 @@ Before full production, require all of the following:
   result defects;
 - at least three distinct composition families;
 - at least two shots use real or generated material unless the input genuinely
-  does not need it and the user agrees;
+  does not need it and the user agrees. That exception is valid only when
+  `00-inputs/material-policy.json` is user-approved, identity-bound to the exact
+  original DesignMD hash, included in the immutable runtime plan/assignments,
+  and every canary Recipe uses `materialRoute: native`; never infer or backfill
+  the exception after rendering;
 - design energy, type hierarchy, and at least two signature motions are visible;
 - `scripts/audit-shot-motion.mjs` reports no signal on any delivered shot;
 - `scripts/audit-onscreen-text.mjs` reports no signal on any delivered shot;
+- the technical gate hash-binds both passing audit reports; a gate without
+  those bindings, or whose report/media/Plan identity changed, is invalid;
 - user prefers this version for at least 3/5 shots;
 - assignment-to-first-canary-preview wall time is at most 45 minutes.
 
@@ -198,6 +231,12 @@ and final assembly. These checks may reject missing files, wrong media facts,
 black/near-empty frames, safe-area escape, obvious occlusion, or missing fonts.
 They must not claim appeal, metaphor quality, weight, craft-principle success,
 or user approval.
+
+The exact standard command owns the repeatable quality loop. It runs text
+provenance before spending render time, then rendered motion evidence before a
+Builder may record `accepted|revised`; the five-shot technical gate reopens and
+hash-verifies both reports. A production is not stable merely because Parent
+manually repaired one video's source.
 
 The creative owner must open actual sheets/previews and repair low-level errors:
 premature answers, coverage, accumulating old/new states, floating connectors,

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { lstat, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import {isDirectExecution} from './direct-execution.mjs';
 
 function usage() {
   return `Usage:
@@ -254,4 +254,4 @@ async function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();
+if (isDirectExecution(import.meta.url)) await main();

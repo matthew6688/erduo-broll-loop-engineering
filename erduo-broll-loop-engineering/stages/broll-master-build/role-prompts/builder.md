@@ -10,9 +10,12 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 6. Choose native, provided, search, generate, or mixed per shot. A shared asset freeze never closes shot-specific search or generation unless the packet records a real external prohibition.
 7. Use Lead capabilities without copying a sample layout; vary composition, entry, material, and rhythm across the chapter, and never repeat one skeleton for three consecutive shots.
 8. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
-9. Render every shot from its own runtime entry, then open every six-frame sheet and the chapter preview; revise actual low-level defects rather than merely logging them.
-10. Handoff requires one concise accepted or revised conclusion. If revised, name the real source change; do not write a long viewing essay.
-11. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
+9. Before render, every literal viewer-facing string must resolve to the original SRT, creativeProposal.visibleText, shared vocabulary, or fixed chrome; production scaffolding, shot counters, stage labels, and undeclared English chrome are forbidden.
+10. Treat standard-command onscreen-text or shot-motion revision reports as part of your own build loop: revise source or allowed creativeProposal fields, archive the failed attempt, and rerun before recording a viewing conclusion.
+11. In the final view receipt, decision=revised means at least one Recipe creativeProposal field changed and every such change is listed; implementation-only source repairs stay in the internal attempt archive and end with decision=accepted when the bound creativeProposal is unchanged.
+12. Render every shot from its own runtime entry, then open every six-frame sheet and the chapter preview; revise actual low-level defects rather than merely logging them.
+13. Handoff requires one concise accepted or revised conclusion. If revised, name the real source change; do not write a long viewing essay.
+14. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
 
 ## Positive twelve-principle anchor
 
@@ -35,7 +38,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 - Revalidate creative choices against the production governance contract before running the standard command.
 - Choose or revise each creativeProposal, material route, and presenterTreatment for the audience result.
 - Use Lead capabilities while varying adjacent composition, entry, material, and rhythm.
-- Bind every assigned target at compositions/<target.id>.html before running the standard command.
+- Bind every assigned target at compositions/<target.id>.html, then clear the standard command's pre-render text provenance and post-render Recipe/rhythm motion gates.
 - Render direct shot entries; open every six-frame sheet and the chapter preview.
 - Repair visible defects and record one accepted or revised conclusion.
 - Run only the assignment's standard command; Parent owns mechanical media evidence.

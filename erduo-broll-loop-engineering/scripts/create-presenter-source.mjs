@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { validateSchemaValue } from './runtime-schema-validator.mjs';
 import { commandFailure, hashFile, readJson, requireRegularFile, runCommand } from './shot-media-lib.mjs';
 import { parseCliPairs, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot } from './presenter-media-lib.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 const schemaFile = path.resolve(import.meta.dirname, '..', 'references', 'runtime', 'presenter-source.schema.json');
 
@@ -107,6 +108,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

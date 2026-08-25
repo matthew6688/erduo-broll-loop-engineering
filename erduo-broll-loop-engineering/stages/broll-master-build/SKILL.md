@@ -67,6 +67,14 @@ previews, repair low-level defects, then record `accepted` or `revised`. A
 revised conclusion names the actual source change. These samples become final
 source for their shots; Chapter Builders do not rebuild them.
 
+The standard command first checks every literal on-screen string against SRT,
+`creativeProposal.visibleText`, shared vocabulary, and fixed chrome before it
+spends render time. It then runs a Recipe-key-state and motion-map-rhythm-aware
+motion audit on the rendered shots. Any `signals` or `unmeasured` report means
+the Lead must archive that attempt, revise only owned source or allowed
+`creativeProposal` fields, and rerun. Do not hand the report to the user as a
+per-video repair request.
+
 ## Chapter Builder mode
 
 Own one contiguous chapter, normally 5–8 shots. Control its composition
@@ -92,6 +100,14 @@ empty containers, unreadable results, unfinished action, design-energy
 mismatch, and repeated chapter structure. Rerender only affected shots. Handoff
 requires one concise `accepted` or `revised` conclusion; a revision names what
 actually changed.
+
+Before the first render, the command rejects undeclared viewer-facing text and
+all production scaffolding. After render, it rejects motion that begins its
+final still hold too early, leaves a Recipe/rhythm-sized action gap, or fails to
+develop across enough of the action window. Treat both reports as an internal
+Builder revision loop: archive the failed attempt, repair owned source or
+allowed `creativeProposal` fields, rerun, and show the user only a gate-clean
+canary.
 
 Complete only when every assigned shot has editable direct source, Parent's
 technical command passes, the real sheets/chapter preview were viewed, truth is

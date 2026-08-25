@@ -4,7 +4,7 @@
   "title": "Five-shot creative canary technical gate",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "status", "planIdentity", "shotIds", "canaryPreview", "checks", "contractBindings", "viewReceiptBindings", "identity"],
+  "required": ["schemaVersion", "status", "planIdentity", "shotIds", "canaryPreview", "checks", "auditBindings", "contractBindings", "viewReceiptBindings", "identity"],
   "properties": {
     "schemaVersion": {"const": "1.0.0"},
     "status": {"const": "passed"},
@@ -21,10 +21,19 @@
     },
     "checks": {
       "type": "object", "additionalProperties": false,
-      "required": ["directRuntimeRender", "fullDecode", "sixFrameSheets", "builderViews"],
+      "required": ["directRuntimeRender", "fullDecode", "sixFrameSheets", "builderViews", "onscreenText", "shotMotion"],
       "properties": {
         "directRuntimeRender": {"const": "passed"}, "fullDecode": {"const": "passed"},
-        "sixFrameSheets": {"const": "passed"}, "builderViews": {"const": "passed"}
+        "sixFrameSheets": {"const": "passed"}, "builderViews": {"const": "passed"},
+        "onscreenText": {"const": "passed"}, "shotMotion": {"const": "passed"}
+      }
+    },
+    "auditBindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["onscreenText", "shotMotion"],
+      "properties": {
+        "onscreenText": {"$ref": "#/$defs/auditBinding"},
+        "shotMotion": {"$ref": "#/$defs/auditBinding"}
       }
     },
     "contractBindings": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/contractBinding"}},
@@ -50,6 +59,14 @@
       "required": ["assignmentId", "locator", "sha256"],
       "properties": {
         "assignmentId": {"$ref": "#/$defs/unitId"}, "locator": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "auditBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["locator", "sha256"],
+      "properties": {
+        "locator": {"type": "string", "pattern": "^05-delivery/checks/[A-Za-z0-9._-]+\\.audit\\.json$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
       }
     }
   }

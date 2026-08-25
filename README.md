@@ -2,6 +2,13 @@
 
 # Erduo B-roll Loop Engineering
 
+Every governed video output is fail-closed on Skill usage. Register the exact
+installed `erduo-broll-loop-engineering/SKILL.md` before planning; every MP4 is
+delivered with a media-hash-bound `*.skill-usage.json` sidecar. Missing, false,
+or stale Skill evidence fails the production.
+The registered policy uses only the hash-bound original DesignMD and forbids
+unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
+
 **给完整原始 SRT 与 design，Agent 自动完成原创分镜、素材、动画、逐镜直出与完整预览；整条 Master 按需生成。**
 
 [![Version](https://img.shields.io/badge/version-1.0.1-c87842)](CHANGELOG.md)
@@ -133,6 +140,11 @@ node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs \
   --delivery-index /path/to/broll-production/05-delivery/delivery-index.json \
   --output /path/to/broll-production/05-delivery/presenter-broll-master.mp4 \
   --receipt /path/to/broll-production/05-delivery/presenter-broll-master.receipt.json
+
+node erduo-broll-loop-engineering/scripts/verify-presenter-delivery.mjs \
+  --production-root /path/to/broll-production \
+  --final /path/to/broll-production/05-delivery/presenter-broll-master.subtitled.mp4 \
+  --subtitle /path/to/broll-production/05-delivery/presenter-broll-master.srt
 ```
 
 `presenterTreatment.mode=mixed` 时，`brollWindows` 使用该 Recipe SRT window 内的绝对
@@ -143,6 +155,10 @@ node erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs \
 和结尾，约占 15–25%；其余 75–85% 用信息图、界面、素材与证据型 B-roll 覆盖。
 正式发布必须用 `--scope full-production`，且 presenter source 同时具有 `publishing`
 授权和 `full-production` 用户批准；canary/internal 合同不能生成正式发布合成。
+字幕版或其他最终衍生版还必须通过 Final Delivery Gate：字幕 sidecar 必须与 Runtime Plan
+绑定的原始 SRT 逐字节一致，字幕不能超过媒体时长，成片必须完整解码且只有一条 AAC/48 kHz
+音轨，响度达到门槛，并且解码后的 PCM 音频必须与已批准的主合成完全一致。这样可直接阻止
+无声导出、错配字幕、替换音轨和未经绑定的最终文件被误报为完成。
 首版只支持本地 MP4 的画面硬切；透明 WebM 数字人持续叠加在 B-roll 上属于后续 adapter，
 不能把本地导入能力表述为已经接通某家供应商 API。
 

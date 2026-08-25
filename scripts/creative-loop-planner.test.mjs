@@ -20,6 +20,7 @@ import {
 import { writeProductionPlan } from '../erduo-broll-loop-engineering/scripts/plan-runtime.mjs';
 import { canonicalJson, validateSchemaValue } from '../erduo-broll-loop-engineering/scripts/runtime-schema-validator.mjs';
 import {finalizeProductionGovernance} from '../erduo-broll-loop-engineering/scripts/validate-production-governance.mjs';
+import {registerSkillUsage} from '../erduo-broll-loop-engineering/scripts/skill-usage.mjs';
 import {
   computeRuntimePlanIdentity,
   computeRepresentativeScenesIdentity,
@@ -268,9 +269,19 @@ test('a governance lock is identity-bound into the runtime plan and every creati
     },
   })}\n`);
   await finalizeProductionGovernance({productionRoot: data.productionRoot, draftFile: draft});
+  const boundSkill = path.join(data.productionRoot, 'bound-skill', 'SKILL.md');
+  await mkdir(path.dirname(boundSkill));
+  await writeFile(boundSkill, '---\nname: erduo-broll-loop-engineering\n---\n\n# Test authority\n');
+  await registerSkillUsage({
+    productionRoot: data.productionRoot,
+    skillFile: boundSkill,
+    skillName: 'erduo-broll-loop-engineering',
+  });
+  data.skillUsageFile = path.join(data.productionRoot, '00-inputs', 'skill-usage.json');
   const result = await writeProductionPlan(data);
   assert.equal(result.plan.sourceContext.productionGovernance.profileId, 'fengtalk-harbor-signal');
   assert.match(result.plan.sourceContext.productionGovernance.contractSha256, /^[0-9a-f]{64}$/u);
+  assert.equal(result.plan.sourceContext.skillUsage.used, true);
   const assignments = await Promise.all(result.assignments.map((locator) => (
     readFile(path.join(data.productionRoot, locator), 'utf8').then(JSON.parse)
   )));
@@ -278,6 +289,7 @@ test('a governance lock is identity-bound into the runtime plan and every creati
     governanceContext.contractIdentity === result.plan.sourceContext.productionGovernance.contractIdentity
       && contextFiles.productionGovernance === '00-inputs/production-governance.json'
       && contextFiles.productionGovernanceLock === 'production-governance.lock.json'
+      && contextFiles.skillUsage === '00-inputs/skill-usage.json'
   )));
 });
 
@@ -389,6 +401,12 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   assert.deepEqual(await gateBuilderAssignment(lead, v4GateOptions), {
     status: 'ready', role: 'lead', phase: 'lead-production',
   });
+  await mkdir(path.join(data.productionRoot, lead.output.workDirectory), {recursive: true});
+  await writeFile(path.join(data.productionRoot, lead.output.handoff), '# Lead handoff without receipt binding\n');
+  await assert.rejects(
+    gateBuilderAssignment(lead, v4GateOptions),
+    /Lead view receipt|Builder view receipt|handoff must reference/iu,
+  );
   assert.deepEqual(await gateBuilderAssignment(canaryBuilders[0], v4GateOptions), {
     status: 'ready', role: 'builder', phase: 'canary',
     allowedShotIds: canaryBuilders[0].canaryPhase.shotIds,
@@ -407,6 +425,28 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   await assert.rejects(
     gateBuilderAssignment(drift, { plan: result.plan, productionRoot: data.productionRoot }),
     /complete planned dispatch packet/u,
+  );
+});
+
+test('an explicit five-shot creative canary is validated and identity-bound into assignments', async (t) => {
+  const data = await fixture(t, {shotCount: 12, chapterSizes: [6, 6]});
+  const requested = ['S01', 'S06', 'S07', 'S10', 'S12'];
+  const result = await writeProductionPlan({...data, canaryShotIds: requested});
+  assert.deepEqual(result.plan.canaryGate.shotIds, requested);
+  const assignments = await Promise.all(result.assignments.map((locator) => (
+    readFile(path.join(data.productionRoot, locator), 'utf8').then(JSON.parse)
+  )));
+  const assignedCanaryShots = assignments.flatMap((assignment) => (
+    assignment.role === 'lead'
+      ? assignment.leadSamples.map(({shotId}) => shotId).filter((shotId) => requested.includes(shotId))
+      : assignment.canaryPhase.shotIds
+  ));
+  assert.deepEqual([...new Set(assignedCanaryShots)].sort(), [...requested].sort());
+
+  const invalidRoot = await fixture(t, {shotCount: 12, chapterSizes: [6, 6]});
+  await assert.rejects(
+    writeProductionPlan({...invalidRoot, canaryShotIds: ['S01', 'S06', 'S07', 'S10', 'S99']}),
+    /unavailable shot S99/u,
   );
 });
 
@@ -653,7 +693,14 @@ test('full production remains blocked until technical canary and independent use
     schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity,
     shotIds: plan.canaryGate.shotIds,
     canaryPreview: { locator: previewLocator, sha256: hash('five-shot-preview'), fullDecode: 'passed' },
-    checks: { directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed', builderViews: 'passed' },
+    checks: {
+      directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed',
+      builderViews: 'passed', onscreenText: 'passed', shotMotion: 'passed',
+    },
+    auditBindings: {
+      onscreenText: {locator: '05-delivery/checks/onscreen-text.audit.json', sha256: '6'.repeat(64)},
+      shotMotion: {locator: '05-delivery/checks/shot-motion.audit.json', sha256: '7'.repeat(64)},
+    },
     contractBindings: plan.canaryGate.shotIds.map((shotId) => ({
       shotId, contractLocator: `05-delivery/shots/${shotId}.shot-media.json`,
       contractSha256: '1'.repeat(64), mediaSha256: '2'.repeat(64),

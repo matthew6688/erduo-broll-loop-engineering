@@ -69,6 +69,7 @@ function unreadableSurfaces(html) {
 
 export async function auditOnscreenText({
   planFile, recipesDirectory, productionRoot, originalSrtFile, visualSystemFile, outputFile,
+  shotIds = null,
 }) {
   const root = path.resolve(productionRoot);
   const plan = await readJson(path.resolve(planFile), 'runtime plan');
@@ -89,16 +90,30 @@ export async function auditOnscreenText({
     for (const shotId of assignment.shotIds ?? []) sourceRootByShot.set(shotId, sourceRoot);
   }
 
-  const shotsDirectory = path.join(root, '05-delivery', 'shots');
-  const contractNames = (await readdir(shotsDirectory))
-    .filter((name) => name.endsWith('.shot-media.json')).sort();
-  if (!contractNames.length) throw new Error('no delivered shot contracts to audit');
+  const requested = shotIds === null ? null : [...new Set(shotIds)];
+  if (requested && requested.length === 0) throw new Error('onscreen text audit requires at least one shot ID');
+  const contracts = new Map();
+  if (requested === null) {
+    const shotsDirectory = path.join(root, '05-delivery', 'shots');
+    const contractNames = (await readdir(shotsDirectory))
+      .filter((name) => name.endsWith('.shot-media.json')).sort();
+    if (!contractNames.length) throw new Error('no delivered shot contracts to audit');
+    for (const name of contractNames) {
+      const contract = await readJson(path.join(shotsDirectory, name), `${name} contract`);
+      contracts.set(contract.shotId, contract);
+    }
+  }
+  const selectedShotIds = requested ?? [...contracts.keys()];
+  const plannedShotIds = new Set(plan.shots.map(({shotId}) => shotId));
+  for (const shotId of selectedShotIds) {
+    if (!plannedShotIds.has(shotId)) throw new Error(`onscreen text audit names unplanned shot ${shotId}`);
+  }
 
   const shots = [];
-  for (const name of contractNames) {
-    const contract = await readJson(path.join(shotsDirectory, name), `${name} contract`);
-    const recipe = await readJson(path.join(path.resolve(recipesDirectory), `${contract.shotId}.json`),
-      `${contract.shotId} Recipe`);
+  for (const shotId of selectedShotIds) {
+    const contract = contracts.get(shotId);
+    const recipe = await readJson(path.join(path.resolve(recipesDirectory), `${shotId}.json`),
+      `${shotId} Recipe`);
     const findings = [];
     const unmeasured = [];
 
@@ -128,9 +143,10 @@ export async function auditOnscreenText({
     }
 
     /* rendered -> declared */
-    const sourceRoot = sourceRootByShot.get(contract.shotId);
+    const sourceRoot = sourceRootByShot.get(shotId);
+    const renderTargetId = contract?.renderTarget?.id ?? shotId;
     const sourceFile = sourceRoot
-      ? path.join(root, sourceRoot, 'compositions', `${contract.renderTarget.id}.html`)
+      ? path.join(root, sourceRoot, 'compositions', `${renderTargetId}.html`)
       : null;
     let html = null;
     if (sourceFile) {
@@ -156,7 +172,7 @@ export async function auditOnscreenText({
     }
 
     shots.push({
-      shotId: contract.shotId,
+      shotId,
       status: findings.length ? 'signals' : (unmeasured.length ? 'unmeasured' : 'passed'),
       measurements: { declaredStrings: declared.size, inspectedSource: sourceFile ? path.relative(root, sourceFile) : null },
       findings,
@@ -166,7 +182,8 @@ export async function auditOnscreenText({
 
   const report = {
     schemaVersion: '1.0.0', audit: 'onscreen-text', planIdentity: plan.identity,
-    status: shots.some(({ findings }) => findings.length) ? 'signals' : 'passed',
+    status: shots.some(({ findings }) => findings.length)
+      ? 'signals' : shots.some(({unmeasured}) => unmeasured?.length) ? 'unmeasured' : 'passed',
     thresholds: {}, thresholdSource: 'default', shots,
   };
   const output = outputFile
@@ -182,7 +199,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const name = argv[index];
     const value = argv[index + 1];
-    if (!['--plan', '--recipes', '--production-root', '--original-srt', '--visual-system', '--output'].includes(name)) {
+    if (!['--plan', '--recipes', '--production-root', '--original-srt', '--visual-system', '--output', '--shot-ids'].includes(name)) {
       throw new Error(`unknown argument ${name}`);
     }
     if (!value) throw new Error(`${name} requires a value`);
@@ -200,9 +217,10 @@ async function main() {
     planFile: options.plan, recipesDirectory: options.recipes,
     productionRoot: options['production-root'], originalSrtFile: options['original-srt'],
     visualSystemFile: options['visual-system'], outputFile: options.output,
+    shotIds: options['shot-ids']?.split(',').map((value) => value.trim()).filter(Boolean) ?? null,
   });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (report.status === 'signals') process.exitCode = 2;
+  if (report.status !== 'passed') process.exitCode = 2;
 }
 
 if (process.argv[1]

@@ -1,5 +1,17 @@
 # Parent bounded review
 
+## Skill usage hard gate
+
+- `00-inputs/skill-usage.json` was created by the bundled registration command,
+  says `used: true`, and still matches the exact `SKILL.md` bytes.
+- Its policy says `bound-original-design-only`, forbids unapproved additions,
+  and keeps presenter integration after the pure-B-roll baseline is approved.
+- Runtime Plan and every assignment carry the same Skill identity.
+- Every MP4 has a same-name `.skill-usage.json` sidecar bound to that media hash
+  and plan identity. Missing, false, stale, or mismatched evidence is `FAIL`.
+- A prose statement, filename, metadata tag, or manually copied sidecar never
+  substitutes for the hash-bound contract.
+
 Start from the compact receipt/handoff. Inspect an actual artifact only to
 answer a concrete contract or technical question. The Parent does not perform
 an independent aesthetic review, commission a review Agent, assign craft
@@ -124,6 +136,15 @@ shot-assembled preview for the film as a whole.
 - Full production remained blocked until the five-shot canary passed its
   technical/viewing gates and the user selected this version for at least three
   of five shots. No legacy visual-lock state or skipped decision bypassed it.
+- Every assignment cleared its pre-render on-screen-text provenance report and
+  post-render Recipe/rhythm motion report before a viewing conclusion. The
+  five-shot technical gate reopens and hash-verifies both aggregate passing
+  reports; Parent did not manually repair production source.
+- If the canary has fewer than two provided/searched/generated/mixed material
+  shots, `00-inputs/material-policy.json` existed before planning, records the
+  user's native-only default-design approval, matches the exact original
+  DesignMD SHA-256, is bound into the runtime plan and assignments, and all five
+  canary Recipes are `materialRoute: native`. Otherwise this is a hard failure.
 - Hybrid shares only runtime-neutral visual tokens. HyperFrames and Remotion
   have separate source locators and identities.
 
@@ -206,6 +227,21 @@ shot-assembled preview for the film as a whole.
   aesthetic approval.
 - Every delivered shot passes FFprobe and complete decode. An optional Master,
   when requested, also passes them. Technical facts are not aesthetic approval.
+
+## Presenter final-delivery gate
+
+- A human/digital presenter delivery has a schema-valid
+  `presenter-delivery-gate.json`; the composition receipt, edit plan, Runtime
+  Plan, original SRT, subtitle sidecar, and final media hashes all close.
+- The final media fully decodes, contains exactly one AAC/48 kHz audio stream,
+  and meets the declared mean/peak volume floors.
+- A subtitled derivative preserves the approved composition's decoded PCM
+  audio exactly. Missing, replaced, truncated, or silently re-encoded audio
+  blocks delivery.
+- The subtitle sidecar is byte-identical to the bound original SRT, every cue
+  has a positive ordered window, and the last cue stays inside the final media.
+- This mechanical gate does not approve subtitle placement, lip sync, identity,
+  or aesthetics; those remain explicit user review decisions.
 
 ## Final report
 

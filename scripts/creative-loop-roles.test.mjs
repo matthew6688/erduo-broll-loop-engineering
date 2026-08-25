@@ -49,12 +49,14 @@ test('generated role prompts anchor positive craft and chapter creative ownershi
     'information-dense interface/process/data', 'signature motion',
     'capability index', 'accepted or revised',
   ]) assert.equal(lead.includes(token), true, token);
+  assert.match(lead, /implementation-only source repairs[\s\S]*decision=accepted/iu);
 
   const builder = roleInjection('builder').rolePrompt;
   assert.match(builder, /complete creative loop for one contiguous chapter, normally five to eight shots/u);
   assert.match(builder, /Never change truth/u);
   assert.match(builder, /native, provided, search, generate, or mixed/u);
   assert.match(builder, /open every six-frame sheet and the chapter preview/u);
+  assert.match(builder, /implementation-only source repairs[\s\S]*decision=accepted/iu);
 });
 
 test('Parent, orchestration, and stage Skills expose the reset contract', async () => {

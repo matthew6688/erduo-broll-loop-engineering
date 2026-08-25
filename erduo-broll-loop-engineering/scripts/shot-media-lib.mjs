@@ -435,7 +435,18 @@ async function validateCanaryEvidenceClosure({
     }
   }
   if (compositions.size < 3) throw new Error('canary creative gate requires at least three distinct composition families');
-  if (materialShots.length < 2) throw new Error('canary creative gate requires at least two real-or-generated material shots');
+  const materialPolicy = plan.sourceContext?.materialPolicy ?? null;
+  const allCanaryShotsNative = [...recipes.values()].every(
+    (recipe) => recipe.creativeProposal?.materialRoute === 'native',
+  );
+  const nativeOnlyException = materialPolicy?.approvedBy === 'user'
+    && materialPolicy.scope === 'default-design-native-only'
+    && materialPolicy.minimumMaterialShots === 0
+    && materialPolicy.originalDesignSha256 === plan.sourceContext?.originalDesign?.sha256
+    && allCanaryShotsNative;
+  if (materialShots.length < 2 && !nativeOnlyException) {
+    throw new Error('canary creative gate requires at least two real-or-generated material shots unless a verified user-approved native-only default-design policy is bound');
+  }
   if (signatureMotions.size < 2) throw new Error('canary creative gate requires at least two visible signature motions');
 
   const previewStats = await stat(previewFile);
@@ -450,6 +461,7 @@ async function validateCanaryEvidenceClosure({
     creativeChecks: {
       lowLevelErrors: 0, compositionFamilies: compositions.size,
       materialShots: materialShots.length, signatureMotions: signatureMotions.size, wallTimeMs,
+      materialPolicy: nativeOnlyException ? 'user-approved-native-only' : 'standard-minimum-two',
     },
   };
 }
@@ -475,12 +487,21 @@ export async function validateCanaryTechnicalGate({
     ...(plan.sourceContext?.presenterSource?.locator ? {
       presenterSourceFile: path.resolve(productionRoot, plan.sourceContext.presenterSource.locator),
     } : {}),
+    ...(plan.sourceContext?.skillUsage?.locator ? {
+      skillUsageFile: path.resolve(productionRoot, plan.sourceContext.skillUsage.locator),
+    } : {}),
+    ...(plan.sourceContext?.materialPolicy?.locator ? {
+      materialPolicyFile: path.resolve(productionRoot, plan.sourceContext.materialPolicy.locator),
+    } : {}),
   });
   const loaded = await readGateFile(productionRoot, gate.technicalLocator, 'canary technical gate');
   if (!loaded) return null;
   const value = loaded.value;
   await assertRuntimeSchema(value, 'canary-technical-gate.schema.json', 'canary technical gate');
-  const requiredChecks = ['directRuntimeRender', 'fullDecode', 'sixFrameSheets', 'builderViews'];
+  const requiredChecks = [
+    'directRuntimeRender', 'fullDecode', 'sixFrameSheets', 'builderViews',
+    'onscreenText', 'shotMotion',
+  ];
   if (value.schemaVersion !== '1.0.0' || value.status !== 'passed'
     || value.planIdentity !== plan.identity || !exactArray(value.shotIds, gate.shotIds)
     || !Array.isArray(value.contractBindings) || value.contractBindings.length !== 5
@@ -489,6 +510,22 @@ export async function validateCanaryTechnicalGate({
     || requiredChecks.some((name) => value.checks?.[name] !== 'passed')
     || value.identity !== identityFor(value)) {
     throw new Error('canary technical gate is not a valid identity-bound five-shot pass');
+  }
+  for (const [name, expectedAudit] of [
+    ['onscreenText', 'onscreen-text'], ['shotMotion', 'shot-motion'],
+  ]) {
+    const binding = value.auditBindings?.[name];
+    const auditFile = withinRoot(productionRoot, binding?.locator, `${expectedAudit} audit`);
+    await requireRegularFile(auditFile, `${expectedAudit} audit`);
+    if (binding.sha256 !== await hashFile(auditFile)) {
+      throw new Error(`${expectedAudit} audit binding is stale`);
+    }
+    const audit = JSON.parse(await readFile(auditFile, 'utf8'));
+    if (audit.audit !== expectedAudit || audit.status !== 'passed'
+      || audit.planIdentity !== plan.identity
+      || !exactArray(audit.shots?.map(({shotId}) => shotId), gate.shotIds)) {
+      throw new Error(`${expectedAudit} audit is not a current five-shot pass`);
+    }
   }
   const previewFile = withinRoot(productionRoot, value.canaryPreview?.locator, 'canary preview');
   await requireRegularFile(previewFile, 'canary preview');

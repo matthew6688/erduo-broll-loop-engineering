@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/presenter-delivery-gate.schema.json",
+  "title": "Final presenter delivery gate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "presenterKind", "inputs", "timeline", "output", "audio", "subtitles", "checks"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "status": {"const": "passed"},
+    "presenterKind": {"enum": ["human", "digital"]},
+    "inputs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compositionReceiptSha256", "editPlanSha256", "runtimePlanSha256", "originalSrtSha256", "subtitleSha256", "finalMediaSha256"],
+      "properties": {
+        "compositionReceiptSha256": {"$ref": "#/$defs/sha256"},
+        "editPlanSha256": {"$ref": "#/$defs/sha256"},
+        "runtimePlanSha256": {"$ref": "#/$defs/sha256"},
+        "originalSrtSha256": {"$ref": "#/$defs/sha256"},
+        "subtitleSha256": {"$ref": "#/$defs/sha256"},
+        "finalMediaSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "timeline": {
+      "type": "object", "additionalProperties": false,
+      "required": ["durationMs", "presenterDurationMs", "brollDurationMs", "segments"],
+      "properties": {
+        "durationMs": {"type": "integer", "minimum": 1},
+        "presenterDurationMs": {"type": "integer", "minimum": 0},
+        "brollDurationMs": {"type": "integer", "minimum": 0},
+        "segments": {"type": "integer", "minimum": 1}
+      }
+    },
+    "output": {
+      "type": "object", "additionalProperties": false,
+      "required": ["file", "durationMs", "width", "height", "fps", "videoCodec", "audioCodec", "sampleRate", "channels", "audioStreams", "fullDecode"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "durationMs": {"type": "integer", "minimum": 1},
+        "width": {"type": "integer", "minimum": 2},
+        "height": {"type": "integer", "minimum": 2},
+        "fps": {"type": "number", "exclusiveMinimum": 0},
+        "videoCodec": {"const": "h264"},
+        "audioCodec": {"const": "aac"},
+        "sampleRate": {"const": 48000},
+        "channels": {"type": "integer", "minimum": 1, "maximum": 2},
+        "audioStreams": {"const": 1},
+        "fullDecode": {"const": "passed"}
+      }
+    },
+    "audio": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decodedPcmSha256", "meanVolumeDb", "maxVolumeDb", "minMeanVolumeDb", "minMaxVolumeDb"],
+      "properties": {
+        "decodedPcmSha256": {"$ref": "#/$defs/sha256"},
+        "meanVolumeDb": {"type": "number"}, "maxVolumeDb": {"type": "number"},
+        "minMeanVolumeDb": {"type": "number"}, "minMaxVolumeDb": {"type": "number"}
+      }
+    },
+    "subtitles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cueCount", "startMs", "endMs", "exactOriginalSrt"],
+      "properties": {
+        "cueCount": {"type": "integer", "minimum": 1}, "startMs": {"type": "integer", "minimum": 0},
+        "endMs": {"type": "integer", "minimum": 1}, "exactOriginalSrt": {"const": true}
+      }
+    },
+    "checks": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compositionBinding", "runtimeBinding", "sourceSrtBinding", "oneAudioStream", "audioContinuity", "loudness", "subtitleTiming", "fullDecode"],
+      "properties": {
+        "compositionBinding": {"const": "passed"}, "runtimeBinding": {"const": "passed"},
+        "sourceSrtBinding": {"const": "passed"}, "oneAudioStream": {"const": "passed"},
+        "audioContinuity": {"const": "passed"}, "loudness": {"const": "passed"},
+        "subtitleTiming": {"const": "passed"}, "fullDecode": {"const": "passed"}
+      }
+    }
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

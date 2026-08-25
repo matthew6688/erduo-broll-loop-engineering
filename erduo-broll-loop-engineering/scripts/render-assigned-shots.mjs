@@ -10,6 +10,10 @@ import { validateRuntimePlan } from './validate-runtime-plan.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import { prepareSharedToolchain, renderRemotionCompositions } from './remotion-toolchain.mjs';
 import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
+import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
+import {auditOnscreenText} from './audit-onscreen-text.mjs';
+import {auditShotMotion} from './audit-shot-motion.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 import {
   clearMinimalFailureEvidence,
   inspectAssignmentRuntime,
@@ -55,6 +59,12 @@ function runtimePlanInputs(productionRoot, recipesDirectory, plan) {
     originalDesignFile: path.resolve(root, plan?.sourceContext?.originalDesign?.locator ?? '00-input/original-design.md'),
     ...(plan?.sourceContext?.presenterSource?.locator ? {
       presenterSourceFile: path.resolve(root, plan.sourceContext.presenterSource.locator),
+    } : {}),
+    ...(plan?.sourceContext?.skillUsage?.locator ? {
+      skillUsageFile: path.resolve(root, plan.sourceContext.skillUsage.locator),
+    } : {}),
+    ...(plan?.sourceContext?.materialPolicy?.locator ? {
+      materialPolicyFile: path.resolve(root, plan.sourceContext.materialPolicy.locator),
     } : {}),
   };
 }
@@ -336,8 +346,8 @@ function contentIdentity(value) {
 }
 
 async function tryFinalizeCanaryTechnicalGate({
-  plan, productionRoot, deliveryRoot, recipesDirectory, shotSchema,
-  ffmpeg, ffprobe, runner,
+  plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema,
+  ffmpeg, ffprobe, runner, auditText = auditOnscreenText, auditMotion = auditShotMotion,
 }) {
   if (!plan?.canaryGate?.required) return null;
   const existing = await validateCanaryTechnicalGate({
@@ -363,7 +373,29 @@ async function tryFinalizeCanaryTechnicalGate({
     contracts.push(contract);
     contractFiles.push(file);
   }
-  const preview = await assembleCanaryPreview({contracts, deliveryRoot, ffmpeg, ffprobe, runner});
+  const auditDirectory = path.join(path.resolve(deliveryRoot), 'checks');
+  const onscreenTextAuditFile = path.join(auditDirectory, 'onscreen-text.audit.json');
+  const shotMotionAuditFile = path.join(auditDirectory, 'shot-motion.audit.json');
+  const [onscreenTextAudit, shotMotionAudit] = await Promise.all([
+    auditText({
+      planFile, recipesDirectory, productionRoot,
+      originalSrtFile: path.resolve(productionRoot, plan.sourceContext.originalSrt.locator),
+      visualSystemFile: path.join(path.resolve(productionRoot), '01-director', 'visual-system.json'),
+      outputFile: onscreenTextAuditFile, shotIds: plan.canaryGate.shotIds,
+    }),
+    auditMotion({
+      planFile, recipesDirectory, productionRoot,
+      motionMapFile: path.join(path.resolve(productionRoot), '01-director', 'motion-map.json'),
+      outputFile: shotMotionAuditFile, shotIds: plan.canaryGate.shotIds, ffmpeg,
+    }),
+  ]);
+  if (onscreenTextAudit.status !== 'passed' || shotMotionAudit.status !== 'passed') {
+    throw new Error(`canary rendered-evidence audits require revision: onscreen-text=${onscreenTextAudit.status}, shot-motion=${shotMotionAudit.status}`);
+  }
+  const preview = await assembleCanaryPreview({
+    contracts, deliveryRoot, ffmpeg, ffprobe, runner,
+    productionRoot, planIdentity: plan.identity, skillUsageBinding: plan.sourceContext?.skillUsage,
+  });
   const assignmentDirectory = path.join(path.resolve(productionRoot), '01-runtime-plan', 'assignments');
   const assignments = await Promise.all((await readdir(assignmentDirectory, {withFileTypes: true}))
     .filter((entry) => entry.isFile() && path.extname(entry.name) === '.json')
@@ -421,7 +453,7 @@ async function tryFinalizeCanaryTechnicalGate({
       }
     } catch (error) {
       if (error?.code === 'ENOENT' || /ENOENT/u.test(error.message)) return null;
-      throw error;
+      throw new Error(`${candidate.assignmentId} canary receipt invalid: ${error.message}`);
     }
     const snapshotLocator = `05-delivery/canary-receipts/${candidate.assignmentId}.json`;
     const snapshotFile = ensureWithin(path.resolve(productionRoot), snapshotLocator, 'canary receipt snapshot');
@@ -442,7 +474,20 @@ async function tryFinalizeCanaryTechnicalGate({
     schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity,
     shotIds: [...plan.canaryGate.shotIds],
     canaryPreview: {locator: '05-delivery/canary-preview.mp4', sha256: preview.sha256, fullDecode: 'passed'},
-    checks: {directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed', builderViews: 'passed'},
+    checks: {
+      directRuntimeRender: 'passed', fullDecode: 'passed', sixFrameSheets: 'passed',
+      builderViews: 'passed', onscreenText: 'passed', shotMotion: 'passed',
+    },
+    auditBindings: {
+      onscreenText: {
+        locator: path.relative(path.resolve(productionRoot), onscreenTextAuditFile).split(path.sep).join('/'),
+        sha256: await hashFile(onscreenTextAuditFile),
+      },
+      shotMotion: {
+        locator: path.relative(path.resolve(productionRoot), shotMotionAuditFile).split(path.sep).join('/'),
+        sha256: await hashFile(shotMotionAuditFile),
+      },
+    },
     contractBindings: contracts.map((contract, index) => ({
       shotId: contract.shotId,
       contractLocator: path.relative(path.resolve(productionRoot), contractFiles[index]).split(path.sep).join('/'),
@@ -479,6 +524,8 @@ async function renderAssignedShotsInternal({
   prepareRemotionToolchain = prepareSharedToolchain,
   renderRemotionUnit = renderRemotionCompositions,
   inspectRuntime = inspectAssignmentRuntime,
+  auditText = auditOnscreenText,
+  auditMotion = auditShotMotion,
 }) {
   const absoluteSourceRoot = path.resolve(sourceRoot);
   await assertProductionSourcePolicy(absoluteSourceRoot);
@@ -568,11 +615,29 @@ async function renderAssignedShotsInternal({
     const semanticCheckFile = path.join(checksDirectory, `${basename}.semantic-check.png`);
     const shotUnit = plan.authoringUnits.find(({ shotIds }) => shotIds.includes(shot.shotId));
     if (!shotUnit || shotUnit.runtime !== shot.runtime) throw new Error(`${shot.shotId} has no unique planned authoring unit`);
-    return { shot, unit: shotUnit, recipe, target, frameCount, basename, output, contractFile, semanticCheckFile };
+    return {
+      shot, unit: shotUnit, recipe, target, frameCount, basename, output, contractFile, semanticCheckFile,
+      skillUsageFile: `${output}.skill-usage.json`,
+    };
   });
 
+  if (plan.schemaVersion === '4.0.0' && renderShotIds.length > 0) {
+    const preflightOutput = path.join(
+      path.resolve(productionRoot), assignment.output.workDirectory, 'checks', 'onscreen-text.preflight.json',
+    );
+    const textPreflight = await auditText({
+      planFile, recipesDirectory, productionRoot,
+      originalSrtFile: path.resolve(productionRoot, plan.sourceContext.originalSrt.locator),
+      visualSystemFile: path.join(path.resolve(productionRoot), '01-director', 'visual-system.json'),
+      outputFile: preflightOutput, shotIds: renderShotIds,
+    });
+    if (textPreflight.status !== 'passed') {
+      throw new Error(`assignment onscreen-text preflight requires revision: ${textPreflight.status}; report=${preflightOutput}`);
+    }
+  }
+
   const validateBoundContract = async (descriptor, contract, { decode = true } = {}) => {
-    const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, semanticCheckFile } = descriptor;
+    const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, semanticCheckFile, skillUsageFile } = descriptor;
     assertSchema(contract, shotSchema, `${shot.shotId} shot contract`);
     const expectedSamples = semanticSamplePoints(recipe, shot.window, plan.productionProfile.fps, frameCount);
     const mismatches = [];
@@ -597,6 +662,12 @@ async function renderAssignedShotsInternal({
       const facts = await probeAndDecode(output, { ffmpeg, ffprobe, runner, cwd: shotsDirectory, shotId: shot.shotId });
       assertMediaFacts(facts, { shotId: shot.shotId, frameCount, window: shot.window, profile: plan.productionProfile });
     }
+    if (plan.sourceContext?.skillUsage) {
+      await verifyVideoSkillUsage({
+        productionRoot, videoFile: output, sidecarFile: skillUsageFile,
+        planIdentity: plan.identity, binding: plan.sourceContext.skillUsage,
+      });
+    }
   };
 
   const activeDescriptors = descriptors.filter(({shot}) => renderShotIds.includes(shot.shotId));
@@ -604,6 +675,7 @@ async function renderAssignedShotsInternal({
   for (const descriptor of activeDescriptors) {
     const states = await Promise.all([
       exists(descriptor.output), exists(descriptor.contractFile), exists(descriptor.semanticCheckFile),
+      ...(plan.sourceContext?.skillUsage ? [exists(descriptor.skillUsageFile)] : []),
     ]);
     if (states.every(Boolean)) {
       const contract = await readJson(descriptor.contractFile, `${descriptor.shot.shotId} shot contract`);
@@ -617,7 +689,7 @@ async function renderAssignedShotsInternal({
   }
 
   const finalizeShot = async (descriptor) => {
-    const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, contractFile, semanticCheckFile } = descriptor;
+    const { shot, unit: shotUnit, recipe, target, frameCount, basename, output, contractFile, semanticCheckFile, skillUsageFile } = descriptor;
     try {
       await requireRegularFile(output, `${shot.shotId} rendered media`);
       const facts = await probeAndDecode(output, {
@@ -648,11 +720,20 @@ async function renderAssignedShotsInternal({
       };
       assertSchema(contract, shotSchema, `${shot.shotId} shot contract`);
       await writeFile(contractFile, `${JSON.stringify(contract, null, 2)}\n`, { flag: 'wx' });
+      if (plan.sourceContext?.skillUsage) {
+        await writeVideoSkillUsage({
+          productionRoot, videoFile: output, outputFile: skillUsageFile,
+          planIdentity: plan.identity, binding: plan.sourceContext.skillUsage,
+        });
+      }
       contracts.push(contract);
       contractFiles.push(contractFile);
       return contract;
     } catch (error) {
-      await Promise.all([rm(output, { force: true }), rm(semanticCheckFile, { force: true })]);
+      await Promise.all([
+        rm(output, { force: true }), rm(semanticCheckFile, { force: true }),
+        rm(skillUsageFile, {force: true}),
+      ]);
       throw error;
     }
   };
@@ -689,6 +770,19 @@ async function renderAssignedShotsInternal({
       await finalizeShot(descriptor);
     }
   }
+  if (plan.schemaVersion === '4.0.0' && renderShotIds.length > 0) {
+    const motionOutput = path.join(
+      path.resolve(productionRoot), assignment.output.workDirectory, 'checks', 'shot-motion.audit.json',
+    );
+    const motionAudit = await auditMotion({
+      planFile, recipesDirectory, productionRoot,
+      motionMapFile: path.join(path.resolve(productionRoot), '01-director', 'motion-map.json'),
+      outputFile: motionOutput, shotIds: renderShotIds, ffmpeg,
+    });
+    if (motionAudit.status !== 'passed') {
+      throw new Error(`assignment shot-motion audit requires revision: ${motionAudit.status}; report=${motionOutput}`);
+    }
+  }
   const inspectionReceipt = await runInspectionForPlan({
     plan, inspectRuntime,
     inspectionOptions: renderShotIds.length > 0 ? {
@@ -719,6 +813,7 @@ async function renderAssignedShotsInternal({
     chapterPreview = await assembleChapterPreview({
       unitId: assignment.unitId, contracts: viewedContracts, deliveryRoot,
       outputFile: chapterOutput, ffmpeg, ffprobe, runner,
+      productionRoot, planIdentity: plan.identity, skillUsageBinding: plan.sourceContext?.skillUsage,
     });
     if (plan.schemaVersion === '4.0.0') {
       const recipeBindings = viewedShotIds.map((shotId) => creativeRecipeBinding(recipeById.get(shotId)));
@@ -758,7 +853,8 @@ async function renderAssignedShotsInternal({
     }
   }
   const canaryTechnicalGate = await tryFinalizeCanaryTechnicalGate({
-    plan, productionRoot, deliveryRoot, recipesDirectory, shotSchema, ffmpeg, ffprobe, runner,
+    plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema, ffmpeg, ffprobe, runner,
+    auditText, auditMotion,
   });
   if (canarySubset) {
     return {
@@ -859,6 +955,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

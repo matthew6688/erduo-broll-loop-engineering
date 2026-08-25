@@ -41,6 +41,11 @@ node scripts/create-production-profile.mjs \
   --width <width> --height <height> --fps <fps> \
   --audio <audio-policy> --master-format h264-mp4
 
+node scripts/register-skill-usage.mjs \
+  --production-root <production-root> \
+  --skill-file <canonical-skill-root>/SKILL.md \
+  --skill-name erduo-broll-loop-engineering
+
 node scripts/plan-runtime.mjs \
   --recipes <production-root>/01-director/shot-recipes \
   --selection <runtime-selection.json> \
@@ -50,6 +55,9 @@ node scripts/plan-runtime.mjs \
   --motion-map <production-root>/01-director/motion-map.json \
   --original-srt <production-root>/00-input/original.srt \
   --original-design <production-root>/00-input/original-design.md \
+  --skill-usage <production-root>/00-inputs/skill-usage.json \
+  --material-policy <production-root>/00-inputs/material-policy.json \
+  --canary-shot-ids <approved-five-comma-separated-shot-ids> \
   --hyperframes-executable <verified-absolute-hyperframes-cli> \
   --production-profile <production-root>/production-profile.json \
   --production-root <production-root>
@@ -62,10 +70,26 @@ executable are required for normal Recipe v4 production. Use
 motion map, either original input, or executable cannot produce a valid v4 plan
 or assignment packet.
 
+`--material-policy` is optional and narrow. Supply it only when the user has
+explicitly approved the unchanged default DesignMD as native-only and external
+or generated material would violate that approval. The contract must use
+`scope: default-design-native-only`, bind the exact original DesignMD SHA-256,
+and exist before planning. It lowers only the two-material-shot minimum to zero;
+all five canary Recipes must remain `materialRoute: native`, and every other
+technical and aesthetic gate remains unchanged.
+
 Run the Lead sample gate, then the five-shot creative canary. Full production is
 blocked until all canary technical/visual-baseline conditions pass and the user
 selects this version for at least 3/5 shots. A failed canary returns to its
 original Lead or Chapter Builder; it never starts the full film.
+
+The assignment standard command is itself a quality loop. It performs
+source-only on-screen-text provenance before render, rendered Recipe/rhythm
+motion evidence after render, and refuses a viewing conclusion while either
+report is `signals` or `unmeasured`. The owning Lead/Builder archives the
+attempt, revises owned source or allowed `creativeProposal` fields, and reruns.
+Parent does not hand-fix source, and the user sees only a gate-clean canary. The
+canary technical gate must hash-bind both passing reports.
 
 ## Direct original context
 

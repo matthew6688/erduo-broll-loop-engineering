@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { lstat, mkdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,8 @@ import {
   runCommand,
 } from './shot-media-lib.mjs';
 import { validateShotMedia } from './validate-shot-media.mjs';
+import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 function escapeConcatPath(file) {
   return file.replaceAll("'", "'\\''");
@@ -25,6 +27,7 @@ function previewRaster(profile) {
 
 async function assembleVerifiedContracts({
   contracts, deliveryRoot, outputFile, label, ffmpeg, ffprobe, runner,
+  productionRoot, planIdentity, skillUsageBinding,
 }) {
   if (!Array.isArray(contracts) || contracts.length === 0) throw new Error(`${label} has no verified shot contracts`);
   const delivery = path.resolve(deliveryRoot);
@@ -70,6 +73,9 @@ async function assembleVerifiedContracts({
   if (existing) {
     const facts = await probeAndDecode(output, {ffmpeg, ffprobe, runner, cwd: path.dirname(output), shotId: label});
     assertPreviewFacts(facts);
+    if (skillUsageBinding) await verifyVideoSkillUsage({
+      productionRoot, videoFile: output, planIdentity, binding: skillUsageBinding,
+    });
     return {preview: output, mediaFacts: facts, sha256: await hashFile(output), recovered: true};
   }
   await mkdir(path.dirname(output), {recursive: true});
@@ -90,9 +96,12 @@ async function assembleVerifiedContracts({
     await requireRegularFile(output, label);
     const facts = await probeAndDecode(output, {ffmpeg, ffprobe, runner, cwd: path.dirname(output), shotId: label});
     assertPreviewFacts(facts);
+    if (skillUsageBinding) await writeVideoSkillUsage({
+      productionRoot, videoFile: output, planIdentity, binding: skillUsageBinding,
+    });
     return {preview: output, mediaFacts: facts, sha256: await hashFile(output)};
   } catch (error) {
-    await rm(output, {force: true});
+    await Promise.all([rm(output, {force: true}), rm(`${output}.skill-usage.json`, {force: true})]);
     throw error;
   } finally {
     await rm(concatFile, {force: true});
@@ -102,12 +111,14 @@ async function assembleVerifiedContracts({
 export async function assembleChapterPreview({
   unitId, contracts, deliveryRoot, outputFile = path.join(deliveryRoot, 'chapter-previews', `${unitId}.mp4`),
   ffmpeg = 'ffmpeg', ffprobe = 'ffprobe', runner = runCommand,
+  productionRoot, planIdentity, skillUsageBinding,
 }) {
   if (!/^U[0-9]{3}$/u.test(unitId ?? '')) throw new Error('chapter preview requires a valid authoring unit id');
   if (contracts.some((contract) => contract.unitId !== unitId)) throw new Error('chapter preview contracts must belong to one authoring unit');
   const result = await assembleVerifiedContracts({
     contracts: [...contracts].sort((left, right) => left.order - right.order),
     deliveryRoot, outputFile, label: `${unitId} chapter preview`, ffmpeg, ffprobe, runner,
+    productionRoot, planIdentity, skillUsageBinding,
   });
   return {status: 'chapter-preview-ready', unitId, shots: contracts.length, ...result};
 }
@@ -115,10 +126,12 @@ export async function assembleChapterPreview({
 export async function assembleCanaryPreview({
   contracts, deliveryRoot, outputFile = path.join(deliveryRoot, 'canary-preview.mp4'),
   ffmpeg = 'ffmpeg', ffprobe = 'ffprobe', runner = runCommand,
+  productionRoot, planIdentity, skillUsageBinding,
 }) {
   if (contracts.length !== 5) throw new Error('canary preview requires exactly five verified shot contracts');
   const result = await assembleVerifiedContracts({
     contracts, deliveryRoot, outputFile, label: 'five-shot canary preview', ffmpeg, ffprobe, runner,
+    productionRoot, planIdentity, skillUsageBinding,
   });
   return {status: 'canary-preview-ready', shots: 5, shotIds: contracts.map(({shotId}) => shotId), ...result};
 }
@@ -146,6 +159,7 @@ export async function assembleShotPreview({
     planFile, recipesDirectory, sourceManifestFile, sourceManifestFiles, productionRoot, deliveryRoot,
     ffmpeg, ffprobe, runner,
   });
+  const plan = JSON.parse(await readFile(path.resolve(planFile), 'utf8'));
   const delivery = path.resolve(deliveryRoot);
   const mediaFiles = validation.deliveryIndex.shots.map(({ file }) => path.resolve(delivery, file));
   for (const [index, mediaFile] of mediaFiles.entries()) {
@@ -185,9 +199,12 @@ export async function assembleShotPreview({
     if (!Number.isFinite(facts.durationMs) || Math.abs(facts.durationMs - expectedDuration) > frameMs + 1) {
       throw new Error('preview duration differs from the verified shot coverage by more than one frame');
     }
+    if (plan.sourceContext?.skillUsage) await writeVideoSkillUsage({
+      productionRoot, videoFile: output, planIdentity: plan.identity, binding: plan.sourceContext.skillUsage,
+    });
     return { status: 'preview-ready', preview: output, shots: validation.shots, mediaFacts: facts };
   } catch (error) {
-    await rm(output, { force: true });
+    await Promise.all([rm(output, { force: true }), rm(`${output}.skill-usage.json`, {force: true})]);
     throw error;
   } finally {
     await rm(concatFile, { force: true });
@@ -221,6 +238,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

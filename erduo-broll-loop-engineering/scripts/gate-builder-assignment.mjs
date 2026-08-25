@@ -10,6 +10,7 @@ import { validateVisualLock } from './validate-visual-lock.mjs';
 import { canonicalJson } from './runtime-schema-validator.mjs';
 import { roleInjection } from './generate-role-files.mjs';
 import { resolveExistingRegularWithinRoot } from './presenter-media-lib.mjs';
+import {validateBuilderViewReceipt} from './shot-media-lib.mjs';
 import {
   buildBuilderAssignments,
   runtimeInspectionContract,
@@ -44,6 +45,35 @@ function assertExactAssignment(assignment, expected) {
 function identityOf(value) {
   const { identity: _identity, ...identityInput } = value;
   return `sha256:${createHash('sha256').update(canonicalJson(identityInput)).digest('hex')}`;
+}
+
+async function regularOutputExists(productionRoot, locator, label) {
+  try {
+    await resolveExistingRegularWithinRoot(productionRoot, locator, label);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT' || /ENOENT/u.test(error?.message ?? '')) return false;
+    throw error;
+  }
+}
+
+async function validateLeadClosureIfStarted(assignment, productionRoot) {
+  const receiptExists = await regularOutputExists(
+    productionRoot, assignment.output.viewReceipt, 'Lead view receipt',
+  );
+  const handoffExists = await regularOutputExists(
+    productionRoot, assignment.output.handoff, 'Lead handoff',
+  );
+  if (!receiptExists && !handoffExists) return;
+  if (!receiptExists || !handoffExists) {
+    throw new Error('Lead closure requires both the Lead view receipt and a handoff that references it');
+  }
+  const recipeBindings = assignment.recipeBindings.map(({
+    shotId, recipeIdentity, truthIdentity,
+  }) => ({shotId, recipeIdentity, truthIdentity}));
+  await validateBuilderViewReceipt({
+    assignment, productionRoot, recipeBindings, expectedShotIds: assignment.shotIds,
+  });
 }
 
 async function verifyFileHash(productionRoot, locator, expectedSha256, label) {
@@ -182,6 +212,7 @@ export async function gateBuilderAssignment(assignment, options = {}) {
     if (!expected) throw new Error('assignment is not declared by the runtime plan');
     assertExactAssignment(assignment, expected);
     if (assignment.role === 'lead') {
+      await validateLeadClosureIfStarted(assignment, productionRoot);
       return { status: 'ready', role: 'lead', phase: 'lead-production' };
     }
     if (!canaryTechnicalGate || !canaryUserDecision) {

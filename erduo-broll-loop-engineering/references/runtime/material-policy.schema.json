@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/material-policy.schema.json",
+  "title": "User-approved canary material policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "approvedBy", "scope", "minimumMaterialShots", "reason", "originalDesignSha256", "identity"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "status": {"const": "approved"},
+    "approvedBy": {"const": "user"},
+    "scope": {"const": "default-design-native-only"},
+    "minimumMaterialShots": {"const": 0},
+    "reason": {"type": "string", "minLength": 20},
+    "originalDesignSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

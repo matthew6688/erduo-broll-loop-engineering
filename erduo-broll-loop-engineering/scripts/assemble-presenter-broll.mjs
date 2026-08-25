@@ -15,6 +15,8 @@ import {
 } from './presenter-media-lib.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
+import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -113,6 +115,9 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
   if (canonicalJson(plan.segments) !== canonicalJson(compiledSegments)) {
     throw new Error('presenter edit plan segments differ from the bound Recipe presenter treatments');
   }
+  const skillUsageBinding = runtimePlan.sourceContext?.skillUsage;
+  if (!skillUsageBinding) throw new Error('presenter composition requires runtime-plan skill usage binding');
+  return {runtimePlan, skillUsageBinding};
 }
 
 function seconds(ms) {
@@ -125,7 +130,10 @@ function normalizedVideoFilter({ input, startMs, endMs, width, height, fps, outp
     + `setsar=1,fps=${fps},format=yuv420p[${output}]`;
 }
 
-async function loadVerifiedShots({ deliveryRoot, deliveryIndex, ffmpeg, ffprobe, runner }) {
+async function loadVerifiedShots({
+  productionRoot, deliveryRoot, deliveryIndex, planIdentity, skillUsageBinding,
+  ffmpeg, ffprobe, runner,
+}) {
   const shots = new Map();
   for (const indexed of deliveryIndex.shots) {
     if (shots.has(indexed.shotId)) throw new Error(`delivery index repeats shot ${indexed.shotId}`);
@@ -145,6 +153,9 @@ async function loadVerifiedShots({ deliveryRoot, deliveryIndex, ffmpeg, ffprobe,
     }
     const mediaSha256 = await hashFile(mediaPath);
     if (mediaSha256 !== contract.media.sha256) throw new Error(`${indexed.shotId} media hash changed before presenter composition`);
+    await verifyVideoSkillUsage({
+      productionRoot, videoFile: mediaPath, planIdentity, binding: skillUsageBinding,
+    });
     const facts = await probeAndDecode(mediaPath, {
       ffmpeg, ffprobe, runner, cwd: path.dirname(mediaPath), shotId: `${indexed.shotId} B-roll`,
     });
@@ -196,7 +207,9 @@ export async function assemblePresenterBroll({
     assertSchema(plan, 'presenter-edit-plan.schema.json', 'presenter edit plan'),
     assertSchema(deliveryIndex, 'delivery-index.schema.json', 'delivery index'),
   ]);
-  await verifyCompiledPlanBindings({ productionRoot, sourceRecord, source, plan });
+  const {runtimePlan, skillUsageBinding} = await verifyCompiledPlanBindings({
+    productionRoot, sourceRecord, source, plan,
+  });
   const presenter = await resolveExistingRegularWithinRoot(productionRoot, source.media.file, 'presenter media');
   if (await hashFile(presenter.absolute) !== source.media.sha256) throw new Error('presenter media hash changed after source registration');
   if (source.approval.approvedMediaSha256 !== source.media.sha256) {
@@ -213,7 +226,10 @@ export async function assemblePresenterBroll({
     if (presenterFacts[key] !== source.media[key]) throw new Error(`presenter media ${key} differs from its source contract`);
   }
   if (Math.abs(presenterFacts.fps - source.media.fps) > 1e-6) throw new Error('presenter media fps differs from its source contract');
-  const shots = await loadVerifiedShots({ deliveryRoot, deliveryIndex, ffmpeg, ffprobe, runner });
+  const shots = await loadVerifiedShots({
+    productionRoot, deliveryRoot, deliveryIndex, planIdentity: runtimePlan.identity,
+    skillUsageBinding, ffmpeg, ffprobe, runner,
+  });
   const mix = validatePresenterEditPlan({ plan, shots, presenterDurationMs: presenterFacts.durationMs });
   const { width, height, fps } = plan.output;
   if (width % 2 !== 0 || height % 2 !== 0) throw new Error('presenter composition output width and height must be even');
@@ -264,6 +280,10 @@ export async function assemblePresenterBroll({
     }
     await link(temporaryOutput, output.absolute);
     outputLinked = true;
+    await writeVideoSkillUsage({
+      productionRoot, videoFile: output.absolute, planIdentity: runtimePlan.identity,
+      binding: skillUsageBinding,
+    });
     const usedShotIds = [...new Set(plan.segments.filter(({ kind }) => kind === 'broll').map(({ shotId }) => shotId))];
     const receiptValue = {
       schemaVersion: '1.0.0',
@@ -295,6 +315,7 @@ export async function assemblePresenterBroll({
   } catch (error) {
     await rm(temporaryDirectory, { recursive: true, force: true });
     if (outputLinked) await rm(output.absolute, { force: true });
+    if (outputLinked) await rm(`${output.absolute}.skill-usage.json`, { force: true });
     if (receiptLinked) await rm(receipt.absolute, { force: true });
     throw error;
   }
@@ -311,6 +332,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

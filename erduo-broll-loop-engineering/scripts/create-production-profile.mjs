@@ -7,6 +7,7 @@ import {
   DEFAULT_PRODUCTION_PROFILE,
   bindProductionProfile,
 } from './plan-runtime.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 export const SUPPORTED_MASTER_FORMAT = 'h264-mp4';
 export const SUPPORTED_MEZZANINE_FORMATS = Object.freeze(['h264-mp4', 'ffv1-mkv']);
@@ -143,6 +144,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

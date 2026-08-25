@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "used", "video", "skillUsage", "planIdentity", "identity"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "used": {"const": true},
+    "video": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256"],
+      "properties": {
+        "locator": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "skillUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractLocator", "contractSha256", "contractIdentity", "skillName", "skillSha256"],
+      "properties": {
+        "contractLocator": {"const": "00-inputs/skill-usage.json"},
+        "contractSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "contractIdentity": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "skillName": {"type": "string", "minLength": 1},
+        "skillSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "planIdentity": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -16,6 +16,9 @@ import {
 } from '../erduo-broll-loop-engineering/scripts/presenter-media-lib.mjs';
 import { validateRecipeDirectory } from '../erduo-broll-loop-engineering/scripts/validate-shot-recipes.mjs';
 import { computeRuntimePlanIdentity } from '../erduo-broll-loop-engineering/scripts/validate-runtime-plan.mjs';
+import {
+  registerSkillUsage, verifySkillUsage, writeVideoSkillUsage,
+} from '../erduo-broll-loop-engineering/scripts/skill-usage.mjs';
 
 function sha(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -114,6 +117,10 @@ test('compositor preserves one presenter audio stream while switching to validat
     mkdir(presenterDirectory, { recursive: true }),
     mkdir(shotsDirectory, { recursive: true }),
   ]);
+  const skillFile = path.join(base, 'SKILL.md');
+  await writeFile(skillFile, '---\nname: erduo-broll-loop-engineering\n---\n# Test authority\n');
+  await registerSkillUsage({productionRoot, skillFile, skillName: 'erduo-broll-loop-engineering'});
+  const skillUsage = await verifySkillUsage({productionRoot});
   const presenterFile = path.join(presenterDirectory, 'presenter.mp4');
   const shotFile = path.join(shotsDirectory, '001-S01.mp4');
   const srtFile = path.join(presenterDirectory, 'source.srt');
@@ -209,6 +216,7 @@ test('compositor preserves one presenter audio stream while switching to validat
     schemaVersion: '4.0.0',
     sourceContext: {
       originalSrt: { sha256: sha('SRT') },
+      skillUsage,
       presenterSource: {
         locator: '00-inputs/presenter/presenter-source.json',
         sha256: sha(await readFile(sourceFile)),
@@ -223,6 +231,9 @@ test('compositor preserves one presenter audio stream while switching to validat
   };
   runtimePlan.identity = computeRuntimePlanIdentity(runtimePlan);
   await writeFile(runtimePlanFile, `${JSON.stringify(runtimePlan)}\n`);
+  await writeVideoSkillUsage({
+    productionRoot, videoFile: shotFile, planIdentity: runtimePlan.identity, binding: skillUsage,
+  });
   const editPlanFile = path.join(productionRoot, 'presenter-edit-plan.json');
   await assert.rejects(createPresenterEditPlan({
     productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
@@ -319,6 +330,7 @@ test('compositor preserves one presenter audio stream while switching to validat
   assert.equal(receipt.mix.brollDurationMs, 2000);
   assert.equal(receipt.mix.presenterDurationMs, 2000);
   assert.equal(receipt.output.fullDecode, 'passed');
+  assert.equal(JSON.parse(await readFile(`${outputFile}.skill-usage.json`, 'utf8')).used, true);
   const humanPresenterSource = JSON.parse(await readFile(humanSourceFile, 'utf8'));
   const humanRuntimePlan = structuredClone(runtimePlan);
   humanRuntimePlan.sourceContext.presenterSource = {
@@ -336,6 +348,10 @@ test('compositor preserves one presenter audio stream while switching to validat
   const humanOutputFile = path.join(deliveryRoot, 'human-presenter-broll-master.mp4');
   const humanReceiptFile = path.join(deliveryRoot, 'human-presenter-broll-master.receipt.json');
   await writeFile(humanRuntimePlanFile, `${JSON.stringify(humanRuntimePlan)}\n`);
+  await rm(`${shotFile}.skill-usage.json`);
+  await writeVideoSkillUsage({
+    productionRoot, videoFile: shotFile, planIdentity: humanRuntimePlan.identity, binding: skillUsage,
+  });
   await createPresenterEditPlan({
     productionRoot, runtimePlanFile: humanRuntimePlanFile, recipesDirectory,
     presenterSourceFile: humanSourceFile, outputFile: humanEditPlanFile,

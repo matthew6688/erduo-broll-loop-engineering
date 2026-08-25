@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createProductionProfile } from './create-production-profile.mjs';
 import { mezzanineVideoArgs } from './frozen-media-policy.mjs';
 import { runFrozenMediaCommand } from './validate-frozen-blocks.mjs';
+import {isDirectExecution} from './direct-execution.mjs';
 
 function failure(label, result) {
   const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.code}`;
@@ -171,6 +172,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify(await verifyLightweightCodec(), null, 2)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectExecution(import.meta.url)) {
   main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }
