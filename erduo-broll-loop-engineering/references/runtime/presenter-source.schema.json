@@ -35,7 +35,7 @@
       "properties": {
         "likeness": { "const": "confirmed" },
         "voice": { "const": "confirmed" },
-        "use": { "enum": ["internal-canary", "publishing"] }
+        "use": { "enum": ["internal-framework-demo", "internal-canary", "publishing"] }
       }
     },
     "approval": {
@@ -43,12 +43,12 @@
       "additionalProperties": false,
       "required": ["scope", "approvedBy", "approvedMediaSha256", "identity", "voice", "lipSync"],
       "properties": {
-        "scope": { "enum": ["canary", "full-production"] },
+        "scope": { "enum": ["framework-demo", "canary", "full-production"] },
         "approvedBy": { "const": "user" },
         "approvedMediaSha256": { "$ref": "#/$defs/sha256" },
         "identity": { "const": "approved" },
         "voice": { "const": "approved" },
-        "lipSync": { "const": "approved" }
+        "lipSync": { "enum": ["not-evaluated", "approved"] }
       }
     },
     "media": {

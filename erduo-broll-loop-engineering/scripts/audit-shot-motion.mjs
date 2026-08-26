@@ -146,28 +146,30 @@ export async function auditShotMotion({
     let actionMean = null;
     if (hold) {
       const holdMs = Math.max(0, hold.endMs - hold.startMs);
-      const actionGaps = Math.max(1, Math.round((hold.startMs - recipe.truth.srtWindowMs.startMs) / 1000 * fps) - 1);
-      const action = deltas.slice(0, actionGaps);
-      actionMean = action.reduce((sum, value) => sum + value, 0) / action.length;
-      actionActiveRatio = action.filter((value) => value >= thresholds.stillCutoff).length / action.length;
-      const actionStill = stillRuns(action, thresholds.stillCutoff);
-      const actionRuns = [...actionStill.runs, ...(actionStill.tail ? [actionStill.tail] : [])];
-      midStillMs = Math.round((actionRuns.length ? Math.max(...actionRuns) : 0) / fps * 1000);
-      const stateTransitions = Math.max(1, (recipe.creativeProposal?.keyStates?.length ?? 2) - 1);
-      const actionDurationMs = Math.max(1, hold.startMs - recipe.truth.srtWindowMs.startMs);
-      maxAllowedMidStillMs = Math.max(
-        thresholds.minimumGapMs,
-        Math.round(actionDurationMs / stateTransitions * rhythmPolicy.maxBeatGapFactor),
-      );
+      const actionDurationMs = Math.max(0, hold.startMs - recipe.truth.srtWindowMs.startMs);
+      const actionGaps = Math.max(0, Math.round(actionDurationMs / 1000 * fps) - 1);
+      if (actionGaps > 0) {
+        const action = deltas.slice(0, actionGaps);
+        actionMean = action.reduce((sum, value) => sum + value, 0) / action.length;
+        actionActiveRatio = action.filter((value) => value >= thresholds.stillCutoff).length / action.length;
+        const actionStill = stillRuns(action, thresholds.stillCutoff);
+        const actionRuns = [...actionStill.runs, ...(actionStill.tail ? [actionStill.tail] : [])];
+        midStillMs = Math.round((actionRuns.length ? Math.max(...actionRuns) : 0) / fps * 1000);
+        const stateTransitions = Math.max(1, (recipe.creativeProposal?.keyStates?.length ?? 2) - 1);
+        maxAllowedMidStillMs = Math.max(
+          thresholds.minimumGapMs,
+          Math.round(actionDurationMs / stateTransitions * rhythmPolicy.maxBeatGapFactor),
+        );
+      }
       if (tailMs > holdMs + thresholds.tailGraceMs) {
         findings.push({ signal: 'tail-still-exceeds-declared-hold',
           detail: `still tail ${tailMs}ms against a ${holdMs}ms hold declared by ${hold.source}` });
       }
-      if (actionActiveRatio < rhythmPolicy.minActionActiveRatio) {
+      if (actionActiveRatio !== null && actionActiveRatio < rhythmPolicy.minActionActiveRatio) {
         findings.push({ signal: 'action-window-underdeveloped',
           detail: `${(actionActiveRatio * 100).toFixed(1)}% of action frames visibly develop; ${motionEntry?.rhythm ?? 'default'} rhythm requires ${(rhythmPolicy.minActionActiveRatio * 100).toFixed(1)}%` });
       }
-      if (midStillMs > maxAllowedMidStillMs) {
+      if (maxAllowedMidStillMs !== null && midStillMs > maxAllowedMidStillMs) {
         findings.push({ signal: 'mid-shot-still-run',
           detail: `longest action-window still run ${midStillMs}ms exceeds the ${maxAllowedMidStillMs}ms Recipe/rhythm allowance` });
       }

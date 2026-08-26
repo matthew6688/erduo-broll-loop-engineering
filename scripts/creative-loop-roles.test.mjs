@@ -81,6 +81,8 @@ test('Parent, orchestration, and stage Skills expose the reset contract', async 
   assert.match(parent, /Remotion: explicit opt-in or canary only/u);
   assert.match(parent, /`auto`: experimental and explicit only/u);
   assert.match(parent, /Full production is blocked until/u);
+  assert.match(parent, /final presenter assembly[\s\S]*actual delivered MP4[\s\S]*contact sheet/iu);
+  assert.match(parent, /technical canary pass[\s\S]*never substitutes for this final-pixel review/iu);
 
   assert.match(director, /schemaVersion:"4\.0\.0"/u);
   assert.match(director, /truth:\{chapterId,srtWindowMs/u);

@@ -209,9 +209,11 @@ duration, authorization use, and approval scope into every Lead/Builder packet.
 Director writes and the owning Builder may
 revise `creativeProposal.presenterTreatment` after viewing. Parent must run
 `create-presenter-edit-plan.mjs` after final Recipe revisions; it may not invent
-or hand-edit cut times. `assemble-presenter-broll.mjs` may then replace
-picture intervals only with unchanged validated silent shots inside their SRT
-windows, while preserving exactly one presenter audio stream. Its composition
+or hand-edit cut times. `assemble-presenter-broll.mjs` may then replace picture
+intervals only with unchanged validated silent shots inside their SRT windows,
+while preserving exactly one presenter audio stream. Presenter background and
+Logo remain part of the presenter source and must not alter the B-roll design
+authority. Its composition
 receipt binds the presenter contract, edit plan, delivery index, used shot
 media, mix durations, output hash, and full audiovisual decode. This final
 composition does not change or weaken any direct-shot contract.

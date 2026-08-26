@@ -41,3 +41,10 @@ The fork includes rendered motion/on-screen-text audits and unified Recipe
 truth/source-input identity validation. Keep README, current references,
 schemas, role charters, tests, and release manifests aligned when those
 contracts change.
+
+Presenter production supports provider-neutral human/digital sources plus
+`presenter|broll|mixed` Recipe treatments. Presenter background and Logo are
+presenter-layer concerns; they must not replace or restyle the original B-roll
+DesignMD. See `docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`;
+publishable audio, lip-sync, subtitle, decode, authorization, and
+Skill-evidence gates still apply.

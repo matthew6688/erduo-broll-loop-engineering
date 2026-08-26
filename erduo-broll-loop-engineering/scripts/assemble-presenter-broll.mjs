@@ -62,6 +62,18 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
     || plan.presenterSource.mediaSha256 !== source.media.sha256) {
     throw new Error('presenter edit plan is not bound to the current presenter source contract');
   }
+  if (plan.compositionScope === 'framework-demo'
+    && (source.authorization.use !== 'internal-framework-demo'
+      || source.approval.scope !== 'framework-demo'
+      || source.approval.lipSync !== 'not-evaluated')) {
+    throw new Error('framework-demo composition requires isolated demo authorization, demo approval, and unevaluated lip sync');
+  }
+  if (plan.compositionScope === 'canary'
+    && (source.authorization.use !== 'internal-canary'
+      || source.approval.scope !== 'canary'
+      || source.approval.lipSync !== 'approved')) {
+    throw new Error('canary composition requires internal-canary authorization and approved canary lip sync');
+  }
   if (plan.compositionScope === 'full-production'
     && (source.authorization.use !== 'publishing' || source.approval.scope !== 'full-production')) {
     throw new Error('full-production composition requires publishing authorization and full-production approval');

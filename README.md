@@ -71,7 +71,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
-- 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。数字人导入不是 HeyGen/Hypergen API adapter。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
+- 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。仓库另有受限的 HeyGen canary adapter，用于授权输入、余额预检、上传、幂等提交、轮询/恢复和下载；它不是完整的正式生产 Provider。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
 
 真人/数字人双模式、竖屏/YouTube 横屏的生产边界、审批门禁、已验证能力和后续产品化顺序，
 见 [`docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`](docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md)。
@@ -161,8 +161,9 @@ node erduo-broll-loop-engineering/scripts/verify-presenter-delivery.mjs \
 绑定的原始 SRT 逐字节一致，字幕不能超过媒体时长，成片必须完整解码且只有一条 AAC/48 kHz
 音轨，响度达到门槛，并且解码后的 PCM 音频必须与已批准的主合成完全一致。这样可直接阻止
 无声导出、错配字幕、替换音轨和未经绑定的最终文件被误报为完成。
-首版只支持本地 MP4 的画面硬切；透明 WebM 数字人持续叠加在 B-roll 上属于后续 adapter，
-不能把本地导入能力表述为已经接通某家供应商 API。
+人物背景和品牌 Logo 只属于 presenter source，不得改写原始 B-roll DesignMD、主题、版式或
+动画。透明 WebM 数字人持续叠加仍属于后续能力。现有 HeyGen canary adapter 不能表述为
+已经完成某家供应商的正式生产产品化。
 
 ## v1.0.1：恢复 Chapter Builder 创作闭环
 

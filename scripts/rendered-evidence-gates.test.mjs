@@ -48,6 +48,40 @@ test('onscreen-text preflight rejects production scaffolding before any video or
   assert.equal((await auditOnscreenText(args)).status, 'passed');
 });
 
+test('onscreen-text preflight accepts only hash-bound bitmap and video surfaces', async (t) => {
+  const productionRoot = await root(t);
+  const sourceRoot = path.join(productionRoot, '03-build', 'U001', 'source');
+  const recipes = path.join(productionRoot, '01-director', 'shot-recipes');
+  const assignments = path.join(productionRoot, '01-runtime-plan', 'assignments');
+  const asset = path.join(sourceRoot, 'assets', 'presenter.mp4');
+  await Promise.all([
+    mkdir(path.join(sourceRoot, 'compositions'), {recursive: true}),
+    mkdir(path.dirname(asset), {recursive: true}), mkdir(recipes, {recursive: true}),
+    mkdir(assignments, {recursive: true}), mkdir(path.join(productionRoot, '00-inputs'), {recursive: true}),
+    mkdir(path.join(productionRoot, '02-assets'), {recursive: true}),
+  ]);
+  await writeFile(asset, 'BOUND-PRESENTER');
+  const sha256 = createHash('sha256').update(await readFile(asset)).digest('hex');
+  await Promise.all([
+    writeFile(path.join(productionRoot, '01-runtime-plan', 'runtime-plan.json'), `${JSON.stringify({identity: '7'.repeat(64), shots: [{shotId: 's01'}]})}\n`),
+    writeFile(path.join(assignments, 'U001.json'), `${JSON.stringify({shotIds: ['s01'], sourceRoot: '03-build/U001/source'})}\n`),
+    writeFile(path.join(recipes, 's01.json'), `${JSON.stringify({shotId: 's01', creativeProposal: {objects: []}})}\n`),
+    writeFile(path.join(productionRoot, '00-inputs', 'original.srt'), '1\n00:00:00,000 --> 00:00:01,000\n旁白\n'),
+    writeFile(path.join(sourceRoot, 'compositions', 's01.html'), '<body><video src="assets/presenter.mp4"></video></body>\n'),
+  ]);
+  const args = {
+    planFile: path.join(productionRoot, '01-runtime-plan', 'runtime-plan.json'), recipesDirectory: recipes,
+    productionRoot, originalSrtFile: path.join(productionRoot, '00-inputs', 'original.srt'), shotIds: ['s01'],
+  };
+  assert.equal((await auditOnscreenText(args)).status, 'unmeasured');
+  await writeFile(path.join(productionRoot, '02-assets', 'asset-index.json'), `${JSON.stringify({
+    schemaVersion: '1.0.0', sharedMaterial: [{assetId: 'presenter', sha256}],
+  })}\n`);
+  assert.equal((await auditOnscreenText(args)).status, 'passed');
+  await writeFile(asset, 'DRIFTED-PRESENTER');
+  assert.equal((await auditOnscreenText(args)).status, 'unmeasured');
+});
+
 test('shot-motion gate accepts staged development with only the declared final hold and rejects a frozen shot', async (t) => {
   if (spawnSync('ffmpeg', ['-version'], {stdio: 'ignore'}).status !== 0) t.skip('ffmpeg unavailable');
   const productionRoot = await root(t);
@@ -86,4 +120,15 @@ test('shot-motion gate accepts staged development with only the declared final h
   const frozen = await auditShotMotion(args);
   assert.equal(frozen.status, 'signals');
   assert.ok(frozen.shots[0].findings.some(({signal}) => ['tail-still-exceeds-declared-hold', 'action-window-underdeveloped'].includes(signal)));
+
+  await Promise.all([
+    writeFile(path.join(recipes, 's01.json'), `${JSON.stringify({
+      shotId: 's01', truth: {srtWindowMs: {startMs: 0, endMs: 2000}, readableHold: {startMs: 0, endMs: 2000}},
+      creativeProposal: {keyStates: ['deliberate still']},
+    })}\n`),
+    writeFile(motionMapFile, `${JSON.stringify({shots: [{shotId: 's01', rhythm: 'calm', settleMs: 2000}]})}\n`),
+  ]);
+  const deliberateStill = await auditShotMotion(args);
+  assert.equal(deliberateStill.status, 'passed');
+  assert.equal(deliberateStill.shots[0].measurements.actionWindowActiveRatio, null);
 });

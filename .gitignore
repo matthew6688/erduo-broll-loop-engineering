@@ -13,6 +13,7 @@ node_modules/
 broll-production/
 renders/
 artifacts/
+docs/assets/digital-presenter-visual-system/
 
 # Secrets and local configuration
 .env

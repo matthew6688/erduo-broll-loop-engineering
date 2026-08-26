@@ -532,7 +532,8 @@ function parseArgs(argv) {
   }
   const allowed = new Set([
     '--plan', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map',
-    '--recipes', '--original-srt', '--original-design', '--material-policy', '--production-root',
+    '--recipes', '--original-srt', '--original-design', '--material-policy', '--presenter-source',
+    '--production-root',
   ]);
   const values = {};
   for (let index = 0; index < argv.length; index += 2) {
@@ -551,6 +552,7 @@ function parseArgs(argv) {
     originalSrtFile: values['original-srt'],
     originalDesignFile: values['original-design'],
     materialPolicyFile: values['material-policy'],
+    presenterSourceFile: values['presenter-source'],
     productionRoot: values['production-root'],
   };
 }

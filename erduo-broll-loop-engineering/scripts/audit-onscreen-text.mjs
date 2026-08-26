@@ -20,7 +20,8 @@
  * viewer.
  */
 
-import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, readdir, writeFile, mkdir, lstat } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -60,10 +61,49 @@ export function renderedText(html) {
 
 /* Text drawn into a canvas, a shader, or a bitmap cannot be read from markup.
  * Say so rather than reporting a clean pass over text nobody inspected. */
-function unreadableSurfaces(html) {
+function indexedSurfaceHashes(index) {
+  const hashes = new Set();
+  // `asset-index.json` uses `sharedMedia` for user-provided factual captures.
+  // Keep accepting the older collection names, but do not reject a regular
+  // serving copy whose byte hash is already closed in the canonical index.
+  for (const collection of ['sharedMedia', 'sharedMaterial', 'brandAssets', 'reusableDerivatives']) {
+    for (const entry of index?.[collection] ?? []) {
+      if (/^[0-9a-f]{64}$/u.test(entry?.sha256 ?? '')) hashes.add(entry.sha256);
+    }
+  }
+  return hashes;
+}
+
+function surfaceSources(html) {
+  return [...html.matchAll(/<(?:img|video)\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/giu)]
+    .map((match) => match[1]);
+}
+
+async function unreadableSurfaces(html, { sourceRoot, approvedHashes }) {
   const surfaces = [];
   if (/<canvas\b/iu.test(html)) surfaces.push('canvas element: text drawn at runtime is not inspectable');
-  if (/<(img|video)\b/iu.test(html)) surfaces.push('bitmap or video element: burnt-in text is not inspectable');
+  for (const locator of surfaceSources(html)) {
+    if (!sourceRoot || !approvedHashes.size || /^(?:[a-z]+:|\/)/iu.test(locator)) {
+      surfaces.push(`bitmap or video ${locator}: burnt-in text is not bound to the approved asset index`);
+      continue;
+    }
+    const absolute = path.resolve(sourceRoot, locator);
+    const relative = path.relative(sourceRoot, absolute);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      surfaces.push(`bitmap or video ${locator}: asset path escapes the authored source root`);
+      continue;
+    }
+    try {
+      const info = await lstat(absolute);
+      if (!info.isFile() || info.isSymbolicLink()) throw new Error('not a regular file');
+      const sha256 = createHash('sha256').update(await readFile(absolute)).digest('hex');
+      if (!approvedHashes.has(sha256)) {
+        surfaces.push(`bitmap or video ${locator}: asset hash is not bound to the approved asset index`);
+      }
+    } catch {
+      surfaces.push(`bitmap or video ${locator}: bound surface file is missing or unsafe`);
+    }
+  }
   return surfaces;
 }
 
@@ -78,6 +118,12 @@ export async function auditOnscreenText({
   const visualSystem = visualSystemFile ? await readJson(path.resolve(visualSystemFile), 'visual system') : {};
   const vocabulary = new Set((visualSystem.vocabulary ?? []).map(fold));
   const chrome = new Set(CHROME.map(fold));
+  let approvedHashes = new Set();
+  try {
+    approvedHashes = indexedSurfaceHashes(await readJson(path.join(root, '02-assets', 'asset-index.json'), 'asset index'));
+  } catch {
+    // A production without bitmap/video surfaces does not require an asset index.
+  }
 
   /* The shot contract names a render target, not a file. Assignments are what
    * bind a shot to the source root that authored it. */
@@ -155,7 +201,9 @@ export async function auditOnscreenText({
     if (html === null) {
       unmeasured.push('authored source for this shot was not located: rendered text not inspected');
     } else {
-      unmeasured.push(...unreadableSurfaces(html));
+      unmeasured.push(...await unreadableSurfaces(html, {
+        sourceRoot: path.resolve(root, sourceRoot), approvedHashes,
+      }));
       for (const text of renderedText(html)) {
         const scaffolding = SCAFFOLDING.find(([pattern]) => pattern.test(text));
         if (scaffolding) {

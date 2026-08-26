@@ -153,8 +153,20 @@ export async function createPresenterEditPlan({
   if (presenterKindOf(plannedPresenter) !== presenterKindOf(presenterSource)) {
     throw new Error('runtime plan presenter kind differs from the current presenter source contract');
   }
-  if (!['canary', 'full-production'].includes(compositionScope)) {
-    throw new Error('compositionScope must be canary or full-production');
+  if (!['framework-demo', 'canary', 'full-production'].includes(compositionScope)) {
+    throw new Error('compositionScope must be framework-demo, canary, or full-production');
+  }
+  if (compositionScope === 'framework-demo'
+    && (presenterSource.authorization.use !== 'internal-framework-demo'
+      || presenterSource.approval.scope !== 'framework-demo'
+      || presenterSource.approval.lipSync !== 'not-evaluated')) {
+    throw new Error('framework-demo composition requires isolated demo authorization, demo approval, and unevaluated lip sync');
+  }
+  if (compositionScope === 'canary'
+    && (presenterSource.authorization.use !== 'internal-canary'
+      || presenterSource.approval.scope !== 'canary'
+      || presenterSource.approval.lipSync !== 'approved')) {
+    throw new Error('canary composition requires internal-canary authorization and approved canary lip sync');
   }
   if (compositionScope === 'full-production'
     && (presenterSource.authorization.use !== 'publishing'

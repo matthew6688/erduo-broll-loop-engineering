@@ -8,8 +8,8 @@
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "presenterKind": { "enum": ["human", "digital"] },
-    "compositionScope": { "enum": ["canary", "full-production"] },
-    "authorizationUse": { "enum": ["internal-canary", "publishing"] },
+    "compositionScope": { "enum": ["framework-demo", "canary", "full-production"] },
+    "authorizationUse": { "enum": ["internal-framework-demo", "internal-canary", "publishing"] },
     "inputs": {
       "type": "object",
       "additionalProperties": false,

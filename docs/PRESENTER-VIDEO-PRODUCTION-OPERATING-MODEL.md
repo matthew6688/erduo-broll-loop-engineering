@@ -1,6 +1,14 @@
 # 真人 / 数字人双模式视频生产方案
 
-更新时间：2026-08-25
+更新时间：2026-08-26
+
+数字人图片、动作白名单、主持人背景与 canary 升级门禁见
+[`DIGITAL-PRESENTER-VISUAL-SYSTEM.md`](DIGITAL-PRESENTER-VISUAL-SYSTEM.md)。
+
+当前现役决定：默认 Erduo B-roll 的 DesignMD、主题、版式和动画保持不变。FengTalk 适配只发生
+在 presenter source：数字人的独立背景与“峰说”Logo。人物与 B-roll 按 Recipe 的
+`presenter|broll|mixed` 时间线切换，不建立新的同屏主题，也不让 presenter 品牌层改写 B-roll。
+正常发布所需的肖像/声音授权、口型、唯一音轨、字幕、完整解码和 Skill 证据仍全部保留。
 
 ## 1. 目标与边界
 
@@ -28,7 +36,7 @@ Director、Assets、Lead、Chapter Builder、五镜头 canary、静音逐镜 B-r
 | 竖屏 9:16 | 已完成真实样片 | 1080×1920、30 fps |
 | 横屏 16:9 | 引擎支持，尚未完成本方案实片 canary | Erduo 默认 profile 为 3840×2160、30 fps，也可显式使用 1920×1080 |
 | 字幕 | 已纳入最终交付门禁 | 原 SRT 作为 sidecar truth；烧录字幕衍生版必须通过 SRT hash、时间、音轨连续性、响度和完整解码检查 |
-| HeyGen HTTP adapter | 未产品化 | 本次能调用 API，但任务状态、幂等、恢复、Webhook 和下载还没有仓库级 adapter |
+| HeyGen HTTP adapter | canary adapter 已实现并有 mock 回归测试；正式生产 adapter 未完成 | 已有授权文件、余额预检、上传、幂等键、状态持久化、轮询、恢复和下载；仍缺 full-production 授权合同、Webhook/长期任务运维和真实发布回归 |
 
 因此，对外应表述为“真人/数字人双模式剪辑与合成已成立”；不应表述为“HeyGen 全自动
 Provider 已完整产品化”或“横屏已经过真实样片验收”。
@@ -60,6 +68,7 @@ Chapter Builders → 静音逐镜 B-roll → delivery-index.json
 - 原始 DesignMD 是视觉真源；默认版未稳定前不得叠加品牌实验。
 - 每个 B-roll shot 保持静音；最终只保留 presenter 的一条 canonical audio stream。
 - Director/Builder 决定 `presenter|broll|mixed`；Parent 只能机械编译切点，不能手写时间线。
+- 数字人背景和“峰说”Logo 是 presenter source 的一部分，不得进入 B-roll DesignMD。
 - 更换声音、数字人媒体、SRT、DesignMD、画幅或治理锁，都要建立新的 production root。
 - 人像必须保持自然彩色；永久禁止把本人肖像处理为黑白。
 
@@ -187,13 +196,12 @@ SRT、旁白、授权、素材索引和部分叙事设计可以复用；已经�
 
 ## 8. 下一阶段产品化顺序
 
-1. **P0：无水印账户 canary**——重新生成三段 presenter，确认正式发布质量。
-2. **P0：字幕安全区证据**——最终交付合同、SRT/音轨/响度/解码门禁已完成；下一步补字幕与主体文字碰撞证据。
-3. **P1：YouTube 横屏 canary**——同一 SRT 做 1920×1080 的三镜头 Lead + 五镜头 canary。
-4. **P1：真人实片 canary**——用一条真实真人母片验证 `presenterKind=human` 的完整交付。
-5. **P1：HeyGen adapter**——持久化 job state、幂等键、轮询/Webhook、恢复下载和费用 gate。
-6. **P2：透明数字人 overlay**——只在支持 matting 的 Avatar/WebM 上单独做 canary。
-7. **P2：FengTalk 品牌化**——基线稳定后逐项加入，永远不一次改完整视觉系统。
+1. **P0：Presenter 背景基线**——只批准数字人独立背景和“峰说”Logo；不得改 B-roll DesignMD。
+2. **P0：无水印账户 canary**——重新生成需要的 presenter 片段，确认正式发布质量。
+3. **P0：字幕安全区证据**——补字幕与主体文字碰撞证据。
+4. **P1：YouTube 横屏 canary**——同一 SRT 重新执行横屏 Director、Lead 与五镜头 canary，不从竖屏裁切。
+5. **P1：真人实片 canary**——用一条真实真人母片验证 `presenterKind=human` 的完整交付。
+6. **P1：HeyGen 正式生产 adapter**——在现有 canary adapter 上补 full-production 授权、Webhook/长期任务运维、费用确认和真实发布回归。
 
 这套顺序的目标是把“偶尔能生成一条视频”变成“输入明确、审批明确、输出可预期、失败可定位、
 真人与数字人可切换、竖屏与横屏可分别复现”的生产系统。

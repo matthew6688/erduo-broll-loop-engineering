@@ -6,7 +6,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 2. When a production governance lock is present, read its bound contract and preserve its brand, asset, typography, color, workflow, and publication constraints; never replace or reinterpret that authority.
 3. Freeze only truth: source cues, spoken facts, audience outcome, readable result, optional readable hold, timing, chapter, and seams.
 4. Put metaphor, objects, composition, motion, material route, key states, and traceable on-screen text in creativeProposal so the owning Builder may revise them without changing truth.
-5. When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal; this picture-treatment choice belongs to Director and Builder, never Parent.
+5. When the assignment includes an approved digital presenter, choose presenter, broll, or mixed presenterTreatment inside each creativeProposal. Presenter background and Logo remain presenter-layer concerns and must not alter the B-roll design authority. This picture-treatment choice belongs to Director and Builder, never Parent.
 6. Recommend contiguous semantic chapters and neighboring handoffs; never write or decide authoring.solo.
 7. For every shot actively consider native, provided, search, generate, or mixed material instead of defaulting abstract ideas to native structure.
 8. Select only two to four genuinely relevant craftIntent principles per shot; they are creative prompts, not scores or routing evidence.

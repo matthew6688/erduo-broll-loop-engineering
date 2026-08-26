@@ -10,7 +10,9 @@ import {
   validatePresenterEditPlan,
 } from '../erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs';
 import { createPresenterSource } from '../erduo-broll-loop-engineering/scripts/create-presenter-source.mjs';
-import { createPresenterEditPlan } from '../erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs';
+import {
+  compilePresenterSegments, createPresenterEditPlan,
+} from '../erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs';
 import {
   resolveExistingDirectoryWithinRoot, resolveExistingRegularWithinRoot,
 } from '../erduo-broll-loop-engineering/scripts/presenter-media-lib.mjs';
@@ -269,6 +271,42 @@ test('compositor preserves one presenter audio stream while switching to validat
     compositionScope: 'full-production', verifyRuntimePlan: async () => ({ status: 'valid' }),
   });
   assert.equal(fullPlanResult.plan.compositionScope, 'full-production');
+  const demoSourceFile = path.join(presenterDirectory, 'framework-demo-presenter-source.json');
+  await createPresenterSource({
+    productionRoot, inputFile: presenterFile, outputFile: demoSourceFile,
+    provider: 'mock-loop', presenterKind: 'digital', srtFile, portraitFile, narrationFile,
+    alignment: { method: 'provided', status: 'confirmed' },
+    authorization: { likeness: 'confirmed', voice: 'confirmed', use: 'internal-framework-demo' },
+    approval: {
+      scope: 'framework-demo', approvedBy: 'user', identity: 'approved', voice: 'approved',
+      lipSync: 'not-evaluated',
+    },
+    runner,
+  });
+  const demoSource = JSON.parse(await readFile(demoSourceFile, 'utf8'));
+  const demoRuntimePlan = structuredClone(runtimePlan);
+  demoRuntimePlan.sourceContext.presenterSource = {
+    locator: '00-inputs/presenter/framework-demo-presenter-source.json',
+    sha256: sha(await readFile(demoSourceFile)), mediaSha256: demoSource.media.sha256,
+    durationMs: demoSource.media.durationMs, authorizationUse: 'internal-framework-demo',
+    approvalScope: 'framework-demo', presenterKind: 'digital',
+  };
+  demoRuntimePlan.identity = computeRuntimePlanIdentity(demoRuntimePlan);
+  const demoRuntimePlanFile = path.join(runtimePlanDirectory, 'framework-demo-runtime-plan.json');
+  await writeFile(demoRuntimePlanFile, `${JSON.stringify(demoRuntimePlan)}\n`);
+  const demoEditPlanFile = path.join(productionRoot, 'framework-demo-edit-plan.json');
+  const demoPlanResult = await createPresenterEditPlan({
+    productionRoot, runtimePlanFile: demoRuntimePlanFile, recipesDirectory,
+    presenterSourceFile: demoSourceFile, outputFile: demoEditPlanFile,
+    compositionScope: 'framework-demo', verifyRuntimePlan: async () => ({ status: 'valid' }),
+  });
+  assert.equal(demoPlanResult.plan.compositionScope, 'framework-demo');
+  await assert.rejects(createPresenterEditPlan({
+    productionRoot, runtimePlanFile: demoRuntimePlanFile, recipesDirectory,
+    presenterSourceFile: demoSourceFile,
+    outputFile: path.join(productionRoot, 'invalid-demo-as-canary.json'),
+    compositionScope: 'canary', verifyRuntimePlan: async () => ({ status: 'valid' }),
+  }), /canary composition requires internal-canary authorization and approved canary lip sync/u);
   await createPresenterEditPlan({
     productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
     outputFile: editPlanFile, compositionScope: 'canary',

@@ -1,6 +1,6 @@
 ---
 name: erduo-broll-loop-engineering
-description: Create editable SRT-anchored B-roll through a Director, shared Assets, three Lead samples, and 5–8-shot Chapter Builders that render, view, and revise their own work. Use for original-SRT/design-to-video production with HyperFrames by default, explicit Remotion canaries, direct per-shot H.264 delivery, six-frame sheets, and a complete preview.
+description: Create editable SRT-anchored B-roll through a Director, shared Assets, three Lead samples, and 5–8-shot Chapter Builders that render, view, and revise their own work. Use for original-SRT/design-to-video production and selective B-roll packaging over approved human or digital-presenter A-roll, with HyperFrames by default, explicit Remotion canaries, direct per-shot H.264 delivery, six-frame sheets, and a complete preview.
 ---
 
 # Erduo B-roll Loop Engineering
@@ -154,6 +154,18 @@ when preflight returns `run-onboarding-diagnostic`.
     Plan, original SRT, and edit plan; requires one preserved decoded audio stream,
     complete decode, acceptable loudness, and subtitle timing within the media.
     `broll-shot-export` is legacy-only.
+12. After final presenter assembly and every audio/subtitle derivative, sample the
+    actual delivered MP4 at the opening, every Recipe boundary, every treatment
+    change, every subtitle interval, and the final second. Open the resulting
+    screenshots or contact sheet before reporting completion. Check objective
+    visible defects including unreadable Logo contrast, clipped source media,
+    empty presenter-mode composition, missing visible subtitles, black frames,
+    presenter crop/scale, and accumulated or unreadable information. Record a
+    concise pass/fail review beside the delivery. A technical canary pass or a
+    valid subtitle stream never substitutes for this final-pixel review. On
+    failure, keep the media as evidence, mark the delivery failed, and return the
+    smallest timestamped findings to the owning Builder or presenter assembly
+    stage; never show it as an accepted result.
 
 ## Canary hard gate
 
@@ -233,7 +245,7 @@ development.
 
 Parent owns deterministic rendering, FFprobe, full decode, hash, source
 identity, shot contract, six-frame-sheet generation, chapter-preview generation,
-and final assembly. These checks may reject missing files, wrong media facts,
+final assembly, and final-delivery screenshot extraction. These checks may reject missing files, wrong media facts,
 black/near-empty frames, safe-area escape, obvious occlusion, or missing fonts.
 They must not claim appeal, metaphor quality, weight, craft-principle success,
 or user approval.

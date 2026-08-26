@@ -33,8 +33,9 @@ concise reason, not a new approval workflow.
 
 For an assignment with an approved digital presenter, also view and revise
 `presenterTreatment` when needed. Decide `presenter`, `broll`, or absolute
-`mixed.brollWindows` from the actual chapter result. Parent only compiles these
-Recipe decisions and must not invent the cuts.
+`mixed.brollWindows` from the actual chapter result. Presenter background and
+Logo remain presenter-layer concerns and must not alter the original B-roll
+DesignMD. Parent only compiles these Recipe decisions and must not invent the cuts.
 
 Do not create `src/inspection.tsx`, inspection Compositions, DOM trace markers,
 motion windows, dense diagnostics, capture/trace/lint/screenshot/frame-scan/

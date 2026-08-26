@@ -8,7 +8,7 @@
   "properties": {
     "schemaVersion": { "const": "2.0.0" },
     "authoredBy": { "const": "compiled-from-recipe-creative-proposals" },
-    "compositionScope": { "enum": ["canary", "full-production"] },
+    "compositionScope": { "enum": ["framework-demo", "canary", "full-production"] },
     "runtimePlan": { "$ref": "#/$defs/boundFile" },
     "presenterSource": { "$ref": "#/$defs/presenterSourceBinding" },
     "recipes": {
