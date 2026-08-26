@@ -89,10 +89,13 @@ when preflight returns `run-onboarding-diagnostic`.
    5–8 shots and roughly 35–70 seconds; semantic shot and final media boundaries
    remain one shot. A normal 15–24-shot film should not become one Agent per
    shot. Never hand-edit generated plans or assignments.
-3. Dispatch Assets once. It freezes known shared media, fonts, licenses, and
+3. Dispatch Assets once per production lineage. It freezes known shared media, fonts, licenses, and
    reusable derivatives, while keeping each shot's `native`, `provided`,
    `search`, `generate`, or `mixed` route open. A global external-material ban
    requires an actual user, capability, authorization, or cost restriction.
+   A Recipe- or Runtime-Plan-only revision must reuse and mechanically verify
+   the same frozen asset closure; never redispatch Assets merely to rewrite a
+   Plan identity when every asset/font/license hash is unchanged.
 4. Dispatch the Lead with the complete original SRT/design, motion map, exactly
    three representative Recipes, shared asset/font index, and any bound presenter
    source context. Lead builds three
@@ -105,13 +108,21 @@ when preflight returns `run-onboarding-diagnostic`.
    sheets and short previews, repairs visible defects, and returns `accepted` or
    `revised`. The standard command must pass the automatic governance `source`
    gate and on-screen-text provenance gate before rendering, then pass the
-   Recipe/rhythm-aware motion gate after rendering. Before the first render it
+   Recipe/rhythm-aware motion gate after rendering. For HyperFrames it first
+   runs the official browser `check` at transition boundaries with frame/layout
+   checking. Runtime, missing-asset, font, contrast, overflow, and collision
+   errors are preflight failures and consume no render attempt. Before the first render it
    must aggregate every deterministic per-shot runtime-metadata failure into
    one Assignment Preflight result and write the hash-bound preflight receipt;
    it may not fail one shot at a time. The Lead archives and repairs its own
    failed attempt; the user is not asked to direct per-shot repairs. Only an
    actual runtime render consumes the two-attempt assignment budget. A third
    render is forbidden and returns the work to its Recipe or Runtime Plan.
+   On a new governed Plan, Parent runs `reuse-unchanged-shots.mjs` for shots whose
+   Recipe, editable-source manifest, runtime target, timing, production profile,
+   Skill contract, media hash, and semantic sheet are byte-identical. The script
+   reissues only the current Plan sidecar plus a lineage receipt. Any drift fails
+   closed; unchanged shots are never re-rendered just to acquire a new Plan identity.
    These sources become the final sources for their shots.
 6. Build only the five-shot creative canary first. Each Chapter Builder receives
    the complete original SRT/design, its chapter truth/proposals, neighboring
@@ -195,6 +206,11 @@ Before full production, require all of the following:
 - user prefers this version for at least 3/5 shots;
 - assignment-to-first-canary-preview wall time is at most 45 minutes.
 
+If the projected first-canary wall time exceeds 45 minutes, stop expanding the
+production. Fix preflight, caching, or assignment scope before continuing; do
+not preserve formal gate progress by repeatedly creating roots and re-rendering
+unchanged media.
+
 No automatic score may replace the user's choice.
 
 ## Role and context boundaries
@@ -251,7 +267,8 @@ They must not claim appeal, metaphor quality, weight, craft-principle success,
 or user approval.
 
 The exact standard command owns the repeatable quality loop. It runs text
-provenance before spending render time, then rendered motion evidence before a
+provenance and the official HyperFrames browser visual check before spending
+render time, then rendered motion evidence before a
 Builder may record `accepted|revised`; the five-shot technical gate reopens and
 hash-verifies both reports. It also validates all active runtime targets before
 the first render, reports their deterministic failures together, writes
@@ -259,6 +276,13 @@ the first render, reports their deterministic failures together, writes
 `render-attempts.ndjson`. Preflight failures consume no render attempt; each
 Assignment has at most two actual render attempts. A production is not stable
 merely because Parent manually repaired one video's source.
+
+Across governed Plan revisions, use `scripts/reuse-unchanged-shots.mjs` instead
+of rendering an unchanged shot again. Reuse is allowed only when the script
+validates the prior Skill sidecar and exact current Recipe/source/profile/runtime
+bindings, media and six-frame hashes, then writes a current-Plan sidecar and
+lineage receipt without overwriting any artifact. Assets remain one frozen
+closure unless an asset/font/license hash or approved route actually changes.
 
 The creative owner must open actual sheets/previews and repair low-level errors:
 premature answers, coverage, accumulating old/new states, floating connectors,

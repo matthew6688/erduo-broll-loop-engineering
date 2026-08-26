@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -367,6 +368,71 @@ async function renderInvocation({ backend, target, shot, sourceRoot, sourcePaths
   throw new Error(`unsupported shot backend ${backend}`);
 }
 
+export async function runHyperframesVisualPreflight({
+  assignment,
+  plan,
+  sourceRoot,
+  sourceIdentity,
+  productionRoot,
+  hyperframes,
+  compositionIds,
+  runner = runCommand,
+}) {
+  if (assignment.runtime !== 'hyperframes') return null;
+  if (!Array.isArray(compositionIds) || compositionIds.length === 0) {
+    throw new Error('HyperFrames visual preflight requires one or more composition IDs');
+  }
+  const checksDirectory = path.join(
+    path.resolve(productionRoot), assignment.output.workDirectory, 'checks',
+  );
+  await mkdir(checksDirectory, {recursive: true});
+  const outputFile = path.join(checksDirectory, 'hyperframes-visual-preflight.json');
+  const stagingRoot = await mkdtemp(path.join(os.tmpdir(), 'erduo-hf-check-'));
+  const stagedSource = path.join(stagingRoot, 'source');
+  const reports = [];
+  try {
+    await cp(path.resolve(sourceRoot), stagedSource, {recursive: true});
+    const compositionDirectory = path.join(stagedSource, 'compositions');
+    for (const compositionId of compositionIds) {
+      const compositionFile = path.join(compositionDirectory, `${compositionId}.html`);
+      await requireRegularFile(compositionFile, `${compositionId} HyperFrames composition`);
+      const stagedEntrypoint = await readFile(compositionFile, 'utf8');
+      await writeFile(path.join(stagedSource, 'index.html'), stagedEntrypoint);
+      const args = [
+        'check', stagedSource, '--at-transitions',
+        '--frame-check', 'severity=error;seek=.25,.5,.75;tol=2',
+        '--json',
+      ];
+      const result = await runner({executable: hyperframes, args, cwd: stagedSource});
+      if (result.code !== 0) {
+        throw commandFailure(`${compositionId} HyperFrames visual preflight`, result);
+      }
+      try {
+        reports.push({compositionId, report: JSON.parse(result.stdout)});
+      } catch {
+        throw new Error(`${compositionId} HyperFrames visual preflight returned invalid JSON`);
+      }
+    }
+  } finally {
+    await rm(stagingRoot, {recursive: true, force: true});
+  }
+  const receipt = {
+    schemaVersion: '1.0.0',
+    status: 'passed',
+    planIdentity: plan.identity,
+    assignmentId: assignment.assignmentId,
+    sourceIdentity,
+    command: {
+      executable: hyperframes,
+      mode: 'per-composition-staged-check',
+      flags: ['--at-transitions', '--frame-check', 'severity=error;seek=.25,.5,.75;tol=2', '--json'],
+    },
+    reports,
+  };
+  await writeFile(outputFile, `${JSON.stringify(receipt, null, 2)}\n`);
+  return {file: outputFile, receipt};
+}
+
 async function exists(file) {
   try { await lstat(file); return true; } catch (error) {
     if (error?.code === 'ENOENT') return false;
@@ -384,7 +450,7 @@ function contentIdentity(value) {
 }
 
 async function writeAssignmentPreflightReceipt({
-  productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds,
+  productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds, visualPreflight,
 }) {
   const receipt = {
     schemaVersion: '1.0.0', status: 'passed', planIdentity: plan.identity,
@@ -395,8 +461,15 @@ async function writeAssignmentPreflightReceipt({
     checks: [
       'runtime-plan', 'assignment-scope', 'production-source-policy', 'source-closure',
       'shared-assets', 'production-governance', 'recipe-windows', 'runtime-metadata',
+      ...(visualPreflight ? ['hyperframes-visual-check'] : []),
       ...(plan.schemaVersion === '4.0.0' ? ['onscreen-text-provenance'] : []),
     ],
+    ...(visualPreflight ? {
+      visualPreflight: {
+        locator: path.relative(path.resolve(productionRoot), visualPreflight.file).split(path.sep).join('/'),
+        sha256: await hashFile(visualPreflight.file),
+      },
+    } : {}),
   };
   receipt.identity = contentIdentity(receipt);
   const directory = path.join(
@@ -795,8 +868,14 @@ async function renderAssignedShotsInternal({
     throw new Error(`assignment preflight failed before rendering:\n- ${invocationErrors.join('\n- ')}`);
   }
   const renderInvocationByShot = new Map(invocationResults.map(({value}) => [value.shotId, value.invocation]));
+  const visualPreflight = renderShotIds.length > 0
+    ? await runHyperframesVisualPreflight({
+      assignment, plan, sourceRoot: absoluteSourceRoot, sourceIdentity: sourceBinding.identity,
+      productionRoot, hyperframes, compositionIds: activeDescriptors.map(({target}) => target.id), runner,
+    })
+    : null;
   const preflightReceipt = await writeAssignmentPreflightReceipt({
-    productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds,
+    productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds, visualPreflight,
   });
 
   const validateBoundContract = async (descriptor, contract, {

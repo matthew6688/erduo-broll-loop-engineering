@@ -196,6 +196,9 @@ function controlledRunner({ facts = new Map(), calls = [], failDecodeShot = null
     calls.push({ executable, args: [...args] });
     const output = path.resolve(args.at(-1));
     if (executable === 'hyperframes') {
+      if (args[0] === 'check') {
+        return { code: 0, stdout: JSON.stringify({status: 'pass', issues: []}), stderr: '' };
+      }
       assert.equal(args[0], 'render');
       assert.match(args[args.indexOf('--composition') + 1], /compositions\/S0[123]\.html$/u);
       assert.ok(!args.some((value) => /(?:^|[\\/])(master|unit-media|trim)(?:[.\\/]|$)/iu.test(value)));
@@ -262,7 +265,7 @@ test('renderer invokes one native shot target and verifies one complete media fi
   });
   assert.equal(result.status, 'shots-ready');
   assert.equal(result.shots, 3);
-  assert.equal(calls.filter(({ executable }) => executable === 'hyperframes').length, 3);
+  assert.equal(calls.filter(({ executable, args }) => executable === 'hyperframes' && args[0] === 'render').length, 3);
   assert.equal(calls.filter(({ executable }) => executable === 'ffprobe').length, 3);
   assert.equal(calls.filter(({ executable, args }) => executable === 'ffmpeg' && args.includes('null')).length, 3);
   const semanticCalls = calls.filter(({ executable, args }) => executable === 'ffmpeg' && args.some((value) => /tile=3x2/u.test(value)));
@@ -412,7 +415,7 @@ test('Parent archives a complete prior delivery before rerendering a revised sha
     runner: controlledRunner({calls, facts}), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
   });
   assert.equal(second.status, 'shots-ready');
-  assert.equal(calls.filter(({executable}) => executable === 'hyperframes').length, 3);
+  assert.equal(calls.filter(({executable, args}) => executable === 'hyperframes' && args[0] === 'render').length, 3);
   const attemptsRoot = path.join(value.productionRoot, '04-visual-lock', 'hyperframes', 'attempts');
   const attemptNames = await readdir(attemptsRoot);
   assert.equal(attemptNames.length, 1);
@@ -455,8 +458,8 @@ test('failed shot resumes in place while completed verified shots are safely ski
     ...value, runner: controlledRunner({ calls, facts }), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
   });
   assert.equal(resumed.status, 'shots-ready');
-  assert.equal(calls.filter(({ executable }) => executable === 'hyperframes').length, 2);
-  assert.ok(calls.filter(({ executable }) => executable === 'hyperframes')
+  assert.equal(calls.filter(({ executable, args }) => executable === 'hyperframes' && args[0] === 'render').length, 2);
+  assert.ok(calls.filter(({ executable, args }) => executable === 'hyperframes' && args[0] === 'render')
     .every(({ args }) => !args.join(' ').includes('S01')));
 });
 
@@ -534,6 +537,9 @@ test('real FFmpeg fixture decodes every direct shot, creates six-frame sheets, a
   const value = await fixture(t);
   const realRunner = async (command) => {
     if (command.executable !== 'hyperframes') return runCommand(command);
+    if (command.args[0] === 'check') {
+      return { code: 0, stdout: JSON.stringify({status: 'pass', issues: []}), stderr: '' };
+    }
     const output = command.args.at(-1);
     const shotId = /S0[123]/u.exec(command.args.join(' '))[0];
     const frames = 30;

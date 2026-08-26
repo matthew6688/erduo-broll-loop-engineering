@@ -88,7 +88,10 @@ Assignment Preflight before render: runtime-plan/assignment/source/asset/
 governance/Recipe/text checks plus every active target's runtime metadata are
 validated, and all target failures are returned together. A passing preflight
 writes `checks/assignment-preflight.json`. Preflight failures consume no render
-attempt. HyperFrames metadata validation includes the strict runtime's root
+attempt. HyperFrames preflight also stages each bound composition as a temporary
+root and runs the official browser `check` at tween boundaries with frame/layout
+checking. Missing assets/fonts, runtime errors, contrast failures, collisions,
+and unsafe overflow are returned before the render ledger starts. HyperFrames metadata validation includes the strict runtime's root
 `data-start="0"`, either `data-no-timeline` or a timeline registry, and rejection
 of parent-traversing `../` asset references in addition to raster/fps/duration
 binding. The command then performs rendered Recipe/rhythm motion evidence and
@@ -104,6 +107,16 @@ then starts the second render. Partial artifacts or any other identity drift
 still fail closed. Parent does not hand-fix source, and the user sees only a
 gate-clean canary. The canary technical gate must hash-bind both passing
 rendered reports.
+
+When the owning Recipe or Plan changes after the two-attempt ceiling, start a
+new governed Plan but do not render unchanged shots again. Parent runs
+`reuse-unchanged-shots.mjs` only after the new source manifests exist. The
+script verifies the old Skill sidecar plus exact current Recipe, source,
+profile, runtime target, timing, media, and semantic-sheet hashes; it then
+copies the immutable evidence, writes a current-Plan Skill sidecar, and records
+a lineage receipt. Any changed binding rejects reuse. Asset/font/license
+closures are mechanically revalidated and Assets is not redispatched unless
+their content or approved route actually changed.
 
 ## Direct original context
 
