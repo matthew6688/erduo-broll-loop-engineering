@@ -40,6 +40,7 @@
         "durationMs": { "type": "integer", "minimum": 1 },
         "presenterDurationMs": { "type": "integer", "minimum": 0 },
         "brollDurationMs": { "type": "integer", "minimum": 0 },
+        "splitDurationMs": { "type": "integer", "minimum": 0 },
         "segments": { "type": "integer", "minimum": 1 }
       }
     },

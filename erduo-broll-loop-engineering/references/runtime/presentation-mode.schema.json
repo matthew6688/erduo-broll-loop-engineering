@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/erduo1998-cell/erduo-broll-loop-engineering/blob/main/erduo-broll-loop-engineering/references/runtime/presentation-mode.schema.json",
+  "title": "Approved presenter composition mode",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "mode", "approval", "designPolicy", "brollProductionProfile", "output", "presenter", "broll", "transition", "originalDesign", "identity"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "mode": { "enum": ["original", "avatar-center", "avatar-split"] },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approvedBy"],
+      "properties": {
+        "status": { "enum": ["draft", "approved"] },
+        "approvedBy": { "type": ["string", "null"], "enum": ["user", null] }
+      }
+    },
+    "designPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["brollDesign", "presenterBranding", "themeOverride"],
+      "properties": {
+        "brollDesign": { "const": "original-designmd-unchanged" },
+        "presenterBranding": { "const": "presenter-layer-only" },
+        "themeOverride": { "const": false }
+      }
+    },
+    "brollProductionProfile": { "$ref": "#/$defs/profileBinding" },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "fps"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 2 },
+        "height": { "type": "integer", "minimum": 2 },
+        "fps": { "type": "number", "exclusiveMinimum": 0, "maximum": 120 }
+      }
+    },
+    "presenter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredKind", "layout", "position"],
+      "properties": {
+        "requiredKind": { "enum": ["any", "digital"] },
+        "layout": { "enum": ["full-frame-source", "centered-full-frame", "full-frame-base"] },
+        "position": { "enum": ["source", "center", "right"] }
+      }
+    },
+    "broll": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultLayout", "allowFullFrame", "sourceAspect"],
+      "properties": {
+        "defaultLayout": { "enum": ["full-frame-cutaway", "left-vertical-overlay"] },
+        "allowFullFrame": { "const": true },
+        "sourceAspect": { "enum": ["production-profile", "9:16"] }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default", "splitBoundary"],
+      "properties": {
+        "default": { "enum": ["cut", "cut-or-match"] },
+        "splitBoundary": { "enum": ["none", "soft-edge-blend"] }
+      }
+    },
+    "originalDesign": { "$ref": "#/$defs/fileBinding" },
+    "presenterSource": { "$ref": "#/$defs/presenterBinding" },
+    "identity": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256"],
+      "properties": {
+        "locator": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "profileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256", "identity", "width", "height", "fps"],
+      "properties": {
+        "locator": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "identity": { "$ref": "#/$defs/sha256" },
+        "width": { "type": "integer", "minimum": 2 },
+        "height": { "type": "integer", "minimum": 2 },
+        "fps": { "type": "number", "exclusiveMinimum": 0, "maximum": 120 }
+      }
+    },
+    "presenterBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256", "mediaSha256", "presenterKind"],
+      "properties": {
+        "locator": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaSha256": { "$ref": "#/$defs/sha256" },
+        "presenterKind": { "enum": ["human", "digital"] }
+      }
+    }
+  }
+}

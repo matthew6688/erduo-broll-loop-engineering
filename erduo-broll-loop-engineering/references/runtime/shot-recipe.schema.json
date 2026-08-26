@@ -46,7 +46,7 @@
             "brollWindows": {
               "type": "array",
               "minItems": 1,
-              "items": { "$ref": "#/$defs/window" }
+              "items": { "$ref": "#/$defs/brollWindow" }
             },
             "reason": { "$ref": "#/$defs/nonEmpty" }
           }
@@ -113,6 +113,16 @@
       "properties": {
         "startMs": { "type": "integer", "minimum": 0 },
         "endMs": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "brollWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startMs", "endMs"],
+      "properties": {
+        "startMs": { "type": "integer", "minimum": 0 },
+        "endMs": { "type": "integer", "minimum": 1 },
+        "presentation": { "enum": ["full", "split"] }
       }
     },
     "seam": { "enum": ["cut", "match", "handoff"] },

@@ -12,6 +12,7 @@ import { presenterKindOf, resolveExistingRegularWithinRoot } from './presenter-m
 import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
 import {verifySkillUsage} from './skill-usage.mjs';
 import {verifyMaterialPolicy} from './material-policy.mjs';
+import {bindPresentationModeContext} from './presentation-mode.mjs';
 import {
   computeRecipeIdentity,
   computeRecipeNonCreativeIdentity,
@@ -252,6 +253,15 @@ export async function verifyRuntimePlanInputs(plan, files = {}) {
     : null;
   if (canonicalJson(plan.sourceContext?.materialPolicy ?? null) !== canonicalJson(materialPolicy)) {
     throw new Error('material policy binding differs from the current approved contract');
+  }
+  const presentationMode = plan.sourceContext?.presentationMode
+    ? await bindPresentationModeContext({
+      productionRoot, presentationModeFile: files.presentationModeFile,
+      originalDesignFile: files.originalDesignFile, presenterSourceFile: files.presenterSourceFile,
+      productionProfile: plan.productionProfile,
+    }) : null;
+  if (canonicalJson(plan.sourceContext?.presentationMode ?? null) !== canonicalJson(presentationMode)) {
+    throw new Error('presentation mode binding differs from the current approved contract');
   }
   await Promise.all([
     verifyRawSourceBinding(plan.sourceContext?.originalSrt, files.originalSrtFile, 'original SRT', productionRoot),
@@ -532,7 +542,7 @@ function parseArgs(argv) {
   }
   const allowed = new Set([
     '--plan', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map',
-    '--recipes', '--original-srt', '--original-design', '--material-policy', '--presenter-source',
+    '--recipes', '--original-srt', '--original-design', '--material-policy', '--presenter-source', '--presentation-mode',
     '--production-root',
   ]);
   const values = {};
@@ -553,6 +563,7 @@ function parseArgs(argv) {
     originalDesignFile: values['original-design'],
     materialPolicyFile: values['material-policy'],
     presenterSourceFile: values['presenter-source'],
+    presentationModeFile: values['presentation-mode'],
     productionRoot: values['production-root'],
   };
 }

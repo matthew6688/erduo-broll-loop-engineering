@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="880" viewBox="0 0 1800 880">
+  <rect width="1800" height="880" fill="#f4f5f7"/>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #15181d; }
+    .title { font-size: 34px; font-weight: 700; }
+    .label { font-size: 25px; font-weight: 650; }
+    .small { font-size: 19px; fill: #4f5662; }
+    .canvas { fill: #171a20; stroke: #7f8794; stroke-width: 2; }
+    .person { fill: #d7dbe1; stroke: #ffffff; stroke-width: 2; }
+    .broll { fill: #37a7a0; stroke: #a8f0ea; stroke-width: 2; }
+    .arrow { stroke: #636b78; stroke-width: 4; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#636b78"/></marker>
+    <filter id="soft"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
+  <text x="70" y="65" class="title">三种固定生产模式 · 同一套 Erduo B-roll 核心</text>
+
+  <g transform="translate(70 120)">
+    <text x="0" y="0" class="label">1 · original</text>
+    <rect x="0" y="35" width="480" height="270" rx="8" class="canvas"/>
+    <circle cx="240" cy="145" r="45" class="person"/>
+    <path d="M175 290 Q240 205 305 290" class="person"/>
+    <line x1="180" y1="340" x2="300" y2="340" class="arrow"/>
+    <rect x="0" y="375" width="480" height="270" rx="8" class="broll"/>
+    <text x="240" y="520" text-anchor="middle" class="label">全屏 B-roll</text>
+    <text x="0" y="690" class="small">保留原始 A-roll 构图；需要时整屏切换</text>
+  </g>
+
+  <g transform="translate(660 120)">
+    <text x="0" y="0" class="label">2 · avatar-center</text>
+    <rect x="0" y="35" width="480" height="270" rx="8" class="canvas"/>
+    <circle cx="240" cy="135" r="45" class="person"/>
+    <path d="M170 290 Q240 195 310 290" class="person"/>
+    <line x1="180" y1="340" x2="300" y2="340" class="arrow"/>
+    <rect x="0" y="375" width="480" height="270" rx="8" class="broll"/>
+    <text x="240" y="520" text-anchor="middle" class="label">全屏 B-roll</text>
+    <text x="0" y="690" class="small">数字人居中；导演决定何时让 B-roll 接管画面</text>
+  </g>
+
+  <g transform="translate(1250 120)">
+    <text x="0" y="0" class="label">3 · avatar-split</text>
+    <rect x="0" y="35" width="480" height="270" rx="8" class="canvas"/>
+    <rect x="28" y="54" width="140" height="232" rx="6" fill="#37a7a0" opacity="0.45" filter="url(#soft)"/>
+    <rect x="38" y="64" width="120" height="212" rx="5" class="broll"/>
+    <text x="98" y="178" text-anchor="middle" class="small" fill="#ffffff">9:16</text>
+    <circle cx="356" cy="135" r="42" class="person"/>
+    <path d="M300 290 Q356 195 420 290" class="person"/>
+    <line x1="180" y1="340" x2="300" y2="340" class="arrow"/>
+    <rect x="0" y="375" width="480" height="270" rx="8" class="broll"/>
+    <text x="240" y="520" text-anchor="middle" class="label">仍可切全屏 B-roll</text>
+    <text x="0" y="690" class="small">人物右侧；左侧直接复用竖屏 B-roll，并柔化边界</text>
+  </g>
+</svg>

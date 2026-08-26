@@ -73,7 +73,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
 - 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
-- 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。仓库另有受限的 HeyGen canary adapter，用于授权输入、余额预检、上传、幂等提交、轮询/恢复和下载；它不是完整的正式生产 Provider。逐镜 B-roll 仍保持静音，最终合成器按 SRT 绝对时间切换画面并只保留一条 presenter 音轨。
+- 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。三个冻结版式为 `original`、`avatar-center` 和 `avatar-split`；第三种在横屏数字人底图左侧直接复用已验证的 9:16 B-roll，不创建新 B-roll 主题。仓库另有受限的 HeyGen canary adapter，用于授权输入、余额预检、上传、幂等提交、轮询/恢复和下载；它不是完整的正式生产 Provider。逐镜 B-roll 仍保持静音，最终合成器只保留一条 presenter 音轨。
 
 真人/数字人双模式、竖屏/YouTube 横屏的生产边界、审批门禁、已验证能力和后续产品化顺序，
 见 [`docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`](docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md)。
@@ -115,6 +115,8 @@ Presenter 不是新的 B-roll 渲染后端。真人机位成片或已经获授�
 逐镜合同、SRT window、完整音视频解码、输出帧率与唯一音轨。
 生成 Runtime Plan 时还要传入 `--presenter-source <presenter-source.json>`，这样同一份
 哈希封闭的授权、时长和媒体身份会进入 Lead/Builder assignment。
+新 Presenter 生产还必须生成用户批准的 `presentation-mode.json`，并通过
+`plan-runtime.mjs --presentation-mode <文件>` 绑定进 Runtime Plan；draft 不能进入规划。
 
 ```bash
 node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
@@ -128,6 +130,16 @@ node erduo-broll-loop-engineering/scripts/create-presenter-source.mjs \
   --likeness confirmed --voice confirmed --use internal-canary \
   --approval-scope canary --identity-approval approved \
   --voice-approval approved --lip-sync-approval approved --approved-by user
+
+node erduo-broll-loop-engineering/scripts/create-presentation-mode.mjs \
+  --production-root /path/to/broll-production \
+  --mode avatar-split \
+  --original-design /path/to/broll-production/00-inputs/design.md \
+  --production-profile /path/to/broll-production/00-inputs/vertical-production-profile.json \
+  --presenter-source /path/to/broll-production/00-inputs/presenter/presenter-source.json \
+  --output /path/to/broll-production/00-inputs/presentation-mode.json \
+  --output-width 1920 --output-height 1080 \
+  --approval approved --approved-by user
 
 node erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs \
   --production-root /path/to/broll-production \
@@ -152,7 +164,8 @@ node erduo-broll-loop-engineering/scripts/verify-presenter-delivery.mjs \
 ```
 
 `presenterTreatment.mode=mixed` 时，`brollWindows` 使用该 Recipe SRT window 内的绝对
-毫秒窗口；`presenter` 和 `broll` 则覆盖整镜。编译器会用 Runtime Plan、presenter source
+毫秒窗口；窗口可声明 `presentation=full|split`。在 `avatar-split` 下省略该字段默认 split，
+其余模式默认 full；`presenter` 和 `broll` 则覆盖整镜。编译器会用 Runtime Plan、presenter source
 和全部最终 Recipes 的哈希封闭 edit plan，任何后续漂移都会阻止合成。真人与数字人可复用
 同一套 Recipes、B-roll、编译器和合成器；切换 Presenter Source 后必须重新生成 Runtime Plan
 与 edit plan，让新来源的 hash、时长和授权重新闭合。建议短视频让主持人承担开场、章节锚点

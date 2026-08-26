@@ -16,8 +16,9 @@
 ### 现役决定（2026-08-26）
 
 - 只适配数字人的独立背景和“峰说”Logo；不修改 Erduo B-roll DesignMD、主题、版式和动画。
-- 不采用 `screen-led`、录屏覆盖或 `split-screen-reuse` 同屏路线。
-- Presenter 与 B-roll 只按 Recipe 的 `presenter|broll|mixed` 时间线切换。
+- 不采用 `screen-led` 或录屏覆盖路线。只允许三种已冻结的 presenter 模式：`original`、`avatar-center`、`avatar-split`。
+- `avatar-split` 不是新主题：它以 presenter MP4 为全画幅基底，在人物另一侧叠加已经通过门禁的 9:16 B-roll，并使用柔和边界衔接；必要镜头仍可切换为全屏 B-roll。
+- Presenter 与 B-roll 继续由 Recipe 的 `presenter|broll|mixed` 决定时间窗；`mixed` 窗口再由获批 presentation-mode 合同决定 `full|split` 呈现。
 - 数字人身份、声音、口型、字幕与正式发布门禁保持不变。
 
 ## 2. 当前基线证据
@@ -35,7 +36,7 @@
 ## 3. 永久不变量
 
 1. 本人及数字人必须保持自然彩色和自然肤色，永久禁止黑白、灰度、双色印刷或 duotone 处理。
-2. Presenter 与 B-roll 只按 Recipe 时间切换；不把人物、品牌背景或 Logo 合并进 B-roll 镜头。
+2. Presenter 与 B-roll 只按 Recipe 和获批 presentation-mode 合同编排；人物、品牌背景和 Logo 始终属于 presenter 层，不进入或重绘 B-roll 源码。
 3. 同一条旁白只能有一个 canonical audio；更换音频后必须重新生成口型并重新编译时间线。
 4. 原始 DesignMD 和已验证 B-roll 不随数字人图片、动作或背景实验而变化。
 5. 每次实验只改变一个维度，并进入新的 versioned production root；冻结基线不得原地修改。
@@ -171,7 +172,7 @@ HeyGen 当前 v3 Create Video 支持 Photo Avatar/Digital Twin、外部音频、
 
 曾生成 P1 居中、P2 左侧和 P3 右侧三组人物概念，但都未获审批。这些本地媒体包含用户肖像，按仓库规则不进入 Git 或公共文档资产，也不得自动进入生产。
 
-当前下一步只有一项：从现有背景候选中批准一个 presenter 背景与“峰说”Logo 版本，再用真实、已批准且口型正确的数字人 source 做 presenter-only canary。B-roll 继续使用原始 DesignMD，不重新设计。
+当前已冻结三种生产方法：原装 `original`、数字人居中 `avatar-center`、数字人在旁边并复用竖屏 B-roll 的 `avatar-split`。框架与确定性测试已完成，但尚未渲染 presentation-mode canary。下一步只用真实、已批准且口型正确的数字人 source 跑短 canary，由用户审片后再决定是否进入完整视频；B-roll 继续使用原始 DesignMD，不重新设计。
 
 ## 11. 竖屏 / YouTube 背景风格 canary v2
 

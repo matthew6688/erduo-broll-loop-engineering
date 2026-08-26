@@ -17,6 +17,7 @@ import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-sh
 import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
 import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {bindPresentationModeContext} from './presentation-mode.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -31,6 +32,7 @@ export function validatePresenterEditPlan({ plan, shots, presenterDurationMs }) 
   let cursor = 0;
   let presenterMs = 0;
   let brollMs = 0;
+  let splitMs = 0;
   for (const [index, segment] of plan.segments.entries()) {
     if (segment.startMs !== cursor) throw new Error(`segment ${index + 1} creates a timeline gap or overlap at ${cursor}ms`);
     if (!Number.isInteger(segment.endMs) || segment.endMs <= segment.startMs) throw new Error(`segment ${index + 1} has an invalid time window`);
@@ -38,7 +40,7 @@ export function validatePresenterEditPlan({ plan, shots, presenterDurationMs }) 
     if (segment.kind === 'presenter') {
       if ('shotId' in segment) throw new Error(`presenter segment ${index + 1} must not declare shotId`);
       presenterMs += duration;
-    } else if (segment.kind === 'broll') {
+    } else if (segment.kind === 'broll' || segment.kind === 'split') {
       if (!segment.shotId) throw new Error(`B-roll segment ${index + 1} requires shotId`);
       const shot = shots.get(segment.shotId);
       if (!shot) throw new Error(`B-roll segment ${index + 1} references unknown shot ${segment.shotId}`);
@@ -47,13 +49,17 @@ export function validatePresenterEditPlan({ plan, shots, presenterDurationMs }) 
         throw new Error(`B-roll segment ${index + 1} is outside ${segment.shotId} SRT window`);
       }
       brollMs += duration;
+      if (segment.kind === 'split') {
+        presenterMs += duration;
+        splitMs += duration;
+      }
     } else {
       throw new Error(`segment ${index + 1} has unsupported kind`);
     }
     cursor = segment.endMs;
   }
   if (cursor > presenterDurationMs) throw new Error('edit plan extends beyond presenter media duration');
-  return { durationMs: cursor, presenterDurationMs: presenterMs, brollDurationMs: brollMs };
+  return { durationMs: cursor, presenterDurationMs: presenterMs, brollDurationMs: brollMs, splitDurationMs: splitMs };
 }
 
 async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source, plan }) {
@@ -95,9 +101,29 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
     || presenterKindOf(plannedPresenter) !== presenterKindOf(source)) {
     throw new Error('bound runtime plan presenter source differs from the composition source');
   }
+  const presentationContext = runtimePlan.sourceContext?.presentationMode ?? null;
+  const currentPresentationContext = presentationContext
+    ? await bindPresentationModeContext({
+      productionRoot,
+      presentationModeFile: path.join(productionRoot, presentationContext.locator),
+      originalDesignFile: path.join(productionRoot, runtimePlan.sourceContext.originalDesign.locator),
+      presenterSourceFile: sourceRecord.absolute,
+      productionProfile: runtimePlan.productionProfile,
+    }) : null;
+  if (canonicalJson(presentationContext) !== canonicalJson(currentPresentationContext)) {
+    throw new Error('bound presentation mode changed before presenter composition');
+  }
+  if (plan.schemaVersion === '3.0.0') {
+    if (!presentationContext || plan.presentationMode !== presentationContext.mode
+      || plan.presentationModeContract?.file !== presentationContext.locator
+      || plan.presentationModeContract?.sha256 !== presentationContext.sha256
+      || plan.presentationModeContract?.identity !== presentationContext.identity) {
+      throw new Error('presenter edit plan presentation mode differs from its runtime binding');
+    }
+  }
   const expectedOutput = {
-    width: runtimePlan.productionProfile?.raster?.width,
-    height: runtimePlan.productionProfile?.raster?.height,
+    width: presentationContext?.output.width ?? runtimePlan.productionProfile?.raster?.width,
+    height: presentationContext?.output.height ?? runtimePlan.productionProfile?.raster?.height,
     fps: runtimePlan.productionProfile?.fps?.numerator / runtimePlan.productionProfile?.fps?.denominator,
   };
   if (plan.output.width !== expectedOutput.width || plan.output.height !== expectedOutput.height
@@ -119,11 +145,13 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
     boundRecipes.push(recipe);
   }
   for (const segment of plan.segments) {
-    if (segment.kind === 'broll' && !boundShotIds.has(segment.shotId)) {
+    if (['broll', 'split'].includes(segment.kind) && !boundShotIds.has(segment.shotId)) {
       throw new Error(`B-roll segment references unbound Recipe ${segment.shotId}`);
     }
   }
-  const compiledSegments = compilePresenterSegments(boundRecipes, source.media.durationMs);
+  const compiledSegments = compilePresenterSegments(
+    boundRecipes, source.media.durationMs, presentationContext?.mode ?? 'original',
+  );
   if (canonicalJson(plan.segments) !== canonicalJson(compiledSegments)) {
     throw new Error('presenter edit plan segments differ from the bound Recipe presenter treatments');
   }
@@ -140,6 +168,39 @@ function normalizedVideoFilter({ input, startMs, endMs, width, height, fps, outp
   return `[${input}:v:0]trim=start=${seconds(startMs)}:end=${seconds(endMs)},setpts=PTS-STARTPTS,`
     + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,`
     + `setsar=1,fps=${fps},format=yuv420p[${output}]`;
+}
+
+function evenFloor(value) {
+  return Math.max(2, Math.floor(value / 2) * 2);
+}
+
+export function splitVideoFilters({
+  presenterInput, brollInput, startMs, endMs, brollStartMs, brollEndMs,
+  width, height, fps, output, index,
+}) {
+  const panelHeight = evenFloor(height * 0.9);
+  const panelWidth = evenFloor(panelHeight * 9 / 16);
+  const x = evenFloor(width * 0.06);
+  const y = evenFloor((height - panelHeight) / 2);
+  const halo = evenFloor(Math.max(12, height * 0.018));
+  const base = `split-base-${index}`;
+  const panel = `split-panel-${index}`;
+  const haloLabel = `split-halo-${index}`;
+  const foreground = `split-foreground-${index}`;
+  const blended = `split-blended-${index}`;
+  return [
+    normalizedVideoFilter({
+      input: presenterInput, startMs, endMs, width, height, fps, output: base,
+    }),
+    `[${brollInput}:v:0]trim=start=${seconds(brollStartMs)}:end=${seconds(brollEndMs)},setpts=PTS-STARTPTS,`
+      + `scale=${panelWidth}:${panelHeight}:force_original_aspect_ratio=decrease,`
+      + `pad=${panelWidth}:${panelHeight}:(ow-iw)/2:(oh-ih)/2:color=0x111315,setsar=1,fps=${fps},format=rgba,`
+      + `split=2[${panel}][${foreground}]`,
+    `[${panel}]pad=${panelWidth + halo * 2}:${panelHeight + halo * 2}:${halo}:${halo}:color=black@0,`
+      + `gblur=sigma=${Math.max(6, Math.round(halo * 0.7))}[${haloLabel}]`,
+    `[${base}][${haloLabel}]overlay=x=${x - halo}:y=${y - halo}:shortest=1[${blended}]`,
+    `[${blended}][${foreground}]overlay=x=${x}:y=${y}:shortest=1,format=yuv420p[${output}]`,
+  ];
 }
 
 async function loadVerifiedShots({
@@ -253,7 +314,7 @@ export async function assemblePresenterBroll({
     let localStart = segment.startMs;
     let localEnd = segment.endMs;
     let currentInput = 0;
-    if (segment.kind === 'broll') {
+    if (segment.kind === 'broll' || segment.kind === 'split') {
       const shot = shots.get(segment.shotId);
       args.push('-i', shot.mediaPath);
       currentInput = inputIndex;
@@ -263,7 +324,16 @@ export async function assemblePresenterBroll({
     }
     const label = `v${index}`;
     labels.push(`[${label}]`);
-    filters.push(normalizedVideoFilter({ input: currentInput, startMs: localStart, endMs: localEnd, width, height, fps, output: label }));
+    if (segment.kind === 'split') {
+      filters.push(...splitVideoFilters({
+        presenterInput: 0, brollInput: currentInput,
+        startMs: segment.startMs, endMs: segment.endMs,
+        brollStartMs: localStart, brollEndMs: localEnd,
+        width, height, fps, output: label, index,
+      }));
+    } else {
+      filters.push(normalizedVideoFilter({ input: currentInput, startMs: localStart, endMs: localEnd, width, height, fps, output: label }));
+    }
   }
   filters.push(`${labels.join('')}concat=n=${labels.length}:v=1:a=0[vout]`);
   filters.push(`[0:a:0]atrim=start=0:end=${seconds(mix.durationMs)},asetpts=PTS-STARTPTS,aresample=48000[aout]`);
@@ -296,7 +366,7 @@ export async function assemblePresenterBroll({
       productionRoot, videoFile: output.absolute, planIdentity: runtimePlan.identity,
       binding: skillUsageBinding,
     });
-    const usedShotIds = [...new Set(plan.segments.filter(({ kind }) => kind === 'broll').map(({ shotId }) => shotId))];
+    const usedShotIds = [...new Set(plan.segments.filter(({ kind }) => ['broll', 'split'].includes(kind)).map(({ shotId }) => shotId))];
     const receiptValue = {
       schemaVersion: '1.0.0',
       compositionScope: plan.compositionScope,

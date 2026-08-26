@@ -52,6 +52,28 @@
           "presenterKind": { "enum": ["human", "digital"] }
       }
     },
+    "presentationMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "sha256", "identity", "mode", "output", "brollDefaultLayout"],
+      "properties": {
+        "locator": { "const": "00-inputs/presentation-mode.json" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "identity": { "$ref": "#/$defs/sha256" },
+        "mode": { "enum": ["original", "avatar-center", "avatar-split"] },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height", "fps"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 2 },
+            "height": { "type": "integer", "minimum": 2 },
+            "fps": { "type": "number", "exclusiveMinimum": 0, "maximum": 120 }
+          }
+        },
+        "brollDefaultLayout": { "enum": ["full-frame-cutaway", "left-vertical-overlay"] }
+      }
+    },
     "skillUsage": {
       "type": "object",
       "additionalProperties": false,

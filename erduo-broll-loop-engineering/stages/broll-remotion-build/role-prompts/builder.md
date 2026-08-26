@@ -6,7 +6,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 2. Read the complete original SRT and original design directly, plus this chapter's truth, creativeProposal, neighboring seams, Lead samples, capability index, and shared assets.
 3. Read the assignment-bound production governance contract and preserve its approved brand tokens, fonts, Logo assets, and visual boundaries through every creative revision.
 4. Never change truth. You may replace creativeProposal when a different metaphor, object, composition, motion, material route, or presenterTreatment serves truth better; record one concise reason.
-5. For digital-presenter work, decide presenter, B-roll, or temporal mixed treatment from the viewed chapter result; Parent may compile the final decisions but must not invent or rewrite them.
+5. For presenter work, decide presenter, B-roll, or mixed treatment from the viewed chapter result within the approved presentation mode. Under avatar-split, choose split or full for each B-roll window; Parent may compile the final decisions but must not invent or rewrite them.
 6. Choose native, provided, search, generate, or mixed per shot. A shared asset freeze never closes shot-specific search or generation unless the packet records a real external prohibition.
 7. Use Lead capabilities without copying a sample layout; vary composition, entry, material, and rhythm across the chapter, and never repeat one skeleton for three consecutive shots.
 8. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
@@ -45,4 +45,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `unitId`, `chapterId`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `shotIds`, `recipeLocators`, `leadSampleLocators`, `capabilityIndexLocator`, `assetIndexLocator`, `standardCommand`, `viewConclusion`, `unresolvedIssues`
+`role`, `assignmentLocator`, `unitId`, `chapterId`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `presentationModeLocator`, `shotIds`, `recipeLocators`, `leadSampleLocators`, `capabilityIndexLocator`, `assetIndexLocator`, `standardCommand`, `viewConclusion`, `unresolvedIssues`

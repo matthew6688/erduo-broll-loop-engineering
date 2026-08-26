@@ -1716,6 +1716,8 @@ test('runtime recipe schemas preserve v1/v2/v3 while v4 owns the creative loop c
   }
   collectIntegerMillisecondFields(schema);
   assert.deepEqual(integerMillisecondFields.toSorted(), [
+    '#/$defs/brollWindow/properties/endMs',
+    '#/$defs/brollWindow/properties/startMs',
     '#/$defs/window/properties/endMs',
     '#/$defs/window/properties/startMs',
   ]);
@@ -5573,7 +5575,7 @@ test('public release source contains the parent plus thirteen prompt stage Skill
       .toSorted(),
   );
   assert.equal(promptSurface.every((file) => (
-    /\.(?:json|md|mjs|yaml)$/u.test(file)
+    /\.(?:json|md|mjs|svg|yaml)$/u.test(file)
       || (/\.(?:ts|tsx)$/u.test(file)
         && file.startsWith('references/shotcraft/remotion-sources/'))
   )), true);

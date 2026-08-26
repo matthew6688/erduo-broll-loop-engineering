@@ -29,6 +29,15 @@ brand, audio, privacy, output, material-service, and runtime constraints. Pass
 the original SRT/design files and identities directly to Director, Lead, and
 every Chapter Builder; no intermediate summary may replace them.
 
+Every new presenter production also requires one user-approved
+`00-inputs/presentation-mode.json`, created mechanically with
+`create-presentation-mode.mjs`. Read [presenter composition modes](references/presentation-modes.md)
+when choosing among `original`, `avatar-center`, and `avatar-split`. The mode
+may change only the presenter composition layer. It must bind the original
+DesignMD and B-roll production profile, and it must state
+`themeOverride=false`. Never invent a fourth mode or use presenter branding to
+restyle B-roll.
+
 When the user names a brand/design authority or requires a fixed process, use
 [production governance](references/production-governance.md). FengTalk work
 always requires it. Finalize `production-governance.lock.json` and
@@ -73,8 +82,8 @@ when preflight returns `run-onboarding-diagnostic`.
 ## Creative-loop production
 
 1. Dispatch Director with the complete original SRT/design, task constraints,
-   optional media index, approved presenter source contract when presenter
-   output is requested, the governance contract when locked, and at most two
+   optional media index, approved presenter source contract and presentation-mode
+   contract when presenter output is requested, the governance contract when locked, and at most two
    selected references. The Parent must pass the governance `design` gate
    before dispatch. Director writes
    semantic chapters, shared direction, Recipe v4 files with immutable `truth`
@@ -152,12 +161,17 @@ when preflight returns `run-onboarding-diagnostic`.
 11. Deliver ordered independent shot files, editable source, provenance, and
     `delivery-index.json`. Build a full Master only when requested, from the
     unchanged validated shots. For an approved human or digital presenter, register the
-    local media with `create-presenter-source.mjs`, then use
+    local media with `create-presenter-source.mjs`, create and obtain user approval
+    for `presentation-mode.json`, then use
     Director and Builder own `creativeProposal.presenterTreatment` for every
     Recipe. After their final revisions, Parent runs
     `create-presenter-edit-plan.mjs` to mechanically compile and bind those
     decisions, then `assemble-presenter-broll.mjs` to switch between presenter
-    video and validated silent shots. Parent never hand-authors cut times. Keep exactly one canonical
+    video, validated silent shots, and approved split windows. `original` and
+    `avatar-center` use full-frame cutaways. `avatar-split` keeps the approved
+    digital presenter source as the full-frame base and overlays validated 9:16
+    B-roll on the left with a restrained soft boundary; explicit full-frame
+    B-roll remains allowed. Parent never hand-authors cut times or layout geometry. Keep exactly one canonical
     presenter audio stream and write the composition receipt. Never weaken the
     silent direct-shot contract. When subtitles or another final video derivative
     are delivered, Parent must run `verify-presenter-delivery.mjs` before showing

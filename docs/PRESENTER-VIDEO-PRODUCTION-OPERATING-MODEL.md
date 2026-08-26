@@ -7,7 +7,9 @@
 
 当前现役决定：默认 Erduo B-roll 的 DesignMD、主题、版式和动画保持不变。FengTalk 适配只发生
 在 presenter source：数字人的独立背景与“峰说”Logo。人物与 B-roll 按 Recipe 的
-`presenter|broll|mixed` 时间线切换，不建立新的同屏主题，也不让 presenter 品牌层改写 B-roll。
+`presenter|broll|mixed` 时间线切换。系统现在冻结三种 composition mode：`original`、
+`avatar-center` 和 `avatar-split`。第三种只把已验证的 9:16 B-roll 覆盖到数字人背景的左侧留白，
+不建立新的 B-roll 主题，也不让 presenter 品牌层改写 B-roll。
 正常发布所需的肖像/声音授权、口型、唯一音轨、字幕、完整解码和 Skill 证据仍全部保留。
 
 ## 1. 目标与边界
@@ -79,6 +81,8 @@ Chapter Builders → 静音逐镜 B-roll → delivery-index.json
 先确定完整 SRT、原始 DesignMD、发布用途、素材授权、主持人类型和唯一输出 profile。
 短视频建议先使用 1080×1920；YouTube 横屏建议先用 1920×1080 做成本可控的 canary，正式
 4K 再使用 Erduo 默认 3840×2160。profile 必须由 `create-production-profile.mjs` 生成。
+Presenter 项目还必须用 `create-presentation-mode.mjs` 生成并由用户批准
+`00-inputs/presentation-mode.json`；未批准的 draft 不能进入 Runtime planning。
 
 ### Gate B：声音
 

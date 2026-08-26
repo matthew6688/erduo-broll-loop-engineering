@@ -34,6 +34,7 @@ import { presenterKindOf } from './presenter-media-lib.mjs';
 import {validateProductionGovernanceIfLocked} from './validate-production-governance.mjs';
 import {verifySkillUsage} from './skill-usage.mjs';
 import {verifyMaterialPolicy} from './material-policy.mjs';
+import {bindPresentationModeContext} from './presentation-mode.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
@@ -542,6 +543,7 @@ export async function planRuntime({
   originalSrtFile,
   originalDesignFile,
   presenterSourceFile,
+  presentationModeFile,
   skillUsageFile,
   materialPolicyFile,
   canaryShotIds: requestedCanaryShotIds = null,
@@ -584,6 +586,12 @@ export async function planRuntime({
   }
   const presenterContext = planSchemaVersion === '4.0.0'
     ? await bindPresenterContext(inferredProductionRoot, presenterSourceFile) : null;
+  const productionProfile = bindProductionProfile(requestedProductionProfile);
+  const presentationModeContext = planSchemaVersion === '4.0.0' && presentationModeFile
+    ? await bindPresentationModeContext({
+      productionRoot: inferredProductionRoot, presentationModeFile, originalDesignFile,
+      presenterSourceFile, productionProfile,
+    }) : null;
   const materialPolicyContext = planSchemaVersion === '4.0.0' && materialPolicyFile
     ? await verifyMaterialPolicy({
       productionRoot: inferredProductionRoot, materialPolicyFile, originalDesignFile,
@@ -593,11 +601,11 @@ export async function planRuntime({
     originalSrt: await bindOriginalInput(originalSrtFile, inferredProductionRoot, 'original SRT'),
     originalDesign: await bindOriginalInput(originalDesignFile, inferredProductionRoot, 'original design'),
     ...(presenterContext ? { presenterSource: presenterContext } : {}),
+    ...(presentationModeContext ? { presentationMode: presentationModeContext } : {}),
     ...(skillUsageContext ? { skillUsage: skillUsageContext } : {}),
     ...(materialPolicyContext ? { materialPolicy: materialPolicyContext } : {}),
     ...(governanceContext ? { productionGovernance: governanceContext } : {}),
   } : null;
-  const productionProfile = bindProductionProfile(requestedProductionProfile);
   if (['3.0.0', '4.0.0'].includes(planSchemaVersion)) {
     if (!motionMapFile) throw new Error('runtime plan v3 requires motion-map.json');
     if (planSchemaVersion === '3.0.0') {
@@ -781,7 +789,7 @@ export async function planRuntime({
     );
     await validateRuntimePlan(plan, {
       narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-      originalSrtFile, originalDesignFile, presenterSourceFile, materialPolicyFile,
+      originalSrtFile, originalDesignFile, presenterSourceFile, presentationModeFile, materialPolicyFile,
       productionRoot: inferredProductionRoot,
     });
     return plan;
@@ -848,7 +856,7 @@ export async function planRuntime({
   plan.identity = computeRuntimePlanIdentity(plan);
   await validateRuntimePlan(plan, {
     narrativeEnvelopeFile, visualSystemFile, representativeScenesFile, motionMapFile, recipesDirectory,
-    originalSrtFile, originalDesignFile, presenterSourceFile, materialPolicyFile,
+    originalSrtFile, originalDesignFile, presenterSourceFile, presentationModeFile, materialPolicyFile,
     skillUsageFile,
     productionRoot: inferredProductionRoot,
   });
@@ -948,6 +956,9 @@ function creativeContext(plan) {
     } : {}),
     ...(plan.sourceContext.materialPolicy ? {
       materialPolicyContext: plan.sourceContext.materialPolicy,
+    } : {}),
+    ...(plan.sourceContext.presentationMode ? {
+      presentationModeContext: plan.sourceContext.presentationMode,
     } : {}),
   };
 }
@@ -1067,11 +1078,13 @@ export function buildBuilderAssignments(plan, {
           assetIndex: '02-assets/asset-index.json',
           leadCapabilityIndexes: [...new Set(plannedLeadSamples(plan).map(({ capabilityIndex }) => capabilityIndex))],
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
+          ...(plan.sourceContext.presentationMode ? { presentationMode: plan.sourceContext.presentationMode.locator } : {}),
         } : {}),
       },
       ...(plan.schemaVersion === '4.0.0' ? {
         ...creativeContext(plan),
         ...(presenterContext ? { presenterContext } : {}),
+        ...(plan.sourceContext.presentationMode ? { presentationModeContext: plan.sourceContext.presentationMode } : {}),
         recipeBindings: unit.context.recipeBindings,
         chapter: {
           chapterIds: unit.chapterIds,
@@ -1189,11 +1202,13 @@ export function buildBuilderAssignments(plan, {
           ...(plan.sourceContext.materialPolicy ? {materialPolicy: plan.sourceContext.materialPolicy.locator} : {}),
           assetIndex: '02-assets/asset-index.json',
           ...(presenterContext ? { presenterSource: presenterContext.locator } : {}),
+          ...(plan.sourceContext.presentationMode ? { presentationMode: plan.sourceContext.presentationMode.locator } : {}),
         } : {}),
       },
       ...(plan.schemaVersion === '4.0.0' ? {
         ...creativeContext(plan),
         ...(presenterContext ? { presenterContext } : {}),
+        ...(plan.sourceContext.presentationMode ? { presentationModeContext: plan.sourceContext.presentationMode } : {}),
         recipeBindings: scenes.map(({ shotId }) => plan.authoringUnits
           .flatMap(({ context }) => context.recipeBindings)
           .find((binding) => binding.shotId === shotId)),
@@ -1277,7 +1292,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const name = argv[index];
     if (name === '--json') continue;
-    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--presenter-source', '--skill-usage', '--material-policy', '--canary-shot-ids', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
+    if (!['--recipes', '--selection', '--narrative-envelope', '--visual-system', '--representative-scenes', '--motion-map', '--original-srt', '--original-design', '--presenter-source', '--presentation-mode', '--skill-usage', '--material-policy', '--canary-shot-ids', '--hyperframes-executable', '--remotion-executable', '--solo-reasons', '--matrix', '--remotion-index', '--production-root', '--production-profile'].includes(name)) throw new Error(`unknown argument ${name}`);
     const value = argv[index + 1];
     if (!value) throw new Error(`${name} requires a path`);
     options[name.slice(2)] = name === '--canary-shot-ids' ? value : path.resolve(value);
@@ -1292,6 +1307,7 @@ function parseArgs(argv) {
     originalSrtFile: options['original-srt'],
     originalDesignFile: options['original-design'],
     presenterSourceFile: options['presenter-source'],
+    presentationModeFile: options['presentation-mode'],
     skillUsageFile: options['skill-usage'],
     materialPolicyFile: options['material-policy'],
     canaryShotIds: options['canary-shot-ids']

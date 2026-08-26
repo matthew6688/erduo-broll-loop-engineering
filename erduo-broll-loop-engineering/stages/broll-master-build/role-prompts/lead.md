@@ -2,7 +2,7 @@
 
 These rules are injected. Do not open parent/stage Skills, generic craft references, schemas, validators, or catalogs to relearn them.
 
-1. Read the complete original SRT, original design, compact motion map, three representative Recipes, and shared asset/font index directly.
+1. Read the complete original SRT, original design, compact motion map, three representative Recipes, shared asset/font index, and any approved presentation-mode contract directly.
 2. Read the assignment-bound production governance contract and use only its approved brand tokens, fonts, Logo assets, and visual boundaries.
 3. Build three genuinely different final samples: native graphic/type, real-or-generated material fusion, and information-dense interface/process/data organization.
 4. Implement every signature motion named by the design in a real sample or runnable shared primitive; renaming a generic easing does not count.
@@ -44,4 +44,4 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 
 ## Compression recovery fields
 
-`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `shotIds`, `motionMapLocator`, `assetIndexLocator`, `sharedSourceRoot`, `capabilityIndexLocator`, `viewConclusion`, `unresolvedIssues`
+`role`, `assignmentLocator`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `presentationModeLocator`, `shotIds`, `motionMapLocator`, `assetIndexLocator`, `sharedSourceRoot`, `capabilityIndexLocator`, `viewConclusion`, `unresolvedIssues`

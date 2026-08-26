@@ -3,6 +3,12 @@
 
 ### Added
 
+- Three governed presenter composition modes: unchanged `original`, centered
+  `avatar-center`, and `avatar-split`, which reuses validated 9:16 B-roll
+  beside a presenter without changing the original DesignMD. Approved mode
+  contracts are hash-bound through Runtime Plan, edit plan, composition,
+  validation, tests, documentation, and the release package.
+
 - Assignment Preflight now validates every active runtime target before the
   first render, reports all deterministic target metadata failures together,
   and writes a plan/source/asset-bound receipt. Preflight failures consume no

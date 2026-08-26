@@ -34,6 +34,8 @@ function runtimePlanInputs(productionRoot, recipesDirectory, plan) {
       ? { originalDesignFile: path.join(productionRoot, source.originalDesign.locator) } : {}),
     ...(source.presenterSource?.locator
       ? { presenterSourceFile: path.join(productionRoot, source.presenterSource.locator) } : {}),
+    ...(source.presentationMode?.locator
+      ? { presentationModeFile: path.join(productionRoot, source.presentationMode.locator) } : {}),
   };
 }
 
@@ -47,7 +49,7 @@ function pushSegment(segments, segment) {
   segments.push(segment);
 }
 
-function compileRecipeSegments(recipe) {
+function compileRecipeSegments(recipe, presentationMode = 'original') {
   const treatment = recipe.creativeProposal?.presenterTreatment;
   if (!treatment) throw new Error(`${recipe.shotId}: presenterTreatment is required for digital-presenter compilation`);
   const { startMs, endMs } = recipe.truth.srtWindowMs;
@@ -71,14 +73,19 @@ function compileRecipeSegments(recipe) {
       throw new Error(`${recipe.shotId}: brollWindows[${index}] must be ordered, non-overlapping, and inside its SRT window`);
     }
     if (window.startMs > cursor) result.push({ kind: 'presenter', startMs: cursor, endMs: window.startMs });
-    result.push({ kind: 'broll', shotId: recipe.shotId, startMs: window.startMs, endMs: window.endMs });
+    const split = window.presentation === 'split'
+      || (window.presentation === undefined && presentationMode === 'avatar-split');
+    if (split && presentationMode !== 'avatar-split') {
+      throw new Error(`${recipe.shotId}: split B-roll requires avatar-split presentation mode`);
+    }
+    result.push({ kind: split ? 'split' : 'broll', shotId: recipe.shotId, startMs: window.startMs, endMs: window.endMs });
     cursor = window.endMs;
   }
   if (cursor < endMs) result.push({ kind: 'presenter', startMs: cursor, endMs });
   return result;
 }
 
-export function compilePresenterSegments(recipes, presenterDurationMs) {
+export function compilePresenterSegments(recipes, presenterDurationMs, presentationMode = 'original') {
   const ordered = [...recipes].toSorted(
     (left, right) => left.truth.srtWindowMs.startMs - right.truth.srtWindowMs.startMs,
   );
@@ -88,7 +95,7 @@ export function compilePresenterSegments(recipes, presenterDurationMs) {
     const window = recipe.truth.srtWindowMs;
     if (window.startMs < cursor) throw new Error(`${recipe.shotId}: Recipe SRT window overlaps the preceding Recipe`);
     if (window.startMs > cursor) pushSegment(segments, { kind: 'presenter', startMs: cursor, endMs: window.startMs });
-    for (const segment of compileRecipeSegments(recipe)) pushSegment(segments, segment);
+    for (const segment of compileRecipeSegments(recipe, presentationMode)) pushSegment(segments, segment);
     cursor = window.endMs;
   }
   if (cursor > presenterDurationMs) throw new Error('Recipe timeline extends beyond presenter media duration');
@@ -191,10 +198,12 @@ export async function createPresenterEditPlan({
     });
   }
   const durationMs = presenterSource.media.durationMs;
-  const segments = compilePresenterSegments(loaded.map(({ recipe }) => recipe), durationMs);
+  const presentationContext = runtimePlan.sourceContext?.presentationMode ?? null;
+  const presentationMode = presentationContext?.mode ?? 'original';
+  const segments = compilePresenterSegments(loaded.map(({ recipe }) => recipe), durationMs, presentationMode);
   const fps = runtimePlan.productionProfile.fps.numerator / runtimePlan.productionProfile.fps.denominator;
   const plan = {
-    schemaVersion: '2.0.0',
+    schemaVersion: presentationContext ? '3.0.0' : '2.0.0',
     authoredBy: 'compiled-from-recipe-creative-proposals',
     compositionScope,
     runtimePlan: {
@@ -203,10 +212,18 @@ export async function createPresenterEditPlan({
     presenterSource: {
       file: presenterRecord.locator, sha256: presenterSourceSha256, mediaSha256: presenterSource.media.sha256,
     },
+    ...(presentationContext ? {
+      presentationMode,
+      presentationModeContract: {
+        file: presentationContext.locator,
+        sha256: presentationContext.sha256,
+        identity: presentationContext.identity,
+      },
+    } : {}),
     recipes,
     output: {
-      width: runtimePlan.productionProfile.raster.width,
-      height: runtimePlan.productionProfile.raster.height,
+      width: presentationContext?.output.width ?? runtimePlan.productionProfile.raster.width,
+      height: presentationContext?.output.height ?? runtimePlan.productionProfile.raster.height,
       fps,
     },
     segments,

@@ -48,3 +48,11 @@ presenter-layer concerns; they must not replace or restyle the original B-roll
 DesignMD. See `docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`;
 publishable audio, lip-sync, subtitle, decode, authorization, and
 Skill-evidence gates still apply.
+
+New presenter productions must bind one user-approved
+`00-inputs/presentation-mode.json`. The only modes are `original`,
+`avatar-center`, and `avatar-split`; the split mode reuses validated portrait
+B-roll over the presenter source and does not create a new B-roll theme. The
+framework and tests are complete, but no presentation-mode canary has been
+rendered yet. The next production step is a short user-approved canary, not a
+full video.

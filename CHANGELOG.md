@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Added three governed presenter composition modes: unchanged `original`,
+  centered `avatar-center`, and `avatar-split`, which reuses validated 9:16
+  B-roll beside a presenter without changing the original DesignMD. Approved
+  mode contracts are hash-bound through Runtime Plan, edit plan, composition,
+  validation, tests, documentation, and the release package.
+
 - HyperFrames Assignment Preflight now aggregates strict runtime requirements
   for root `data-start="0"`, timeline opt-out/registration, and parent-traversing
   asset paths before invoking the renderer, so deterministic source failures do
