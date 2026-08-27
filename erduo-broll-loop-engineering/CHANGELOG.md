@@ -3,6 +3,12 @@
 
 ### Speed and stability
 
+- Parent receipt recording now closes a missing minimal creative handoff in
+  the same deterministic command, removing a role roundtrip without weakening
+  viewing or canary gates. The five-shot 1080p sequential mechanical baseline
+  is `47.813s` median; direct-render concurrency and fused decode experiments
+  were slower and were fully reverted.
+
 - Added a fail-closed non-production sandbox preparer for repeated mechanical
   timing trials. It preserves the validated current inputs, Plan, Assets and
   canary-first frozen sources while excluding approvals, old delivery evidence,

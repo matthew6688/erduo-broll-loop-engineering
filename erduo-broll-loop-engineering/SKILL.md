@@ -300,7 +300,10 @@ development.
 
 Parent owns deterministic rendering, FFprobe, full decode, hash, source
 identity, shot contract, six-frame-sheet generation, chapter-preview generation,
-final assembly, and final-delivery screenshot extraction. These checks may reject missing files, wrong media facts,
+view-receipt/minimal-handoff closure, final assembly, and final-delivery
+screenshot extraction. A missing minimal handoff is created by the same Parent
+receipt command; an existing handoff is preserved only when it references that
+receipt. These checks may reject missing files, wrong media facts,
 black/near-empty frames, safe-area escape, obvious occlusion, or missing fonts.
 They must not claim appeal, metaphor quality, weight, craft-principle success,
 or user approval.

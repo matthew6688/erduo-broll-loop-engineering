@@ -46,6 +46,7 @@ test('Parent creates a strict hash-bound view receipt from assignment, Recipes, 
   const planFile = path.join(productionRoot, '01-runtime-plan', 'runtime-plan.json');
   const viewedLocator = '05-delivery/chapter-previews/U001.canary.mp4';
   const receiptLocator = '03-build/U001/view-receipt.json';
+  const handoffLocator = '03-build/U001/handoff.md';
   await Promise.all([
     mkdir(recipesDirectory, {recursive: true}),
     mkdir(path.dirname(assignmentFile), {recursive: true}),
@@ -60,7 +61,7 @@ test('Parent creates a strict hash-bound view receipt from assignment, Recipes, 
   const plan = {schemaVersion: '4.0.0', identity: '9'.repeat(64)};
   const assignment = {
     assignmentId: 'U001', unitId: 'U001', role: 'builder', planIdentity: plan.identity,
-    shotIds: ['shot09'], output: {viewReceipt: receiptLocator},
+    shotIds: ['shot09'], output: {viewReceipt: receiptLocator, handoff: handoffLocator},
   };
   await Promise.all([
     writeFile(path.join(recipesDirectory, 'shot09.json'), `${JSON.stringify(recipe)}\n`),
@@ -80,10 +81,60 @@ test('Parent creates a strict hash-bound view receipt from assignment, Recipes, 
     truthIdentity: computeRecipeTruthIdentity(recipe),
   }]);
   assert.equal(result.receipt.viewedSha256, await hashFile(path.join(productionRoot, viewedLocator)));
+  assert.equal(result.handoff.status, 'created');
+  assert.match(await readFile(path.join(productionRoot, handoffLocator), 'utf8'), /view receipt: 03-build\/U001\/view-receipt\.json/u);
   assert.deepEqual(Object.keys(result.receipt).sort(), [
     'assignmentId', 'creativeProposalChanges', 'decision', 'planIdentity', 'recipeBindings',
     'schemaVersion', 'shotIds', 'unitId', 'viewedArtifact', 'viewedSha256',
   ].sort());
+});
+
+test('Parent preserves a valid creative handoff and rejects a stale one', async (t) => {
+  const productionRoot = await temporaryRoot(t);
+  const recipesDirectory = path.join(productionRoot, '01-director', 'shot-recipes');
+  const assignmentFile = path.join(productionRoot, '01-runtime-plan', 'assignments', 'U001.json');
+  const planFile = path.join(productionRoot, '01-runtime-plan', 'runtime-plan.json');
+  const viewedLocator = '05-delivery/chapter-previews/U001.canary.mp4';
+  const workDirectory = '03-build/U001';
+  const receiptLocator = `${workDirectory}/view-receipt.json`;
+  const handoffLocator = `${workDirectory}/handoff.md`;
+  await Promise.all([
+    mkdir(recipesDirectory, {recursive: true}),
+    mkdir(path.dirname(assignmentFile), {recursive: true}),
+    mkdir(path.join(productionRoot, '05-delivery', 'chapter-previews'), {recursive: true}),
+    mkdir(path.join(productionRoot, workDirectory), {recursive: true}),
+  ]);
+  const recipe = {
+    schemaVersion: '4.0.0', shotId: 'shot09',
+    truth: {srtWindowMs: {startMs: 0, endMs: 1000}},
+    creativeProposal: {visibleText: []},
+  };
+  const plan = {schemaVersion: '4.0.0', identity: '9'.repeat(64)};
+  const assignment = {
+    assignmentId: 'U001', unitId: 'U001', role: 'builder', planIdentity: plan.identity,
+    shotIds: ['shot09'], output: {viewReceipt: receiptLocator, handoff: handoffLocator},
+  };
+  await Promise.all([
+    writeFile(path.join(recipesDirectory, 'shot09.json'), `${JSON.stringify(recipe)}\n`),
+    writeFile(planFile, `${JSON.stringify(plan)}\n`),
+    writeFile(assignmentFile, `${JSON.stringify(assignment)}\n`),
+    writeFile(path.join(productionRoot, viewedLocator), 'VIEWED CANARY'),
+    writeFile(path.join(productionRoot, handoffLocator), '# U001 handoff\nview receipt: view-receipt.json\n'),
+  ]);
+  const preserved = await createViewReceipt({
+    productionRoot, planFile, assignmentFile, recipesDirectory,
+    decision: 'accepted', viewedArtifact: {kind: 'chapter-preview', locator: viewedLocator},
+  });
+  assert.equal(preserved.handoff.status, 'preserved');
+
+  await writeFile(path.join(productionRoot, handoffLocator), '# stale handoff\n');
+  await assert.rejects(
+    createViewReceipt({
+      productionRoot, planFile, assignmentFile, recipesDirectory,
+      decision: 'accepted', viewedArtifact: {kind: 'chapter-preview', locator: viewedLocator},
+    }),
+    /handoff already exists but does not reference its view receipt/u,
+  );
 });
 
 test('full-production receipt order follows the runtime timeline after canary unlock', () => {

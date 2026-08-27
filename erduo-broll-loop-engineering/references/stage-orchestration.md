@@ -114,8 +114,11 @@ rendered reports.
 
 After Lead or Builder has actually opened the sheets/preview, it returns only
 `accepted|revised` and any Recipe proposal changes. Parent creates the strict
-hash-bound receipt with `record-view-receipt.mjs`; creative agents never hand-
-author receipt JSON. Parent then runs `finalize-canary.mjs` to reopen contracts,
+hash-bound receipt with `record-view-receipt.mjs`; the same command creates the
+minimal handoff that references that receipt when it is absent, or preserves an
+existing handoff only when it already references the receipt. Creative agents
+never hand-author receipt JSON and are not recalled solely for this mechanical
+closure. Parent then runs `finalize-canary.mjs` to reopen contracts,
 media, sheets, audits, receipts, and the preview and to create or validate the
 technical gate. Do not repeat an Assignment standard command merely to notice a
 new receipt or finalize the gate: that command is for source/preflight/render,
@@ -215,9 +218,10 @@ change: <required only when revised>
 
 No long viewing essay or extra approval document is required.
 Parent turns this conclusion into the schema-valid receipt with
-`record-view-receipt.mjs`, then uses `finalize-canary.mjs`. The Builder does not
-re-run its standard command after viewing unless source or Recipe content
-actually changed.
+`record-view-receipt.mjs`; that command also closes a missing minimal handoff
+without another Builder roundtrip, then Parent uses `finalize-canary.mjs`. The
+Builder does not re-run its standard command after viewing unless source or
+Recipe content actually changed.
 
 ## No proof work in creative source
 

@@ -21,6 +21,35 @@ function withinRoot(root, locator, label) {
   return file;
 }
 
+async function closeCreativeHandoff({root, assignment, decision, viewedArtifact, creativeProposalChanges}) {
+  const receiptLocator = assignment?.output?.viewReceipt;
+  const handoffLocator = assignment?.output?.handoff;
+  if (typeof receiptLocator !== 'string' || typeof handoffLocator !== 'string') {
+    throw new Error('assignment must declare output.viewReceipt and output.handoff');
+  }
+  const handoffFile = withinRoot(root, handoffLocator, 'creative handoff');
+  const handoff = [
+    `# ${assignment.assignmentId} creative handoff`,
+    '',
+    `status: ${decision}`,
+    `viewed: ${viewedArtifact.kind}`,
+    `view receipt: ${receiptLocator}`,
+    `creative proposal changes: ${creativeProposalChanges.length}`,
+    '',
+  ].join('\n');
+  try {
+    await writeFile(handoffFile, handoff, {flag: 'wx'});
+    return {status: 'created', file: handoffFile};
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const existing = await readFile(handoffFile, 'utf8');
+    if (!existing.includes(receiptLocator) && !existing.includes(path.basename(receiptLocator))) {
+      throw new Error('creative handoff already exists but does not reference its view receipt');
+    }
+    return {status: 'preserved', file: handoffFile};
+  }
+}
+
 export async function createViewReceipt({
   productionRoot,
   planFile,
@@ -69,17 +98,22 @@ export async function createViewReceipt({
   if (errors.length > 0) throw new Error(`view receipt failed schema validation:\n- ${errors.join('\n- ')}`);
   const receiptFile = withinRoot(root, assignment.output.viewReceipt, 'view receipt');
   const body = `${JSON.stringify(receipt, null, 2)}\n`;
+  let status;
   try {
     await writeFile(receiptFile, body, {flag: 'wx'});
-    return {status: 'created', file: receiptFile, receipt};
+    status = 'created';
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
     const existing = await readFile(receiptFile, 'utf8');
     if (canonicalJson(JSON.parse(existing)) !== canonicalJson(receipt)) {
       throw new Error('view receipt already exists with different content; use a new production root or assignment revision');
     }
-    return {status: 'cached', file: receiptFile, receipt};
+    status = 'cached';
   }
+  const handoff = await closeCreativeHandoff({
+    root, assignment, decision, viewedArtifact, creativeProposalChanges,
+  });
+  return {status, file: receiptFile, receipt, handoff};
 }
 
 function parseArgs(argv) {
@@ -113,7 +147,9 @@ async function main() {
     viewedArtifact: {kind: options['viewed-kind'], locator: options['viewed-artifact']},
     creativeProposalChanges: changes,
   }));
-  process.stdout.write(`${JSON.stringify({status: result.status, file: result.file})}\n`);
+  process.stdout.write(`${JSON.stringify({
+    status: result.status, file: result.file, handoff: result.handoff,
+  })}\n`);
 }
 
 if (isDirectExecution(import.meta.url)) {

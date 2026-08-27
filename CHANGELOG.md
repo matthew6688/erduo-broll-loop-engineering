@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+- Parent view-receipt recording now also creates the missing minimal creative
+  handoff, eliminating a role reactivation used only to reference the receipt.
+  Existing handoffs are preserved only when they already reference the bound
+  receipt; all receipt, viewing, canary, and user-approval gates remain intact.
+- Recorded a new five-shot 1080p frozen-source baseline of `47.813s` median.
+  Two isolated renderer candidates were rejected and reverted: two-wide direct
+  rendering was `10.2%` slower, while fused decode/contact-sheet work was
+  `88.7%` slower in its stopping trial. Sequential rendering remains the stable
+  default; the measured bottleneck is creative/preflight/handoff elapsed time.
+
 - Added a fail-closed, non-production performance sandbox preparer for
   repeatable three-trial mechanical benchmarks. It copy-on-write clones only
   the current validated Plan/input/Assets/frozen-source closure, regenerates
