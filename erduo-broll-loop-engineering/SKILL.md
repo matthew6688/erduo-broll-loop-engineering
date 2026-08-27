@@ -112,7 +112,14 @@ when preflight returns `run-onboarding-diagnostic`.
    Parent may run `scripts/reuse-foundation-assets.mjs --source <approved-root>
    --target <new-root>`. This copies only hash-verified fonts and license files,
    writes `02-assets/gates/foundation-reuse.json`, and never reuses episode-
-   specific media or silently changes the new asset index.
+   specific media or silently changes the new asset index. File and editable-source
+   reuse automatically attempts copy-on-write cloning and falls back to ordinary
+   copying on unsupported filesystems. After final delivery on macOS, Parent
+   must preview exact duplicate storage with
+   `scripts/copy-on-write.mjs --root <production-root>`, then run the same command
+   with `--apply`; `clone-unsupported` is a recorded storage limitation, not a
+   media-quality failure. Paths, bytes, hashes, modes, and timestamps stay
+   stable; never use hard links.
 4. Dispatch the Lead with the complete original SRT/design, motion map, exactly
    three representative Recipes, shared asset/font index, and any bound presenter
    source context. Lead builds three

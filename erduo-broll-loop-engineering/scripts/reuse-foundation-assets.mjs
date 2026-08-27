@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import {copyFile, mkdir, readFile, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import {isDirectExecution} from './direct-execution.mjs';
 import {hashFile, requireRegularFile} from './shot-media-lib.mjs';
+import {cloneFile} from './copy-on-write.mjs';
 
 function resolveBounded(root, locator, kind) {
   if (typeof locator !== 'string' || path.isAbsolute(locator) || locator.includes('\\')) {
@@ -41,7 +42,7 @@ export async function reuseFoundationAssets({sourceProductionRoot, targetProduct
     if (actual !== record.sha256) throw new Error(`${record.locator} hash mismatch`);
     await mkdir(path.dirname(target), {recursive: true});
     try {
-      await copyFile(source, target, 1);
+      await cloneFile(source, target, {exclusive: true});
     } catch (error) {
       if (error?.code !== 'EEXIST' || await hashFile(target) !== actual) throw error;
     }

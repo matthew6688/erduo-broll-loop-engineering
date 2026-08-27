@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import {createHash} from 'node:crypto';
-import {constants as fsConstants} from 'node:fs';
-import {copyFile, lstat, mkdir, readFile, readdir, writeFile} from 'node:fs/promises';
+import {lstat, mkdir, readFile, readdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import {canonicalJson} from './runtime-schema-validator.mjs';
 import {hashFile, numberedName, readJson, requireRegularFile} from './shot-media-lib.mjs';
 import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {cloneFile} from './copy-on-write.mjs';
 
 const sha256Json = (value) => `sha256:${createHash('sha256').update(canonicalJson(value)).digest('hex')}`;
 
@@ -156,8 +156,8 @@ export async function reuseUnchangedShots({
       assertAbsent(sheetFile, `${shotId} current sheet`),
     ]);
     await Promise.all([
-      copyFile(priorMedia, mediaFile, fsConstants.COPYFILE_EXCL),
-      copyFile(priorSheet, sheetFile, fsConstants.COPYFILE_EXCL),
+      cloneFile(priorMedia, mediaFile, {exclusive: true}),
+      cloneFile(priorSheet, sheetFile, {exclusive: true}),
     ]);
     const unit = plan.authoringUnits.find(({shotIds: ids}) => ids.includes(shotId));
     const contract = {

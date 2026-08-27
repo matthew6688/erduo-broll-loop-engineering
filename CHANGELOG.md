@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Production asset reuse and editable-source staging now prefer filesystem
+  copy-on-write cloning. A dry-run-by-default optimizer can deduplicate exact
+  large files with independent APFS clones while preserving paths and hashes.
+
 - Recorded the v1.0.1 no-quality-loss speed optimization: a fresh-root,
   post-authoring five-shot canary closed in `3m19s` wall time / about `1m49s`
   measured commands versus the prior `79m37s` approval-to-gate run, with

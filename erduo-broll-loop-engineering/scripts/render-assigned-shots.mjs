@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash, randomUUID } from 'node:crypto';
-import { cp, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,7 @@ import {auditShotMotion} from './audit-shot-motion.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
 import {beginRenderAttempt, finishRenderAttempt} from './render-attempt-budget.mjs';
 import {runTimedProductionStage} from './record-production-event.mjs';
+import {cloneTree} from './copy-on-write.mjs';
 import {
   clearMinimalFailureEvidence,
   inspectAssignmentRuntime,
@@ -408,7 +409,7 @@ export async function runHyperframesVisualPreflight({
   try {
     const results = await mapWithConcurrency(compositionIds, concurrency, async (compositionId, index) => {
       const stagedSource = path.join(stagingRoot, `composition-${index + 1}`, 'source');
-      await cp(path.resolve(sourceRoot), stagedSource, {recursive: true});
+      await cloneTree(path.resolve(sourceRoot), stagedSource);
       const compositionDirectory = path.join(stagedSource, 'compositions');
       const compositionFile = path.join(compositionDirectory, `${compositionId}.html`);
       await requireRegularFile(compositionFile, `${compositionId} HyperFrames composition`);

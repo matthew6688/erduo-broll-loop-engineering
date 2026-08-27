@@ -3,6 +3,11 @@
 
 ### Speed and stability
 
+- Foundation reuse, unchanged-shot reuse, and HyperFrames preflight staging now
+  attempt filesystem copy-on-write cloning with a portable ordinary-copy
+  fallback. A dry-run-by-default storage optimizer can replace exact large-file
+  duplicates with independent APFS clones without changing paths or hashes.
+
 - Formal production now defaults to 1920×1080 at 30 fps; 4K requires an
   explicit request. Planning, Lead/Builder execution, view receipt, and canary
   finalization emit closed stage timings. HyperFrames visual checks use an
