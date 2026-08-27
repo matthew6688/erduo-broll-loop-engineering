@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+- Added a fail-closed, non-production performance sandbox preparer for
+  repeatable three-trial mechanical benchmarks. It copy-on-write clones only
+  the current validated Plan/input/Assets/frozen-source closure, regenerates
+  sandbox-local command arguments, and excludes approvals, user decisions,
+  view receipts, prior media, events, and render-attempt ledgers. Stale Skill
+  bindings, symlinks, incomplete five-shot coverage, or an existing target are
+  rejected before a benchmark can run.
+
 - Production asset reuse and editable-source staging now prefer filesystem
   copy-on-write cloning. A dry-run-by-default optimizer can deduplicate exact
   large files with independent APFS clones while preserving paths and hashes.

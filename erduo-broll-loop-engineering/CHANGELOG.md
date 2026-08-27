@@ -3,6 +3,12 @@
 
 ### Speed and stability
 
+- Added a fail-closed non-production sandbox preparer for repeated mechanical
+  timing trials. It preserves the validated current inputs, Plan, Assets and
+  canary-first frozen sources while excluding approvals, old delivery evidence,
+  events and render-attempt ledgers. It never weakens or changes the production
+  renderer or its quality gates.
+
 - Foundation reuse, unchanged-shot reuse, and HyperFrames preflight staging now
   attempt filesystem copy-on-write cloning with a portable ordinary-copy
   fallback. A dry-run-by-default storage optimizer can replace exact large-file

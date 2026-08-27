@@ -70,6 +70,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - HyperFrames Assignment Preflight 同时检查 strict runtime 的根节点 `data-start="0"`、`data-no-timeline`/timeline registry 与禁止 `../` 素材路径，避免这些静态源码错误消耗实际渲染预算。
 - Parent 从每镜运行时源码直接生成独立 H.264 文件、`shot-media.json`、6 格语义检查图和全片 `delivery-index.json`；禁止从 unit 或 Master 二次切割冒充直出。
 - `production-metrics.json` 可汇总阶段耗时、Agent 调用、unit、文件/字节、渲染/解码/hash、失败/重试与可选宿主 Token；没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
+- 三次机械测速必须使用 `prepare-performance-sandbox.mjs` 建立非生产 sandbox。它只复制当前 Skill/Plan 验证通过的输入、Director、Assets 与 canary-first 冻结源码，重新生成指向 sandbox 的命令；明确排除 Visual Plan 批准、用户 canary 决定、view receipt、旧媒体、事件和 render-attempt ledger。旧 Skill、symlink、缺五镜覆盖或已有目标目录都会 fail closed。
 - 五镜头稳定源码基准已从 `79m37s` 的旧批准到门禁墙钟缩短到新根目录的 `3m19s`，实际命令约 `1m49s`；新旧 canary SSIM 为 `0.999203`。该数据证明稳定源码后的机械闭环，不冒充从零创意生产的 24 倍等口径加速。详见 [`docs/V1.0.1-SPEED-OPTIMIZATION.md`](docs/V1.0.1-SPEED-OPTIMIZATION.md)。
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
