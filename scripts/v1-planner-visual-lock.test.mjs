@@ -306,7 +306,7 @@ test('approved visual lock binds representative media, executable source, tokens
   }, lock).join('\n'), /runtime shared-source identity differs/u);
 
   const profileDrift = structuredClone(builder);
-  profileDrift.productionProfile.raster.width = 1920;
+  profileDrift.productionProfile.raster.width = 1280;
   await assert.rejects(gateBuilderAssignment(profileDrift, {
     plan: result.plan, productionRoot: fixture.productionRoot, visualLock: lock,
   }), /production profile differs/u);

@@ -10,6 +10,47 @@
     "presenterKind": { "enum": ["human", "digital"] },
     "compositionScope": { "enum": ["framework-demo", "canary", "full-production"] },
     "authorizationUse": { "enum": ["internal-framework-demo", "internal-canary", "publishing"] },
+    "brollLineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "publishable", "runtimePlanSha256", "runtimePlanIdentity", "skillEvidence", "visualBindings"],
+      "properties": {
+        "mode": { "const": "external-legacy-framework-demo" },
+        "publishable": { "const": false },
+        "runtimePlanSha256": { "$ref": "#/$defs/sha256" },
+        "runtimePlanIdentity": { "$ref": "#/$defs/sha256" },
+        "skillEvidence": { "enum": ["missing-legacy", "historical-binding-not-current"] },
+        "landscapeVariants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runtimePlanSha256", "runtimePlanIdentity", "skillEvidence", "shotIds"],
+          "properties": {
+            "runtimePlanSha256": { "$ref": "#/$defs/sha256" },
+            "runtimePlanIdentity": { "$ref": "#/$defs/sha256" },
+            "skillEvidence": { "const": "current" },
+            "shotIds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" }
+            }
+          }
+        },
+        "visualBindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shotId", "visualRecipeIdentity"],
+            "properties": {
+              "shotId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+              "visualRecipeIdentity": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
     "inputs": {
       "type": "object",
       "additionalProperties": false,
@@ -26,6 +67,7 @@
             "required": ["shotId", "sha256"],
             "properties": {
               "shotId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+              "variant": { "enum": ["portrait", "landscape"] },
               "sha256": { "$ref": "#/$defs/sha256" }
             }
           }

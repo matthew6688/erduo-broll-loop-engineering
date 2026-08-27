@@ -30,12 +30,61 @@ import {
   computeRecipeIdentity,
   computeRecipeTruthIdentity,
 } from '../erduo-broll-loop-engineering/scripts/validate-shot-recipes.mjs';
+import {createViewReceipt} from '../erduo-broll-loop-engineering/scripts/record-view-receipt.mjs';
+import {finalizeCanary} from '../erduo-broll-loop-engineering/scripts/finalize-canary.mjs';
 
 async function temporaryRoot(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'creative-loop-delivery-'));
   t.after(() => rm(root, {recursive: true, force: true}));
   return root;
 }
+
+test('Parent creates a strict hash-bound view receipt from assignment, Recipes, and viewed media', async (t) => {
+  const productionRoot = await temporaryRoot(t);
+  const recipesDirectory = path.join(productionRoot, '01-director', 'shot-recipes');
+  const assignmentFile = path.join(productionRoot, '01-runtime-plan', 'assignments', 'U001.json');
+  const planFile = path.join(productionRoot, '01-runtime-plan', 'runtime-plan.json');
+  const viewedLocator = '05-delivery/chapter-previews/U001.canary.mp4';
+  const receiptLocator = '03-build/U001/view-receipt.json';
+  await Promise.all([
+    mkdir(recipesDirectory, {recursive: true}),
+    mkdir(path.dirname(assignmentFile), {recursive: true}),
+    mkdir(path.join(productionRoot, '05-delivery', 'chapter-previews'), {recursive: true}),
+    mkdir(path.join(productionRoot, '03-build', 'U001'), {recursive: true}),
+  ]);
+  const recipe = {
+    schemaVersion: '4.0.0', shotId: 'shot09',
+    truth: {srtWindowMs: {startMs: 0, endMs: 1000}},
+    creativeProposal: {visibleText: []},
+  };
+  const plan = {schemaVersion: '4.0.0', identity: '9'.repeat(64)};
+  const assignment = {
+    assignmentId: 'U001', unitId: 'U001', role: 'builder', planIdentity: plan.identity,
+    shotIds: ['shot09'], output: {viewReceipt: receiptLocator},
+  };
+  await Promise.all([
+    writeFile(path.join(recipesDirectory, 'shot09.json'), `${JSON.stringify(recipe)}\n`),
+    writeFile(planFile, `${JSON.stringify(plan)}\n`),
+    writeFile(assignmentFile, `${JSON.stringify(assignment)}\n`),
+    writeFile(path.join(productionRoot, viewedLocator), 'VIEWED CANARY'),
+  ]);
+  const result = await createViewReceipt({
+    productionRoot, planFile, assignmentFile, recipesDirectory,
+    decision: 'accepted', viewedArtifact: {kind: 'chapter-preview', locator: viewedLocator},
+  });
+  assert.equal(result.receipt.decision, 'accepted');
+  assert.deepEqual(result.receipt.shotIds, ['shot09']);
+  assert.deepEqual(result.receipt.recipeBindings, [{
+    shotId: 'shot09',
+    recipeIdentity: computeRecipeIdentity(recipe),
+    truthIdentity: computeRecipeTruthIdentity(recipe),
+  }]);
+  assert.equal(result.receipt.viewedSha256, await hashFile(path.join(productionRoot, viewedLocator)));
+  assert.deepEqual(Object.keys(result.receipt).sort(), [
+    'assignmentId', 'creativeProposalChanges', 'decision', 'planIdentity', 'recipeBindings',
+    'schemaVersion', 'shotIds', 'unitId', 'viewedArtifact', 'viewedSha256',
+  ].sort());
+});
 
 test('full-production receipt order follows the runtime timeline after canary unlock', () => {
   const plan = {
@@ -540,6 +589,20 @@ test('canary gate reopens every contract, media, sheet, receipt, and handoff ins
     '{"later":"full-production receipt may replace the live path"}\n',
   );
   assert.equal((await validate()).status, 'passed', 'immutable canary receipt snapshot must survive the full-production view loop');
+});
+
+test('Parent finalizes an already rendered canary without repeating an assignment standard command', async (t) => {
+  const value = await validCanaryClosure(t);
+  const gate = await finalizeCanary({
+    planFile: value.planFile,
+    productionRoot: value.productionRoot,
+    recipesDirectory: value.recipesDirectory,
+    runner: value.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  });
+  assert.equal(gate.status, 'passed');
+  assert.equal(gate.identity, value.technical.identity);
+  assert.equal(gate.canaryPreview.locator, '05-delivery/canary-preview.mp4');
 });
 
 test('canary creative closure enforces composition, material, signature-motion, and 45-minute thresholds', async (t) => {

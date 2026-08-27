@@ -4,6 +4,37 @@
 
 ## Unreleased
 
+- Recorded the v1.0.1 no-quality-loss speed optimization: a fresh-root,
+  post-authoring five-shot canary closed in `3m19s` wall time / about `1m49s`
+  measured commands versus the prior `79m37s` approval-to-gate run, with
+  `0.999203` SSIM and every existing quality gate retained. The documentation
+  separates this stable-source benchmark from unmeasured from-scratch creative
+  production and records the next observability/concurrency/failure-classification
+  decisions from an independent Claude review.
+- Changed the formal default profile to 1920×1080 at 30 fps; 4K is now
+  explicit opt-in. Added automatic command-stage timing, isolated two-wide
+  HyperFrames preflight concurrency, and default-deny transient retry
+  classification with immutable retry evidence. Direct rendering, quality
+  gates, and the two-attempt ceiling remain unchanged.
+- Added exact SRT visible-text validation at planning, aggregated HyperFrames
+  visual-preflight failures with bounded stdout/stderr, unchanged-source retry
+  blocking, Parent-generated view receipts, receipt-only canary finalization,
+  and hash-verified font/license foundation reuse.
+
+- Added a non-publishable, partial `framework-demo` composition window for
+  evaluating `avatar-split` with a verified legacy B-roll lineage. It permits
+  drift only in Recipe `presenterTreatment`, records absent/historical Skill
+  evidence instead of backfilling it, and remains unavailable to canary, full
+  production, and publishing. Landscape full-cutaway composition now preserves
+  the complete portrait B-roll over a dimmed same-shot blur carrier.
+- `avatar-split` now accepts a current-Skill, same-Recipe 1920×1080 B-roll
+  variant for true landscape full cutaways while retaining the 9:16 shot for
+  split windows. Canary and full production fail closed when a full cutaway
+  lacks its landscape variant; the blur carrier remains framework-demo only.
+- Presenter edit-plan creation now mechanically blocks canary/full-production
+  layouts until the pure-B-roll technical canary and bound 3-of-5 user decision
+  have passed.
+
 - Added three governed presenter composition modes: unchanged `original`,
   centered `avatar-center`, and `avatar-split`, which reuses validated 9:16
   B-roll beside a presenter without changing the original DesignMD. Approved

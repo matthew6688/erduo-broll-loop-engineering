@@ -1,7 +1,40 @@
 
 ## Unreleased
 
+### Speed and stability
+
+- Formal production now defaults to 1920×1080 at 30 fps; 4K requires an
+  explicit request. Planning, Lead/Builder execution, view receipt, and canary
+  finalization emit closed stage timings. HyperFrames visual checks use an
+  isolated two-wide preflight pool while direct renders stay sequential.
+  Only narrowly classified infrastructure failures may retry unchanged source;
+  all unknown failures remain source-blocking.
+
+- Documented a fresh-root, post-authoring five-shot benchmark at `3m19s` wall
+  time and about `1m49s` measured commands, versus the earlier `79m37s`
+  approval-to-gate run. All direct-shot, decode, sheet, text, motion, viewing,
+  and canary gates remain active; old/new preview SSIM was `0.999203`.
+- Planning now rejects stale `source: srt` visible text before render;
+  HyperFrames preflight aggregates all composition failures and retains bounded
+  stdout/stderr; Parent records view receipts and finalizes canary evidence
+  without rerunning unchanged Assignment commands.
+- Added hash-verified font/license foundation reuse. Episode-specific media is
+  never copied by this path.
+
 ### Added
+
+- A narrowly scoped, non-publishable `framework-demo` path can reuse legacy
+  B-roll only after SRT, DesignMD, profile, Recipe truth/visual fields, media
+  contract, hash, and decode verification. It records missing/historical Skill
+  evidence without backfilling it. Portrait full cutaways in landscape keep the
+  complete original frame over a dimmed same-shot blur carrier.
+- `avatar-split` may now bind current-Skill landscape shot variants for true
+  16:9 full cutaways while split windows keep their verified 9:16 media.
+  Canary/full-production composition rejects missing landscape variants; only
+  framework demos retain the portrait blur-carrier fallback.
+- Presenter edit-plan creation now reopens the identity-bound pure-B-roll
+  technical canary and 3-of-5 user decision. Canary/full-production layout
+  work cannot start before the original Skill workflow is approved.
 
 - Three governed presenter composition modes: unchanged `original`, centered
   `avatar-center`, and `avatar-split`, which reuses validated 9:16 B-roll

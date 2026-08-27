@@ -113,7 +113,7 @@ UTF-8 SRT 입력은 중국어로 제한되지 않습니다. 실제 언어 품질
 ## 검증 범위
 
 - macOS의 Codex에서 v1.0.0 production benchmark를 완료했습니다. Claude Code 설치/계약은 검증했지만 동일 입력 v1 production 비교는 pending입니다.
-- v1.0.1 기본 결과물: runtime source에서 직접 렌더링한 순서형 H.264 shot, 3840 × 2160, 30 fps. 전체 Master는 선택 사항입니다.
+- v1.0.1 기본 결과물: runtime source에서 직접 렌더링한 순서형 H.264 shot, 1920 × 1080, 30 fps. 4K는 명시적으로 요청할 때만 사용하며 전체 Master는 선택 사항입니다.
 - 동일 입력의 새 5-shot HyperFrames canary는 직접 render, full decode, 시청 receipt, 구성·소재·signature motion gate를 통과했습니다. 사용자는 결과를 승인하고 나머지 shot과 전체 preview를 만들지 않고 공개하도록 명시했습니다. 따라서 전체 production이나 두 backend의 동등 지원은 주장하지 않습니다.
 - 출력 정책은 직접 JSON으로 작성하지 않고 `create-production-profile.mjs`로 생성합니다. Parent는 이 파일을 항상 `plan-runtime.mjs --production-profile`에 전달하며 너비, 높이, fps, 오디오, H.264 MP4 조건을 계획, 각 Builder 작업, 납품 검증에 동일한 해시로 고정합니다. 예를 들어 `--width 1080 --height 1920 --fps 25 --audio silent --master-format h264-mp4`는 기본값으로 되돌아가지 않는 세로형 25 fps 프로필을 만듭니다.
 - HyperFrames와 Remotion은 독립 백엔드이며 시각적 동일성을 보장하지 않습니다.

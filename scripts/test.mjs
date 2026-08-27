@@ -223,7 +223,7 @@ async function writeV09PlanningFixture(base) {
 
 function frozenFacts(overrides = {}) {
   return {
-    container: 'matroska,webm', codec: 'ffv1', width: 3840, height: 2160,
+    container: 'matroska,webm', codec: 'ffv1', width: 1920, height: 1080,
     fps: '30/1', pixelFormat: 'yuv444p10le', colorSpace: 'bt709',
     colorTransfer: 'bt709', colorPrimaries: 'bt709', colorRange: 'tv',
     durationSeconds: 1, frameCount: 30, audioStreams: 0, startTimeSeconds: 0,
@@ -270,8 +270,8 @@ function controlledMediaRunner({
       await writeFile(output, Buffer.from(isMaster ? 'CONTROLLED_MASTER_MEDIA' : 'CONTROLLED_PREVIEW_MEDIA'));
       factsByFile.set(output, frozenFacts({
         container: 'mov,mp4,m4a,3gp,3g2,mj2', codec: 'h264', pixelFormat: 'yuv420p',
-        width: isMaster ? 3840 : Number(scale?.[1] ?? 1920),
-        height: isMaster ? 2160 : Number(scale?.[2] ?? 1080),
+        width: isMaster ? 1920 : Number(scale?.[1] ?? 1920),
+        height: isMaster ? 1080 : Number(scale?.[2] ?? 1080),
         durationSeconds: 2, frameCount: 60,
         ...(isMaster ? masterFacts : previewFacts),
       }));
@@ -5248,7 +5248,7 @@ test('production profile CLI creates default and vertical policies and planning 
   await execFileAsync(process.execPath, [profileScript, '--output', defaultFile]);
   const defaultProfile = JSON.parse(await readFile(defaultFile, 'utf8'));
   assert.deepEqual(defaultProfile, createProductionProfile());
-  assert.deepEqual(defaultProfile.raster, { width: 3840, height: 2160 });
+  assert.deepEqual(defaultProfile.raster, { width: 1920, height: 1080 });
   assert.deepEqual(defaultProfile.fps, { numerator: 30, denominator: 1 });
 
   const customFile = path.join(fixture.productionRoot, 'production-profile.json');
@@ -5397,7 +5397,7 @@ test('v1 planning writes one immutable plan and minimal Builder task per authori
     ['assignments', 'runtime-plan.json'],
   );
   const tamperedProfilePlan = structuredClone(result.plan);
-  tamperedProfilePlan.productionProfile.raster.width = 1920;
+  tamperedProfilePlan.productionProfile.raster.width = 1280;
   await assert.rejects(
     validateRuntimePlan(tamperedProfilePlan, fixture),
     /productionProfile\/identity|aggregate does not match/u,
@@ -5431,7 +5431,7 @@ test('v1 lightweight frozen unit media makes a low-cost preview and revalidates 
       schemaVersion: '1.0.0', blockId: assignment.blockId, runtime: assignment.runtime,
       window: assignment.window, shotIds: assignment.shotIds,
       profile: {
-        width: 3840, height: 2160, fpsNumerator: 30, fpsDenominator: 1,
+        width: 1920, height: 1080, fpsNumerator: 30, fpsDenominator: 1,
         pixelFormat: 'yuv420p', colorSpace: 'bt709', colorTransfer: 'bt709',
         colorPrimaries: 'bt709', colorRange: 'tv', mezzanineClass: 'visually-lossless',
       },
@@ -5498,7 +5498,7 @@ test('v1 lightweight frozen unit media makes a low-cost preview and revalidates 
   });
   assert.equal(delivery.status, 'master-ready');
   assert.notDeepEqual(await readFile(master), await readFile(preview));
-  assert.equal(delivery.mediaFacts.width, 3840);
+  assert.equal(delivery.mediaFacts.width, 1920);
   await writeFile(preview, 'changed-after-approval');
   await assert.rejects(deliverFrozenMaster({
     planFile: path.join(fixture.productionRoot, '01-runtime-plan', 'runtime-plan.json'),

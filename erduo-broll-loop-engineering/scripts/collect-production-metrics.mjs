@@ -162,6 +162,28 @@ function summarizeStages(events) {
   return stages.sort((left, right) => left.startedAt.localeCompare(right.startedAt) || left.spanId.localeCompare(right.spanId));
 }
 
+function summarizeReviewWaits(events) {
+  const waits = [];
+  for (const renderEnd of events.filter((event) => (
+    event.type === 'stage-end' && event.stage === 'lead-builder'
+    && event.status === 'passed' && event.unitId
+  ))) {
+    const receiptStart = events.find((event) => (
+      event.type === 'stage-start' && event.stage === 'builder'
+      && event.unitId === renderEnd.unitId
+      && Date.parse(event.occurredAt) >= Date.parse(renderEnd.occurredAt)
+    ));
+    if (!receiptStart) continue;
+    waits.push({
+      unitId: renderEnd.unitId,
+      renderEndedAt: renderEnd.occurredAt,
+      receiptStartedAt: receiptStart.occurredAt,
+      wallClockMs: Date.parse(receiptStart.occurredAt) - Date.parse(renderEnd.occurredAt),
+    });
+  }
+  return waits;
+}
+
 function summarizeAgentCalls(events) {
   const result = { total: 0, director: 0, assets: 0, builder: 0, revision: 0, other: 0, fullHistory: 0 };
   for (const event of events.filter(({ type }) => type === 'agent-call')) {
@@ -257,6 +279,7 @@ export async function collectProductionMetrics({
     schemaVersion: '1.0.0', generatedAt: now().toISOString(), productionRoot: '.',
     plan: summarizePlan(plan),
     stages: summarizeStages(events),
+    reviewWaits: summarizeReviewWaits(events),
     agentCalls: summarizeAgentCalls(events),
     files,
     operations: summarizeOperations(events),

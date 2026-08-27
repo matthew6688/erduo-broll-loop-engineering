@@ -53,7 +53,8 @@ node <skill-root>/scripts/create-production-profile.mjs \
   --audio <silent-or-preserve-source> --master-format h264-mp4
 ```
 
-Use no optional flags for the 3840×2160, 30 fps, silent default. Do not write
+Use no optional flags for the 1920×1080, 30 fps, silent default. Use 4K only
+when the user explicitly requests it. Do not write
 the profile JSON manually. Then run:
 
 ```text

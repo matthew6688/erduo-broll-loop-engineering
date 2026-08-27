@@ -70,10 +70,12 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - HyperFrames Assignment Preflight 同时检查 strict runtime 的根节点 `data-start="0"`、`data-no-timeline`/timeline registry 与禁止 `../` 素材路径，避免这些静态源码错误消耗实际渲染预算。
 - Parent 从每镜运行时源码直接生成独立 H.264 文件、`shot-media.json`、6 格语义检查图和全片 `delivery-index.json`；禁止从 unit 或 Master 二次切割冒充直出。
 - `production-metrics.json` 可汇总阶段耗时、Agent 调用、unit、文件/字节、渲染/解码/hash、失败/重试与可选宿主 Token；没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
+- 五镜头稳定源码基准已从 `79m37s` 的旧批准到门禁墙钟缩短到新根目录的 `3m19s`，实际命令约 `1m49s`；新旧 canary SSIM 为 `0.999203`。该数据证明稳定源码后的机械闭环，不冒充从零创意生产的 24 倍等口径加速。详见 [`docs/V1.0.1-SPEED-OPTIMIZATION.md`](docs/V1.0.1-SPEED-OPTIMIZATION.md)。
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
-- 默认 shot 规格为 4K、30 fps、H.264 MP4；字幕不重复烧录，背景音乐不自动添加。
+- 默认 shot 规格为 1920×1080、30 fps、H.264 MP4；4K 仅在用户明确要求时生成。字幕不重复烧录，背景音乐不自动添加。
 - 可选 Presenter 模式同时支持真人和数字人：把已经冻结到本地的带声 MP4 登记为 provider-neutral presenter source，并用 `presenterKind=human|digital` 明确来源类型。三个冻结版式为 `original`、`avatar-center` 和 `avatar-split`；第三种在横屏数字人底图左侧直接复用已验证的 9:16 B-roll，不创建新 B-roll 主题。仓库另有受限的 HeyGen canary adapter，用于授权输入、余额预检、上传、幂等提交、轮询/恢复和下载；它不是完整的正式生产 Provider。逐镜 B-roll 仍保持静音，最终合成器只保留一条 presenter 音轨。
+- Presenter layout 是纯 B-roll 审批后的交付层：五镜技术 canary 和用户 3/5 决策未通过时，edit-plan 命令会直接失败；layout 不得改 DesignMD、Recipe 含义或 B-roll 动画体系。
 
 真人/数字人双模式、竖屏/YouTube 横屏的生产边界、审批门禁、已验证能力和后续产品化顺序，
 见 [`docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md`](docs/PRESENTER-VIDEO-PRODUCTION-OPERATING-MODEL.md)。
@@ -103,7 +105,7 @@ node erduo-broll-loop-engineering/scripts/create-production-profile.mjs \
 
 父流程必须把生成文件通过 `plan-runtime.mjs --production-profile <文件>`
 传入计划。画幅、帧率、音频和输出格式随后以同一个哈希写进计划、每个
-Builder 任务和成片校验；明确的竖屏或其他帧率不会退回默认 4K/30。
+Builder 任务和成片校验；明确的竖屏或其他帧率不会退回默认 1080p/30。
 
 ### 可选：真人或数字人 + B-roll 最终合成
 
@@ -172,6 +174,13 @@ node erduo-broll-loop-engineering/scripts/verify-presenter-delivery.mjs \
 和结尾，约占 15–25%；其余 75–85% 用信息图、界面、素材与证据型 B-roll 覆盖。
 正式发布必须用 `--scope full-production`，且 presenter source 同时具有 `publishing`
 授权和 `full-production` 用户批准；canary/internal 合同不能生成正式发布合成。
+横屏 `avatar-split` 的 split window 使用经验证的 9:16 版本；full B-roll cutaway 必须使用
+同一 Recipe、默认 DesignMD、时间和文字原生重排的 1920×1080 版本。只有不可发布的
+`framework-demo` 可以在缺少横版时使用“完整竖版画面＋同镜暗化模糊背景”的降级承载，
+canary 和完整生产缺横版会直接失败。只有不可发布的 `framework-demo` 可以引用缺少当前 Skill
+sidecar 的旧稳定 B-roll；它仍须逐项验证 SRT、默认 DesignMD、规格、Recipe 视觉字段、媒体
+合同、哈希和完整解码，并在 receipt 中明确 `publishable=false`。这条路径不能进入 canary、
+完整生产或发布，也不会回填历史凭证。
 字幕版或其他最终衍生版还必须通过 Final Delivery Gate：字幕 sidecar 必须与 Runtime Plan
 绑定的原始 SRT 逐字节一致，字幕不能超过媒体时长，成片必须完整解码且只有一条 AAC/48 kHz
 音轨，响度达到门槛，并且解码后的 PCM 音频必须与已批准的主合成完全一致。这样可直接阻止

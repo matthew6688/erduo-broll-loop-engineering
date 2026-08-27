@@ -6,9 +6,11 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {writeProductionProfile} from '../erduo-broll-loop-engineering/scripts/create-production-profile.mjs';
-import {splitVideoFilters} from '../erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs';
 import {
-  compilePresenterSegments, createPresenterEditPlan,
+  assertLandscapeVariantCoverage, portraitBrollInLandscapeFilters, splitVideoFilters,
+} from '../erduo-broll-loop-engineering/scripts/assemble-presenter-broll.mjs';
+import {
+  compilePresenterSegments, createPresenterEditPlan, trimPresenterSegments,
 } from '../erduo-broll-loop-engineering/scripts/create-presenter-edit-plan.mjs';
 import {
   bindPresentationModeContext, createPresentationMode,
@@ -137,6 +139,21 @@ test('avatar-split refuses landscape B-roll and compiles mixed windows to split 
   assert.equal(compilePresenterSegments([recipe], 4000, 'avatar-split')[1].kind, 'broll');
 });
 
+test('framework demo may stop at an approved boundary without compiling the rest of the film', () => {
+  const segments = [
+    {kind: 'presenter', startMs: 0, endMs: 6040},
+    {kind: 'split', shotId: 's02', startMs: 6040, endMs: 15940},
+    {kind: 'broll', shotId: 's03', startMs: 15940, endMs: 20140},
+    {kind: 'presenter', startMs: 20140, endMs: 23460},
+  ];
+  assert.deepEqual(trimPresenterSegments(segments, 20140), segments.slice(0, 3));
+  assert.deepEqual(trimPresenterSegments(segments, 18000), [
+    ...segments.slice(0, 2),
+    {kind: 'broll', shotId: 's03', startMs: 15940, endMs: 18000},
+  ]);
+  assert.throws(() => trimPresenterSegments(segments, 30000), /beyond the compiled timeline/u);
+});
+
 test('presenter edit plan v3 binds avatar-split mode and compiles a landscape split timeline', async (t) => {
   const value = await fixture(t);
   const modeFile = path.join(value.inputs, 'presentation-mode.json');
@@ -198,11 +215,21 @@ test('presenter edit plan v3 binds avatar-split mode and compiles a landscape sp
     presenterSourceFile: value.presenterFile,
     outputFile: path.join(planDirectory, 'presenter-edit-plan.json'), compositionScope: 'canary',
     verifyRuntimePlan: async () => ({status: 'valid'}),
+    verifyBrollCanaryApproval: async () => ({status: 'approved'}),
   });
   assert.equal(result.plan.schemaVersion, '3.0.0');
   assert.equal(result.plan.presentationMode, 'avatar-split');
   assert.deepEqual(result.plan.output, {width: 1920, height: 1080, fps: 30});
   assert.equal(result.plan.segments[1].kind, 'split');
+  await assert.rejects(createPresenterEditPlan({
+    productionRoot: value.root, runtimePlanFile, recipesDirectory: recipes,
+    presenterSourceFile: value.presenterFile,
+    outputFile: path.join(planDirectory, 'blocked-before-broll-approval.json'),
+    compositionScope: 'canary', verifyRuntimePlan: async () => ({status: 'valid'}),
+    verifyBrollCanaryApproval: async () => {
+      throw new Error('pure B-roll canary user approval has not passed');
+    },
+  }), /pure B-roll canary user approval has not passed/u);
 });
 
 test('avatar-split soft-boundary filter executes with a full-frame presenter base and portrait B-roll', async (t) => {
@@ -232,4 +259,49 @@ test('avatar-split soft-boundary filter executes with a full-frame presenter bas
   });
   assert.equal(result.code, 0, result.stderr);
   await access(output);
+});
+
+test('avatar-split full B-roll preserves the portrait frame over a blurred landscape carrier', async (t) => {
+  const available = await runCommand({executable: 'ffmpeg', args: ['-version']});
+  if (available.code !== 0) {
+    t.skip('FFmpeg is not installed');
+    return;
+  }
+  const root = await mkdtemp(path.join(os.tmpdir(), 'presentation-full-broll-filter-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const output = path.join(root, 'full-broll.mp4');
+  const filters = portraitBrollInLandscapeFilters({
+    input: 0, startMs: 0, endMs: 1000, width: 1920, height: 1080,
+    fps: 30, output: 'vout', index: 0,
+  });
+  assert.match(filters.join(';'), /crop=1920:1080,gblur=.*overlay=x=\(W-w\)\/2/u);
+  const result = await runCommand({
+    executable: 'ffmpeg', cwd: root,
+    args: [
+      '-v', 'error', '-nostdin', '-f', 'lavfi', '-i', 'testsrc2=s=1080x1920:r=30:d=1',
+      '-filter_complex', filters.join(';'), '-map', '[vout]', '-an',
+      '-frames:v', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-n', output,
+    ],
+  });
+  assert.equal(result.code, 0, result.stderr);
+  await access(output);
+});
+
+test('avatar-split requires true landscape cutaways outside a framework demo', () => {
+  const segments = [
+    {kind: 'split', shotId: 's02', startMs: 0, endMs: 1000},
+    {kind: 'broll', shotId: 's03', startMs: 1000, endMs: 2000},
+  ];
+  assert.doesNotThrow(() => assertLandscapeVariantCoverage({
+    plan: {presentationMode: 'avatar-split', compositionScope: 'framework-demo', segments},
+    landscapeShots: new Map(),
+  }));
+  assert.throws(() => assertLandscapeVariantCoverage({
+    plan: {presentationMode: 'avatar-split', compositionScope: 'canary', segments},
+    landscapeShots: new Map(),
+  }), /requires landscape B-roll variants: s03/u);
+  assert.doesNotThrow(() => assertLandscapeVariantCoverage({
+    plan: {presentationMode: 'avatar-split', compositionScope: 'full-production', segments},
+    landscapeShots: new Map([['s03', {}]]),
+  }));
 });

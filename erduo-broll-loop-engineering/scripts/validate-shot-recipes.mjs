@@ -33,6 +33,28 @@ export function computeRecipeNonCreativeIdentity(recipe) {
   return createHash('sha256').update(canonicalJson(clone)).digest('hex');
 }
 
+function normalizeVisibleText(value) {
+  return String(value ?? '').normalize('NFKC').replace(/\s+/gu, ' ').trim().toLocaleLowerCase('en-US');
+}
+
+export function validateRecipeVisibleTextAgainstSrt(recipes, originalSrt) {
+  const spoken = normalizeVisibleText(originalSrt);
+  const failures = [];
+  for (const recipe of recipes) {
+    for (const entry of recipe.creativeProposal?.visibleText ?? []) {
+      if (entry.source !== 'srt') continue;
+      const text = normalizeVisibleText(entry.text);
+      if (!text || !spoken.includes(text)) {
+        failures.push(`${recipe.shotId}: SRT visibleText ${JSON.stringify(entry.text)} is not an exact phrase in the original SRT`);
+      }
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`Recipe SRT text provenance failed before runtime planning:\n${failures.join('\n')}`);
+  }
+  return {status: 'passed', checkedRecipes: recipes.length};
+}
+
 export function validateCreativeRevision(original, revised) {
   if (original?.schemaVersion !== '4.0.0' || revised?.schemaVersion !== '4.0.0'
     || original.shotId !== revised.shotId) {

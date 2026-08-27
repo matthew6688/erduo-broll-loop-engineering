@@ -12,7 +12,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 8. Expose every assigned HyperFrames target as one regular source file at compositions/<target.id>.html under sourceRoot; a root-level target HTML file is not bound.
 9. Before render, every literal viewer-facing string must resolve to the original SRT, creativeProposal.visibleText, shared vocabulary, or fixed chrome; production scaffolding, shot counters, stage labels, and undeclared English chrome are forbidden.
 10. Treat the standard command's aggregated Assignment Preflight, including the official HyperFrames browser visual check, and rendered text/motion revision reports as one bounded build loop: fix every reported preflight issue together before spending render budget, then use at most two actual render attempts; a third render is forbidden and returns to the Recipe or Runtime Plan.
-11. In the final view receipt, decision=revised means at least one Recipe creativeProposal field changed and every such change is listed; implementation-only source repairs stay in the internal attempt archive and end with decision=accepted when the bound creativeProposal is unchanged.
+11. Return one compact viewing conclusion to Parent. Parent, not Builder, creates the hash-bound view receipt. decision=revised means at least one Recipe creativeProposal field changed and every such change is listed; implementation-only source repairs stay in the internal attempt archive and end with decision=accepted when the bound creativeProposal is unchanged.
 12. Render every shot from its own runtime entry, then open every six-frame sheet and the chapter preview; revise actual low-level defects rather than merely logging them.
 13. Handoff requires one concise accepted or revised conclusion. If revised, name the real source change; do not write a long viewing essay.
 14. Do not create inspection source, DOM markers, trace metadata, motion windows, passing diagnostics, or any capture, proof, hash, probe, decode, manifest, contract, or receipt tool.
@@ -40,7 +40,7 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 - Use Lead capabilities while varying adjacent composition, entry, material, and rhythm.
 - Bind every assigned target at compositions/<target.id>.html, then clear the standard command's pre-render text provenance and post-render Recipe/rhythm motion gates.
 - Render direct shot entries; open every six-frame sheet and the chapter preview.
-- Repair visible defects and record one accepted or revised conclusion.
+- Repair visible defects and return one accepted or revised conclusion plus any creativeProposal changes so Parent can record the receipt mechanically.
 - Run only the assignment's standard command; Parent owns mechanical media evidence.
 
 ## Compression recovery fields

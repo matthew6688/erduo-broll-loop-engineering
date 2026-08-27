@@ -88,7 +88,11 @@ Assignment Preflight before render: runtime-plan/assignment/source/asset/
 governance/Recipe/text checks plus every active target's runtime metadata are
 validated, and all target failures are returned together. A passing preflight
 writes `checks/assignment-preflight.json`. Preflight failures consume no render
-attempt. HyperFrames preflight also stages each bound composition as a temporary
+attempt. A failed HyperFrames visual preflight writes a source-identity-bound
+failure receipt containing all composition failures and preserves bounded
+stdout plus stderr. Re-running the unchanged source is rejected before another
+browser invocation; repair the listed source defects together first.
+HyperFrames preflight also stages each bound composition as a temporary
 root and runs the official browser `check` at tween boundaries with frame/layout
 checking. Missing assets/fonts, runtime errors, contrast failures, collisions,
 and unsafe overflow are returned before the render ledger starts. HyperFrames metadata validation includes the strict runtime's root
@@ -108,6 +112,15 @@ still fail closed. Parent does not hand-fix source, and the user sees only a
 gate-clean canary. The canary technical gate must hash-bind both passing
 rendered reports.
 
+After Lead or Builder has actually opened the sheets/preview, it returns only
+`accepted|revised` and any Recipe proposal changes. Parent creates the strict
+hash-bound receipt with `record-view-receipt.mjs`; creative agents never hand-
+author receipt JSON. Parent then runs `finalize-canary.mjs` to reopen contracts,
+media, sheets, audits, receipts, and the preview and to create or validate the
+technical gate. Do not repeat an Assignment standard command merely to notice a
+new receipt or finalize the gate: that command is for source/preflight/render,
+not post-view bookkeeping.
+
 When the owning Recipe or Plan changes after the two-attempt ceiling, start a
 new governed Plan but do not render unchanged shots again. Parent runs
 `reuse-unchanged-shots.mjs` only after the new source manifests exist. The
@@ -117,6 +130,12 @@ copies the immutable evidence, writes a current-Plan Skill sidecar, and records
 a lineage receipt. Any changed binding rejects reuse. Asset/font/license
 closures are mechanically revalidated and Assets is not redispatched unless
 their content or approved route actually changed.
+
+Across production roots, `reuse-foundation-assets.mjs` may seed only fonts and
+license texts from a previously passed `assets-gate.json`. It verifies every
+declared hash before copying, refuses overwrite drift, and writes a reuse
+receipt. Shared screenshots, video, generated images, and other episode media
+remain under the new Assets decision and are never copied by this command.
 
 ## Direct original context
 
@@ -195,6 +214,10 @@ change: <required only when revised>
 ```
 
 No long viewing essay or extra approval document is required.
+Parent turns this conclusion into the schema-valid receipt with
+`record-view-receipt.mjs`, then uses `finalize-canary.mjs`. The Builder does not
+re-run its standard command after viewing unless source or Recipe content
+actually changed.
 
 ## No proof work in creative source
 

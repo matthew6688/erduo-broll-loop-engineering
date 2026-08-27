@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 
+import {createHash} from 'node:crypto';
 import { link, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { probeAudioVisual } from './create-presenter-source.mjs';
-import { compilePresenterSegments } from './create-presenter-edit-plan.mjs';
+import { compilePresenterSegments, trimPresenterSegments } from './create-presenter-edit-plan.mjs';
 import { canonicalJson, validateSchemaValue } from './runtime-schema-validator.mjs';
 import {
   commandFailure, hashFile, probeAndDecode, readJson, requireRegularFile, runCommand,
 } from './shot-media-lib.mjs';
 import {
-  parseCliPairs, presenterKindOf, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot,
+  parseCliPairs, presenterKindOf, resolveExistingDirectoryWithinRoot,
+  resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot,
 } from './presenter-media-lib.mjs';
 import { computeRecipeIdentity, computeRecipeTruthIdentity } from './validate-shot-recipes.mjs';
 import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
@@ -152,12 +154,28 @@ async function verifyCompiledPlanBindings({ productionRoot, sourceRecord, source
   const compiledSegments = compilePresenterSegments(
     boundRecipes, source.media.durationMs, presentationContext?.mode ?? 'original',
   );
-  if (canonicalJson(plan.segments) !== canonicalJson(compiledSegments)) {
+  const expectedSegments = plan.window
+    ? trimPresenterSegments(compiledSegments, plan.window.endMs)
+    : compiledSegments;
+  if (plan.window && (plan.compositionScope !== 'framework-demo' || plan.window.startMs !== 0)) {
+    throw new Error('only framework-demo composition may declare a zero-based partial window');
+  }
+  if (canonicalJson(plan.segments) !== canonicalJson(expectedSegments)) {
     throw new Error('presenter edit plan segments differ from the bound Recipe presenter treatments');
   }
   const skillUsageBinding = runtimePlan.sourceContext?.skillUsage;
   if (!skillUsageBinding) throw new Error('presenter composition requires runtime-plan skill usage binding');
-  return {runtimePlan, skillUsageBinding};
+  return {runtimePlan, skillUsageBinding, boundRecipes};
+}
+
+function visualRecipeIdentity(recipe) {
+  const projected = structuredClone(recipe);
+  if (projected.creativeProposal) delete projected.creativeProposal.presenterTreatment;
+  return createHash('sha256').update(canonicalJson(projected)).digest('hex');
+}
+
+function normalizeSha256Identity(value) {
+  return typeof value === 'string' ? value.replace(/^sha256:/u, '') : value;
 }
 
 function seconds(ms) {
@@ -203,9 +221,39 @@ export function splitVideoFilters({
   ];
 }
 
+export function portraitBrollInLandscapeFilters({
+  input, startMs, endMs, width, height, fps, output, index,
+}) {
+  const foregroundWidth = evenFloor(height * 9 / 16);
+  const source = `broll-source-${index}`;
+  const background = `broll-background-${index}`;
+  const foregroundInput = `broll-foreground-input-${index}`;
+  const foreground = `broll-foreground-${index}`;
+  return [
+    `[${input}:v:0]trim=start=${seconds(startMs)}:end=${seconds(endMs)},setpts=PTS-STARTPTS,`
+      + `setsar=1,fps=${fps},split=2[${source}][${foregroundInput}]`,
+    `[${source}]scale=${width}:${height}:force_original_aspect_ratio=increase,`
+      + `crop=${width}:${height},gblur=sigma=42,eq=brightness=-0.28:saturation=0.65,format=yuv420p[${background}]`,
+    `[${foregroundInput}]scale=${foregroundWidth}:${height}:force_original_aspect_ratio=decrease,`
+      + `pad=${foregroundWidth}:${height}:(ow-iw)/2:(oh-ih)/2:color=0x111315,format=yuv420p[${foreground}]`,
+    `[${background}][${foreground}]overlay=x=(W-w)/2:y=0:shortest=1,setsar=1,format=yuv420p[${output}]`,
+  ];
+}
+
+export function assertLandscapeVariantCoverage({plan, landscapeShots}) {
+  if (plan.presentationMode !== 'avatar-split' || plan.compositionScope === 'framework-demo') return;
+  const missing = [...new Set(plan.segments
+    .filter(({kind}) => kind === 'broll')
+    .map(({shotId}) => shotId))]
+    .filter((shotId) => !landscapeShots.has(shotId));
+  if (missing.length) {
+    throw new Error(`avatar-split canary/full-production requires landscape B-roll variants: ${missing.join(', ')}`);
+  }
+}
+
 async function loadVerifiedShots({
   productionRoot, deliveryRoot, deliveryIndex, planIdentity, skillUsageBinding,
-  ffmpeg, ffprobe, runner,
+  verifySkillEvidence = true, ffmpeg, ffprobe, runner,
 }) {
   const shots = new Map();
   for (const indexed of deliveryIndex.shots) {
@@ -226,9 +274,11 @@ async function loadVerifiedShots({
     }
     const mediaSha256 = await hashFile(mediaPath);
     if (mediaSha256 !== contract.media.sha256) throw new Error(`${indexed.shotId} media hash changed before presenter composition`);
-    await verifyVideoSkillUsage({
-      productionRoot, videoFile: mediaPath, planIdentity, binding: skillUsageBinding,
-    });
+    if (verifySkillEvidence) {
+      await verifyVideoSkillUsage({
+        productionRoot, videoFile: mediaPath, planIdentity, binding: skillUsageBinding,
+      });
+    }
     const facts = await probeAndDecode(mediaPath, {
       ffmpeg, ffprobe, runner, cwd: path.dirname(mediaPath), shotId: `${indexed.shotId} B-roll`,
     });
@@ -251,6 +301,15 @@ export async function assemblePresenterBroll({
   editPlanFile,
   deliveryIndexFile,
   deliveryRoot = path.join(productionRoot, '05-delivery'),
+  brollProductionRoot = productionRoot,
+  brollDeliveryRoot = deliveryRoot,
+  brollRuntimePlanFile = path.join(brollProductionRoot, '01-runtime-plan', 'runtime-plan.json'),
+  brollRecipesDirectory = path.join(brollProductionRoot, '01-director', 'shot-recipes'),
+  landscapeProductionRoot = null,
+  landscapeDeliveryRoot = null,
+  landscapeDeliveryIndexFile = null,
+  landscapeRuntimePlanFile = null,
+  landscapeRecipesDirectory = null,
   outputFile = path.join(deliveryRoot, 'presenter-broll-master.mp4'),
   receiptFile = path.join(deliveryRoot, 'presenter-broll-master.receipt.json'),
   ffmpeg = 'ffmpeg',
@@ -263,7 +322,7 @@ export async function assemblePresenterBroll({
   const [sourceRecord, planRecord, indexRecord, output, receipt] = await Promise.all([
     resolveExistingRegularWithinRoot(productionRoot, presenterSourceFile, 'presenter source contract'),
     resolveExistingRegularWithinRoot(productionRoot, editPlanFile, 'presenter edit plan'),
-    resolveExistingRegularWithinRoot(deliveryRoot, deliveryIndexFile, 'delivery index'),
+    resolveExistingRegularWithinRoot(brollDeliveryRoot, deliveryIndexFile, 'delivery index'),
     resolveNewOutputWithinRoot(deliveryRoot, outputFile, 'presenter composition output'),
     resolveNewOutputWithinRoot(deliveryRoot, receiptFile, 'presenter composition receipt'),
   ]);
@@ -280,7 +339,7 @@ export async function assemblePresenterBroll({
     assertSchema(plan, 'presenter-edit-plan.schema.json', 'presenter edit plan'),
     assertSchema(deliveryIndex, 'delivery-index.schema.json', 'delivery index'),
   ]);
-  const {runtimePlan, skillUsageBinding} = await verifyCompiledPlanBindings({
+  const {runtimePlan, skillUsageBinding, boundRecipes} = await verifyCompiledPlanBindings({
     productionRoot, sourceRecord, source, plan,
   });
   const presenter = await resolveExistingRegularWithinRoot(productionRoot, source.media.file, 'presenter media');
@@ -299,11 +358,145 @@ export async function assemblePresenterBroll({
     if (presenterFacts[key] !== source.media[key]) throw new Error(`presenter media ${key} differs from its source contract`);
   }
   if (Math.abs(presenterFacts.fps - source.media.fps) > 1e-6) throw new Error('presenter media fps differs from its source contract');
+  const externalBroll = path.resolve(brollProductionRoot) !== path.resolve(productionRoot);
+  let brollLineage = null;
+  let shotPlanIdentity = runtimePlan.identity;
+  let shotSkillUsageBinding = skillUsageBinding;
+  const externalRecipeByShot = new Map();
+  if (externalBroll) {
+    if (plan.compositionScope !== 'framework-demo') {
+      throw new Error('external legacy B-roll is allowed only for a non-publishable framework-demo');
+    }
+    const [brollPlanRecord, brollRecipeDirectory] = await Promise.all([
+      resolveExistingRegularWithinRoot(brollProductionRoot, brollRuntimePlanFile, 'external B-roll runtime plan'),
+      resolveExistingDirectoryWithinRoot(brollProductionRoot, brollRecipesDirectory, 'external B-roll Recipes'),
+    ]);
+    const brollPlan = await readJson(brollPlanRecord.absolute, 'external B-roll runtime plan');
+    if (computeRuntimePlanIdentity(brollPlan) !== brollPlan.identity) {
+      throw new Error('external B-roll runtime plan identity differs from its contents');
+    }
+    if (brollPlan.sourceContext?.originalSrt?.sha256 !== runtimePlan.sourceContext?.originalSrt?.sha256
+      || brollPlan.sourceContext?.originalDesign?.sha256 !== runtimePlan.sourceContext?.originalDesign?.sha256
+      || brollPlan.productionProfile?.identity !== runtimePlan.productionProfile?.identity) {
+      throw new Error('external B-roll lineage differs from the current SRT, DesignMD, or production profile');
+    }
+    const currentRecipes = new Map(boundRecipes.map((recipe) => [recipe.shotId, recipe]));
+    const usedShotIds = [...new Set(plan.segments
+      .filter(({kind}) => ['broll', 'split'].includes(kind))
+      .map(({shotId}) => shotId))];
+    const visualBindings = [];
+    for (const shotId of usedShotIds) {
+      const currentRecipe = currentRecipes.get(shotId);
+      const priorRecipeRecord = await resolveExistingRegularWithinRoot(
+        brollRecipeDirectory.absolute, path.join(brollRecipeDirectory.absolute, `${shotId}.json`),
+        `${shotId} external B-roll Recipe`,
+      );
+      const priorRecipe = await readJson(priorRecipeRecord.absolute, `${shotId} external B-roll Recipe`);
+      if (!currentRecipe || computeRecipeTruthIdentity(priorRecipe) !== computeRecipeTruthIdentity(currentRecipe)
+        || visualRecipeIdentity(priorRecipe) !== visualRecipeIdentity(currentRecipe)) {
+        throw new Error(`${shotId} external B-roll Recipe differs beyond presenterTreatment`);
+      }
+      externalRecipeByShot.set(shotId, priorRecipe);
+      visualBindings.push({shotId, visualRecipeIdentity: visualRecipeIdentity(currentRecipe)});
+    }
+    shotPlanIdentity = brollPlan.identity;
+    shotSkillUsageBinding = null;
+    brollLineage = {
+      mode: 'external-legacy-framework-demo', publishable: false,
+      runtimePlanSha256: await hashFile(brollPlanRecord.absolute), runtimePlanIdentity: brollPlan.identity,
+      skillEvidence: brollPlan.sourceContext?.skillUsage ? 'historical-binding-not-current' : 'missing-legacy',
+      visualBindings,
+    };
+  }
   const shots = await loadVerifiedShots({
-    productionRoot, deliveryRoot, deliveryIndex, planIdentity: runtimePlan.identity,
-    skillUsageBinding, ffmpeg, ffprobe, runner,
+    productionRoot: brollProductionRoot, deliveryRoot: brollDeliveryRoot, deliveryIndex,
+    planIdentity: shotPlanIdentity, skillUsageBinding: shotSkillUsageBinding,
+    verifySkillEvidence: !externalBroll, ffmpeg, ffprobe, runner,
   });
-  const mix = validatePresenterEditPlan({ plan, shots, presenterDurationMs: presenterFacts.durationMs });
+  for (const [shotId, priorRecipe] of externalRecipeByShot) {
+    if (normalizeSha256Identity(shots.get(shotId)?.contract.recipeIdentity)
+      !== normalizeSha256Identity(computeRecipeIdentity(priorRecipe))) {
+      throw new Error(`${shotId} external media contract is not bound to its Recipe`);
+    }
+  }
+  let landscapeShots = new Map();
+  let landscapeVariantLineage = null;
+  if (landscapeDeliveryIndexFile) {
+    if (plan.presentationMode !== 'avatar-split') {
+      throw new Error('landscape B-roll variants require avatar-split presentation mode');
+    }
+    const variantProductionRoot = path.resolve(landscapeProductionRoot ?? productionRoot);
+    const variantDeliveryRoot = path.resolve(landscapeDeliveryRoot ?? path.join(variantProductionRoot, '05-delivery'));
+    const variantRuntimePlanFile = landscapeRuntimePlanFile
+      ?? path.join(variantProductionRoot, '01-runtime-plan', 'runtime-plan.json');
+    const variantRecipesDirectory = landscapeRecipesDirectory
+      ?? path.join(variantProductionRoot, '01-director', 'shot-recipes');
+    const [variantIndexRecord, variantPlanRecord, variantRecipeDirectory] = await Promise.all([
+      resolveExistingRegularWithinRoot(variantDeliveryRoot, landscapeDeliveryIndexFile, 'landscape B-roll delivery index'),
+      resolveExistingRegularWithinRoot(variantProductionRoot, variantRuntimePlanFile, 'landscape B-roll runtime plan'),
+      resolveExistingDirectoryWithinRoot(variantProductionRoot, variantRecipesDirectory, 'landscape B-roll Recipes'),
+    ]);
+    const [variantIndex, variantPlan] = await Promise.all([
+      readJson(variantIndexRecord.absolute, 'landscape B-roll delivery index'),
+      readJson(variantPlanRecord.absolute, 'landscape B-roll runtime plan'),
+    ]);
+    await assertSchema(variantIndex, 'delivery-index.schema.json', 'landscape B-roll delivery index');
+    if (computeRuntimePlanIdentity(variantPlan) !== variantPlan.identity) {
+      throw new Error('landscape B-roll runtime plan identity differs from its contents');
+    }
+    const variantFps = variantPlan.productionProfile?.fps?.numerator
+      / variantPlan.productionProfile?.fps?.denominator;
+    if (variantPlan.sourceContext?.originalSrt?.sha256 !== runtimePlan.sourceContext?.originalSrt?.sha256
+      || variantPlan.sourceContext?.originalDesign?.sha256 !== runtimePlan.sourceContext?.originalDesign?.sha256
+      || variantPlan.productionProfile?.raster?.width !== plan.output.width
+      || variantPlan.productionProfile?.raster?.height !== plan.output.height
+      || Math.abs(variantFps - plan.output.fps) > 1e-6) {
+      throw new Error('landscape B-roll lineage differs from the current SRT, DesignMD, or landscape output profile');
+    }
+    const requiredLandscapeShotIds = [...new Set(plan.segments
+      .filter(({kind}) => kind === 'broll').map(({shotId}) => shotId))];
+    const currentRecipes = new Map(boundRecipes.map((recipe) => [recipe.shotId, recipe]));
+    const variantRecipes = new Map();
+    for (const shotId of requiredLandscapeShotIds) {
+      const record = await resolveExistingRegularWithinRoot(
+        variantRecipeDirectory.absolute, path.join(variantRecipeDirectory.absolute, `${shotId}.json`),
+        `${shotId} landscape B-roll Recipe`,
+      );
+      const recipe = await readJson(record.absolute, `${shotId} landscape B-roll Recipe`);
+      const current = currentRecipes.get(shotId);
+      if (!current || computeRecipeTruthIdentity(recipe) !== computeRecipeTruthIdentity(current)
+        || visualRecipeIdentity(recipe) !== visualRecipeIdentity(current)) {
+        throw new Error(`${shotId} landscape B-roll Recipe differs beyond presenterTreatment`);
+      }
+      variantRecipes.set(shotId, recipe);
+    }
+    const variantSkillUsageBinding = variantPlan.sourceContext?.skillUsage;
+    if (!variantSkillUsageBinding) throw new Error('landscape B-roll runtime plan requires current Skill evidence');
+    landscapeShots = await loadVerifiedShots({
+      productionRoot: variantProductionRoot, deliveryRoot: variantDeliveryRoot,
+      deliveryIndex: variantIndex, planIdentity: variantPlan.identity,
+      skillUsageBinding: variantSkillUsageBinding, verifySkillEvidence: true,
+      ffmpeg, ffprobe, runner,
+    });
+    for (const shotId of requiredLandscapeShotIds) {
+      const shot = landscapeShots.get(shotId);
+      if (!shot) throw new Error(`${shotId} requires a delivered landscape B-roll variant`);
+      if (normalizeSha256Identity(shot.contract.recipeIdentity)
+        !== normalizeSha256Identity(computeRecipeIdentity(variantRecipes.get(shotId)))) {
+        throw new Error(`${shotId} landscape media contract is not bound to its Recipe`);
+      }
+    }
+    landscapeVariantLineage = {
+      runtimePlanSha256: await hashFile(variantPlanRecord.absolute),
+      runtimePlanIdentity: variantPlan.identity,
+      skillEvidence: 'current',
+      shotIds: requiredLandscapeShotIds,
+    };
+  }
+  const effectiveShots = new Map(shots);
+  for (const [shotId, shot] of landscapeShots) effectiveShots.set(shotId, shot);
+  assertLandscapeVariantCoverage({plan, landscapeShots});
+  const mix = validatePresenterEditPlan({ plan, shots: effectiveShots, presenterDurationMs: presenterFacts.durationMs });
   const { width, height, fps } = plan.output;
   if (width % 2 !== 0 || height % 2 !== 0) throw new Error('presenter composition output width and height must be even');
   const args = ['-v', 'error', '-nostdin', '-i', presenter.absolute];
@@ -315,7 +508,9 @@ export async function assemblePresenterBroll({
     let localEnd = segment.endMs;
     let currentInput = 0;
     if (segment.kind === 'broll' || segment.kind === 'split') {
-      const shot = shots.get(segment.shotId);
+      const shot = segment.kind === 'broll'
+        ? (landscapeShots.get(segment.shotId) ?? shots.get(segment.shotId))
+        : shots.get(segment.shotId);
       args.push('-i', shot.mediaPath);
       currentInput = inputIndex;
       inputIndex += 1;
@@ -329,6 +524,12 @@ export async function assemblePresenterBroll({
         presenterInput: 0, brollInput: currentInput,
         startMs: segment.startMs, endMs: segment.endMs,
         brollStartMs: localStart, brollEndMs: localEnd,
+        width, height, fps, output: label, index,
+      }));
+    } else if (segment.kind === 'broll' && plan.presentationMode === 'avatar-split'
+      && width > height && !landscapeShots.has(segment.shotId)) {
+      filters.push(...portraitBrollInLandscapeFilters({
+        input: currentInput, startMs: localStart, endMs: localEnd,
         width, height, fps, output: label, index,
       }));
     } else {
@@ -366,17 +567,30 @@ export async function assemblePresenterBroll({
       productionRoot, videoFile: output.absolute, planIdentity: runtimePlan.identity,
       binding: skillUsageBinding,
     });
-    const usedShotIds = [...new Set(plan.segments.filter(({ kind }) => ['broll', 'split'].includes(kind)).map(({ shotId }) => shotId))];
+    const usedShotRecords = [];
+    const usedShotKeys = new Set();
+    for (const segment of plan.segments.filter(({kind}) => ['broll', 'split'].includes(kind))) {
+      const variant = segment.kind === 'broll' && landscapeShots.has(segment.shotId) ? 'landscape' : 'portrait';
+      const key = `${segment.shotId}:${variant}`;
+      if (usedShotKeys.has(key)) continue;
+      usedShotKeys.add(key);
+      const shot = variant === 'landscape' ? landscapeShots.get(segment.shotId) : shots.get(segment.shotId);
+      usedShotRecords.push({shotId: segment.shotId, variant, sha256: shot.mediaSha256});
+    }
     const receiptValue = {
       schemaVersion: '1.0.0',
       compositionScope: plan.compositionScope,
       authorizationUse: source.authorization.use,
       presenterKind: presenterKindOf(source),
+      ...(brollLineage ? {brollLineage: {
+        ...brollLineage,
+        ...(landscapeVariantLineage ? {landscapeVariants: landscapeVariantLineage} : {}),
+      }} : {}),
       inputs: {
         presenterSourceSha256: await hashFile(sourcePath),
         deliveryIndexSha256: await hashFile(indexPath),
         editPlanSha256: await hashFile(planPath),
-        shotMedia: usedShotIds.map((shotId) => ({ shotId, sha256: shots.get(shotId).mediaSha256 })),
+        shotMedia: usedShotRecords,
       },
       mix: { ...mix, segments: plan.segments.length },
       output: {
@@ -391,7 +605,8 @@ export async function assemblePresenterBroll({
     receiptLinked = true;
     await rm(temporaryDirectory, { recursive: true, force: true });
     return {
-      status: 'presenter-broll-ready', output: output.absolute, receipt: receipt.absolute,
+      status: brollLineage ? 'presenter-broll-framework-demo-ready' : 'presenter-broll-ready',
+      output: output.absolute, receipt: receipt.absolute,
       mix, mediaFacts: { ...facts, codec: facts.videoCodec },
     };
   } catch (error) {
@@ -409,6 +624,15 @@ async function main() {
     productionRoot: options['production-root'], presenterSourceFile: options['presenter-source'],
     editPlanFile: options['edit-plan'], deliveryIndexFile: options['delivery-index'],
     deliveryRoot: options['delivery-root'], outputFile: options.output, receiptFile: options.receipt,
+    brollProductionRoot: options['broll-production-root'],
+    brollDeliveryRoot: options['broll-delivery-root'],
+    brollRuntimePlanFile: options['broll-runtime-plan'],
+    brollRecipesDirectory: options['broll-recipes'],
+    landscapeProductionRoot: options['landscape-production-root'],
+    landscapeDeliveryRoot: options['landscape-delivery-root'],
+    landscapeDeliveryIndexFile: options['landscape-delivery-index'],
+    landscapeRuntimePlanFile: options['landscape-runtime-plan'],
+    landscapeRecipesDirectory: options['landscape-recipes'],
     ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);

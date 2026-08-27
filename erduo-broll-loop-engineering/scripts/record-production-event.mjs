@@ -66,6 +66,29 @@ export async function recordProductionEvent({ eventsFile, ...input }) {
   return event;
 }
 
+export async function runTimedProductionStage({
+  eventsFile, stage, spanId, unitId, now = () => new Date(),
+}, operation) {
+  if (typeof operation !== 'function') throw new Error('timed production stage requires an operation');
+  const base = {
+    eventsFile, stage, spanId: spanId ?? `${stage}-${randomUUID()}`,
+    ...(unitId ? {unitId} : {}),
+  };
+  await recordProductionEvent({...base, type: 'stage-start', occurredAt: now().toISOString()});
+  try {
+    const result = await operation();
+    await recordProductionEvent({...base, type: 'stage-end', status: 'passed', occurredAt: now().toISOString()});
+    return result;
+  } catch (error) {
+    try {
+      await recordProductionEvent({...base, type: 'stage-end', status: 'failed', occurredAt: now().toISOString()});
+    } catch (timingError) {
+      error.message = `${error.message}\nstage timing closure also failed: ${timingError.message}`;
+    }
+    throw error;
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const event = await recordProductionEvent({

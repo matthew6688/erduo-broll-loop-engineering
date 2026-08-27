@@ -13,6 +13,7 @@ import {
 } from '../erduo-broll-loop-engineering/scripts/frozen-media-policy.mjs';
 import {
   recordProductionEvent,
+  runTimedProductionStage,
 } from '../erduo-broll-loop-engineering/scripts/record-production-event.mjs';
 import {
   collectProductionMetrics,
@@ -80,12 +81,20 @@ test('production metrics use one public-safe scan and preserve unknown host toke
   await recordProductionEvent({ ...base, eventId: 'e3', occurredAt: '2026-08-17T00:00:13.000Z', type: 'operation', operation: 'render', bytesProcessed: 64, unitId: 'U001' });
   await recordProductionEvent({ ...base, eventId: 'e4', occurredAt: '2026-08-17T00:00:15.000Z', type: 'operation', operation: 'full-decode', bytesProcessed: 64, unitId: 'U001' });
   await recordProductionEvent({ ...base, eventId: 'e5', occurredAt: '2026-08-17T00:00:20.000Z', type: 'stage-end', stage: 'builder', spanId: 'builder-U001', unitId: 'U001', status: 'passed' });
+  await recordProductionEvent({ ...base, eventId: 'e6', occurredAt: '2026-08-17T00:00:30.000Z', type: 'stage-start', stage: 'lead-builder', spanId: 'render-U002', unitId: 'U002' });
+  await recordProductionEvent({ ...base, eventId: 'e7', occurredAt: '2026-08-17T00:00:40.000Z', type: 'stage-end', stage: 'lead-builder', spanId: 'render-U002', unitId: 'U002', status: 'passed' });
+  await recordProductionEvent({ ...base, eventId: 'e8', occurredAt: '2026-08-17T00:00:55.000Z', type: 'stage-start', stage: 'builder', spanId: 'receipt-U002', unitId: 'U002' });
+  await recordProductionEvent({ ...base, eventId: 'e9', occurredAt: '2026-08-17T00:00:56.000Z', type: 'stage-end', stage: 'builder', spanId: 'receipt-U002', unitId: 'U002', status: 'passed' });
   const output = path.join(root, 'production-metrics.json');
   const result = await collectProductionMetrics({
     productionRoot: root, outputFile: output,
     now: () => new Date('2026-08-17T00:01:00.000Z'),
   });
   assert.equal(result.metrics.stages[0].wallClockMs, 20_000);
+  assert.deepEqual(result.metrics.reviewWaits, [{
+    unitId: 'U002', renderEndedAt: '2026-08-17T00:00:40.000Z',
+    receiptStartedAt: '2026-08-17T00:00:55.000Z', wallClockMs: 15_000,
+  }]);
   assert.deepEqual(result.metrics.agentCalls, {
     total: 1, director: 0, assets: 0, builder: 1, revision: 0, other: 0, fullHistory: 0,
   });
@@ -103,6 +112,33 @@ test('production metrics use one public-safe scan and preserve unknown host toke
     collectProductionMetrics({ productionRoot: root, outputFile: output }),
     /already exists/u,
   );
+});
+
+test('production commands emit a closed stage span for success and failure', async (t) => {
+  const root = await temporary(t);
+  const eventsFile = path.join(root, 'production-events.ndjson');
+  const moments = [
+    new Date('2026-08-27T00:00:00.000Z'),
+    new Date('2026-08-27T00:00:02.500Z'),
+    new Date('2026-08-27T00:00:03.000Z'),
+    new Date('2026-08-27T00:00:04.000Z'),
+  ];
+  let index = 0;
+  const now = () => moments[index++];
+  assert.equal(await runTimedProductionStage({
+    eventsFile, stage: 'runtime-plan', spanId: 'runtime-plan-main', now,
+  }, async () => 'planned'), 'planned');
+  await assert.rejects(runTimedProductionStage({
+    eventsFile, stage: 'delivery', spanId: 'canary-finalize', now,
+  }, async () => { throw new Error('gate failed'); }), /gate failed/u);
+  const events = (await readFile(eventsFile, 'utf8')).trim().split('\n').map(JSON.parse);
+  assert.deepEqual(events.map(({type, stage, spanId, status}) => ({type, stage, spanId, status})), [
+    {type: 'stage-start', stage: 'runtime-plan', spanId: 'runtime-plan-main', status: undefined},
+    {type: 'stage-end', stage: 'runtime-plan', spanId: 'runtime-plan-main', status: 'passed'},
+    {type: 'stage-start', stage: 'delivery', spanId: 'canary-finalize', status: undefined},
+    {type: 'stage-end', stage: 'delivery', spanId: 'canary-finalize', status: 'failed'},
+  ]);
+  assert.equal(Date.parse(events[1].occurredAt) - Date.parse(events[0].occurredAt), 2500);
 });
 
 test('real FFmpeg fixture proves H.264 and FFV1 decode plus continuous concat', async (t) => {

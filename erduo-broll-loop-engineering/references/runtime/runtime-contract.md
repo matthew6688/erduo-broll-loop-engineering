@@ -67,7 +67,8 @@ path. Before that call, it runs
 `scripts/create-production-profile.mjs` with the user's width, height, fps,
 audio, and supported output-format constraints, then passes the generated file
 through `--production-profile`. With no explicit constraints the generator
-locks 3840×2160, 30 fps, silent H.264 MP4. The script validates inputs and
+locks 1920×1080, 30 fps, silent H.264 MP4. A 4K profile requires explicit
+user constraints. The script validates inputs and
 atomically writes the hash-bound profile into the plan plus every minimal
 Builder assignment. Do not dispatch a Runtime Planner Agent or hand-author its
 JSON.

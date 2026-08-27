@@ -172,7 +172,7 @@ HeyGen 当前 v3 Create Video 支持 Photo Avatar/Digital Twin、外部音频、
 
 曾生成 P1 居中、P2 左侧和 P3 右侧三组人物概念，但都未获审批。这些本地媒体包含用户肖像，按仓库规则不进入 Git 或公共文档资产，也不得自动进入生产。
 
-当前已冻结三种生产方法：原装 `original`、数字人居中 `avatar-center`、数字人在旁边并复用竖屏 B-roll 的 `avatar-split`。框架与确定性测试已完成，但尚未渲染 presentation-mode canary。下一步只用真实、已批准且口型正确的数字人 source 跑短 canary，由用户审片后再决定是否进入完整视频；B-roll 继续使用原始 DesignMD，不重新设计。
+当前已冻结三种生产方法：原装 `original`、数字人居中 `avatar-center`、数字人在旁边并复用竖屏 B-roll 的 `avatar-split`。框架、确定性 FFmpeg 集成测试和不可发布的版式演示已完成；仓库内尚无当前 Skill 绑定、可发布的 presentation-mode canary。下一步只用真实、已批准且口型正确的数字人 source 跑短 canary，由用户审片后再决定是否进入完整视频；B-roll 继续使用原始 DesignMD，不重新设计。
 
 ## 11. 竖屏 / YouTube 背景风格 canary v2
 

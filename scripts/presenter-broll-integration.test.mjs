@@ -134,6 +134,7 @@ test('compositor preserves one presenter audio stream while switching to validat
   ]);
   const calls = [];
   const runner = controlledRunner(calls);
+  const verifyBrollCanaryApproval = async () => ({status: 'approved'});
   const sourceFile = path.join(presenterDirectory, 'presenter-source.json');
   await createPresenterSource({
     productionRoot, inputFile: presenterFile, outputFile: sourceFile, provider: 'heygen', presenterKind: 'digital',
@@ -241,6 +242,7 @@ test('compositor preserves one presenter audio stream while switching to validat
     productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
     outputFile: path.join(productionRoot, 'full-production-edit-plan.json'),
     compositionScope: 'full-production', verifyRuntimePlan: async () => ({ status: 'valid' }),
+    verifyBrollCanaryApproval,
   }), /requires publishing authorization and full-production approval/u);
   const publishingSourceFile = path.join(presenterDirectory, 'publishing-presenter-source.json');
   await createPresenterSource({
@@ -269,6 +271,7 @@ test('compositor preserves one presenter audio stream while switching to validat
     presenterSourceFile: publishingSourceFile,
     outputFile: path.join(productionRoot, 'full-production-edit-plan.json'),
     compositionScope: 'full-production', verifyRuntimePlan: async () => ({ status: 'valid' }),
+    verifyBrollCanaryApproval,
   });
   assert.equal(fullPlanResult.plan.compositionScope, 'full-production');
   const demoSourceFile = path.join(presenterDirectory, 'framework-demo-presenter-source.json');
@@ -306,11 +309,13 @@ test('compositor preserves one presenter audio stream while switching to validat
     presenterSourceFile: demoSourceFile,
     outputFile: path.join(productionRoot, 'invalid-demo-as-canary.json'),
     compositionScope: 'canary', verifyRuntimePlan: async () => ({ status: 'valid' }),
+    verifyBrollCanaryApproval,
   }), /canary composition requires internal-canary authorization and approved canary lip sync/u);
   await createPresenterEditPlan({
     productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile: sourceFile,
     outputFile: editPlanFile, compositionScope: 'canary',
     verifyRuntimePlan: async () => ({ status: 'valid' }),
+    verifyBrollCanaryApproval,
   });
   const compiledPlan = JSON.parse(await readFile(editPlanFile, 'utf8'));
   assert.equal(compiledPlan.authoredBy, 'compiled-from-recipe-creative-proposals');
@@ -394,6 +399,7 @@ test('compositor preserves one presenter audio stream while switching to validat
     productionRoot, runtimePlanFile: humanRuntimePlanFile, recipesDirectory,
     presenterSourceFile: humanSourceFile, outputFile: humanEditPlanFile,
     compositionScope: 'canary', verifyRuntimePlan: async () => ({ status: 'valid' }),
+    verifyBrollCanaryApproval,
   });
   const humanResult = await assemblePresenterBroll({
     productionRoot, deliveryRoot, presenterSourceFile: humanSourceFile,

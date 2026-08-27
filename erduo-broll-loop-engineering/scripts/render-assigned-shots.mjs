@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { cp, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,6 +16,7 @@ import {auditOnscreenText} from './audit-onscreen-text.mjs';
 import {auditShotMotion} from './audit-shot-motion.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
 import {beginRenderAttempt, finishRenderAttempt} from './render-attempt-budget.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 import {
   clearMinimalFailureEvidence,
   inspectAssignmentRuntime,
@@ -376,6 +377,7 @@ export async function runHyperframesVisualPreflight({
   productionRoot,
   hyperframes,
   compositionIds,
+  maxConcurrency = 2,
   runner = runCommand,
 }) {
   if (assignment.runtime !== 'hyperframes') return null;
@@ -387,13 +389,27 @@ export async function runHyperframesVisualPreflight({
   );
   await mkdir(checksDirectory, {recursive: true});
   const outputFile = path.join(checksDirectory, 'hyperframes-visual-preflight.json');
+  const failureDirectory = path.join(checksDirectory, 'preflight-failures');
+  const transientDirectory = path.join(checksDirectory, 'preflight-transient');
+  const failureKey = sourceIdentity.replace(/[^A-Za-z0-9._-]/gu, '_');
+  const failureFile = path.join(failureDirectory, `${failureKey}.json`);
+  if (await exists(failureFile)) {
+    const previous = await readJson(failureFile, 'HyperFrames preflight failure receipt');
+    if (previous.sourceIdentity === sourceIdentity
+      && canonicalJson(previous.compositionIds) === canonicalJson(compositionIds)) {
+      throw new Error(`HyperFrames visual preflight already failed for unchanged source ${sourceIdentity}; source must change before retry`);
+    }
+  }
   const stagingRoot = await mkdtemp(path.join(os.tmpdir(), 'erduo-hf-check-'));
-  const stagedSource = path.join(stagingRoot, 'source');
+  const concurrency = Math.max(1, Math.min(Number(maxConcurrency) || 1, compositionIds.length));
   const reports = [];
+  const deterministicFailures = [];
+  const transientFailures = [];
   try {
-    await cp(path.resolve(sourceRoot), stagedSource, {recursive: true});
-    const compositionDirectory = path.join(stagedSource, 'compositions');
-    for (const compositionId of compositionIds) {
+    const results = await mapWithConcurrency(compositionIds, concurrency, async (compositionId, index) => {
+      const stagedSource = path.join(stagingRoot, `composition-${index + 1}`, 'source');
+      await cp(path.resolve(sourceRoot), stagedSource, {recursive: true});
+      const compositionDirectory = path.join(stagedSource, 'compositions');
       const compositionFile = path.join(compositionDirectory, `${compositionId}.html`);
       await requireRegularFile(compositionFile, `${compositionId} HyperFrames composition`);
       const stagedEntrypoint = await readFile(compositionFile, 'utf8');
@@ -403,15 +419,68 @@ export async function runHyperframesVisualPreflight({
         '--frame-check', 'severity=error;seek=.25,.5,.75;tol=2',
         '--json',
       ];
-      const result = await runner({executable: hyperframes, args, cwd: stagedSource});
+      let result;
+      try {
+        result = await runner({executable: hyperframes, args, cwd: stagedSource});
+      } catch (error) {
+        const classification = classifyPreflightFailure({error});
+        return {
+          compositionId, failure: {
+            message: `${compositionId} HyperFrames visual preflight failed: ${error.message}`,
+            ...classification,
+          },
+        };
+      }
       if (result.code !== 0) {
-        throw commandFailure(`${compositionId} HyperFrames visual preflight`, result);
+        return {
+          compositionId, failure: {
+            message: commandFailure(`${compositionId} HyperFrames visual preflight`, result).message,
+            ...classifyPreflightFailure({result}),
+          },
+        };
       }
       try {
-        reports.push({compositionId, report: JSON.parse(result.stdout)});
+        return {compositionId, report: JSON.parse(result.stdout)};
       } catch {
-        throw new Error(`${compositionId} HyperFrames visual preflight returned invalid JSON`);
+        return {
+          compositionId,
+          failure: {
+            message: `${compositionId} HyperFrames visual preflight returned invalid JSON`,
+            kind: 'deterministic', detailCode: 'invalid-json',
+          },
+        };
       }
+    });
+    for (const result of results) {
+      if (result.report) reports.push({compositionId: result.compositionId, report: result.report});
+      else if (result.failure.kind === 'transient') transientFailures.push(result.failure);
+      else deterministicFailures.push(result.failure);
+    }
+    if (deterministicFailures.length > 0) {
+      const failures = [...deterministicFailures, ...transientFailures];
+      const failure = {
+        schemaVersion: '1.0.0', status: 'failed', planIdentity: plan.identity,
+        assignmentId: assignment.assignmentId, sourceIdentity,
+        compositionIds: [...compositionIds], failures,
+        retryPolicy: 'source-change-required',
+      };
+      failure.identity = contentIdentity(failure);
+      await mkdir(failureDirectory, {recursive: true});
+      await writeFile(failureFile, `${JSON.stringify(failure, null, 2)}\n`, {flag: 'wx'});
+      throw new Error(`HyperFrames visual preflight failed for ${failures.length}/${compositionIds.length} compositions:\n- ${failures.map(({message}) => message).join('\n- ')}`);
+    }
+    if (transientFailures.length > 0) {
+      const receipt = {
+        schemaVersion: '1.0.0', status: 'transient-failure', planIdentity: plan.identity,
+        assignmentId: assignment.assignmentId, sourceIdentity,
+        compositionIds: [...compositionIds], failures: transientFailures,
+        retryPolicy: 'unchanged-source-retry-permitted',
+      };
+      receipt.identity = contentIdentity(receipt);
+      await mkdir(transientDirectory, {recursive: true});
+      const transientFile = path.join(transientDirectory, `${failureKey}-${randomUUID()}.json`);
+      await writeFile(transientFile, `${JSON.stringify(receipt, null, 2)}\n`, {flag: 'wx'});
+      throw new Error(`HyperFrames visual preflight transient failure (${transientFailures.map(({detailCode}) => detailCode).join(', ')}); retry is permitted for unchanged source:\n- ${transientFailures.map(({message}) => message).join('\n- ')}`);
     }
   } finally {
     await rm(stagingRoot, {recursive: true, force: true});
@@ -425,12 +494,40 @@ export async function runHyperframesVisualPreflight({
     command: {
       executable: hyperframes,
       mode: 'per-composition-staged-check',
+      maxConcurrency: concurrency,
       flags: ['--at-transitions', '--frame-check', 'severity=error;seek=.25,.5,.75;tol=2', '--json'],
     },
     reports,
   };
   await writeFile(outputFile, `${JSON.stringify(receipt, null, 2)}\n`);
   return {file: outputFile, receipt};
+}
+
+async function mapWithConcurrency(values, maximum, operation) {
+  const results = new Array(values.length);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < values.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await operation(values[index], index);
+    }
+  };
+  await Promise.all(Array.from({length: maximum}, () => worker()));
+  return results;
+}
+
+function classifyPreflightFailure({result, error}) {
+  const signal = result?.signal;
+  if (signal) return {kind: 'transient', detailCode: `process-signal-${String(signal).toLowerCase()}`};
+  if (result?.code === 124) return {kind: 'transient', detailCode: 'timeout'};
+  if (result?.code === 137) return {kind: 'transient', detailCode: 'oom-or-sigkill'};
+  const errorCode = error?.code;
+  const transientErrorCodes = new Set(['ETIMEDOUT', 'EIO', 'ENOSPC', 'EMFILE', 'ENFILE', 'ENOMEM']);
+  if (transientErrorCodes.has(errorCode)) {
+    return {kind: 'transient', detailCode: `tool-io-${String(errorCode).toLowerCase()}`};
+  }
+  return {kind: 'deterministic', detailCode: 'unclassified-runtime-failure'};
 }
 
 async function exists(file) {
@@ -557,13 +654,14 @@ async function archiveRevisionDeliveries({productionRoot, assignment, sourceBind
   }
 }
 
-async function tryFinalizeCanaryTechnicalGate({
+export async function tryFinalizeCanaryTechnicalGate({
   plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema,
   ffmpeg, ffprobe, runner, auditText = auditOnscreenText, auditMotion = auditShotMotion,
+  verifyPlanInputs,
 }) {
   if (!plan?.canaryGate?.required) return null;
   const existing = await validateCanaryTechnicalGate({
-    plan, productionRoot, recipesDirectory, ffmpeg, ffprobe, runner,
+    plan, productionRoot, recipesDirectory, ffmpeg, ffprobe, runner, verifyPlanInputs,
   });
   if (existing) return existing;
   const ordered = plan.canaryGate.shotIds.map((shotId) => {
@@ -716,7 +814,7 @@ async function tryFinalizeCanaryTechnicalGate({
   await mkdir(path.dirname(gateFile), {recursive: true});
   await writeFile(gateFile, `${JSON.stringify(gate, null, 2)}\n`, {flag: 'wx'});
   return validateCanaryTechnicalGate({
-    plan, productionRoot, recipesDirectory, ffmpeg, ffprobe, runner,
+    plan, productionRoot, recipesDirectory, ffmpeg, ffprobe, runner, verifyPlanInputs,
   });
 }
 
@@ -1227,13 +1325,17 @@ async function main() {
   for (const required of ['plan', 'assignment', 'recipes', 'source-root', 'production-root']) {
     if (!options[required]) throw new Error(`--${required} is required`);
   }
-  const result = await renderAssignedShots({
+  const assignmentId = path.basename(options.assignment, path.extname(options.assignment));
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'lead-builder', unitId: assignmentId,
+  }, () => renderAssignedShots({
     planFile: options.plan, assignmentFile: options.assignment,
     recipesDirectory: options.recipes, sourceRoot: options['source-root'],
     sourceManifestFile: options['source-manifest'], productionRoot: options['production-root'],
     deliveryRoot: options['delivery-root'], hyperframes: options.hyperframes,
     remotion: options.remotion, ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
-  });
+  }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

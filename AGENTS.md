@@ -53,6 +53,7 @@ New presenter productions must bind one user-approved
 `00-inputs/presentation-mode.json`. The only modes are `original`,
 `avatar-center`, and `avatar-split`; the split mode reuses validated portrait
 B-roll over the presenter source and does not create a new B-roll theme. The
-framework and tests are complete, but no presentation-mode canary has been
-rendered yet. The next production step is a short user-approved canary, not a
-full video.
+framework, deterministic FFmpeg integration tests, and non-publishable layout
+demonstrations are complete. The repository does not record a current-Skill,
+publishable presentation-mode canary. The next production step is a short
+user-approved canary, not a full video.

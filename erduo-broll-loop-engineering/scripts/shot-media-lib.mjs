@@ -31,8 +31,17 @@ export async function runCommand({ executable, args, cwd, env = process.env }) {
 }
 
 export function commandFailure(label, result) {
-  const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.code}`;
-  return new Error(`${label} failed: ${detail.slice(-2_000)}`);
+  const bounded = (value) => {
+    const text = value?.trim() ?? '';
+    if (text.length <= 8_000) return text;
+    return `${text.slice(0, 4_000)}\n… output truncated …\n${text.slice(-4_000)}`;
+  };
+  const stdout = bounded(result.stdout);
+  const stderr = bounded(result.stderr);
+  const detail = stdout && stderr
+    ? `stdout:\n${stdout}\nstderr:\n${stderr}`
+    : stdout || stderr || `exit ${result.code}${result.signal ? `, signal ${result.signal}` : ''}`;
+  return new Error(`${label} failed: ${detail}`);
 }
 
 export async function hashFile(file) {

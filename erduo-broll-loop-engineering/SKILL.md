@@ -36,7 +36,10 @@ when choosing among `original`, `avatar-center`, and `avatar-split`. The mode
 may change only the presenter composition layer. It must bind the original
 DesignMD and B-roll production profile, and it must state
 `themeOverride=false`. Never invent a fourth mode or use presenter branding to
-restyle B-roll.
+restyle B-roll. Follow [B-roll layout variants](references/broll-layout-variants.md):
+the original five-shot pure-B-roll canary must pass its technical gate and user
+approval before any presenter edit plan, layout variant, or composition may be
+created.
 
 When the user names a brand/design authority or requires a fixed process, use
 [production governance](references/production-governance.md). FengTalk work
@@ -51,7 +54,7 @@ new production root.
 
 Create a fresh production directory beside the SRT. Use
 `create-production-profile.mjs` for all output choices; never hand-write profile
-JSON. Default to one independent H.264 MP4 per semantic shot, 3840×2160,
+JSON. Default to one independent H.264 MP4 per semantic shot, 1920×1080,
 30 fps, high quality, and silent for faceless work. A combined `master.mp4` is
 optional. Never overwrite.
 
@@ -105,6 +108,11 @@ when preflight returns `run-onboarding-diagnostic`.
    A Recipe- or Runtime-Plan-only revision must reuse and mechanically verify
    the same frozen asset closure; never redispatch Assets merely to rewrite a
    Plan identity when every asset/font/license hash is unchanged.
+   For a new production that uses the same approved font families and licenses,
+   Parent may run `scripts/reuse-foundation-assets.mjs --source <approved-root>
+   --target <new-root>`. This copies only hash-verified fonts and license files,
+   writes `02-assets/gates/foundation-reuse.json`, and never reuses episode-
+   specific media or silently changes the new asset index.
 4. Dispatch the Lead with the complete original SRT/design, motion map, exactly
    three representative Recipes, shared asset/font index, and any bound presenter
    source context. Lead builds three
@@ -115,7 +123,9 @@ when preflight returns `run-onboarding-diagnostic`.
    is forbidden.
 5. Lead runs the assignment's standard command, opens all three six-frame
    sheets and short previews, repairs visible defects, and returns `accepted` or
-   `revised`. The standard command must pass the automatic governance `source`
+   `revised`. Parent converts that compact conclusion into a hash-bound receipt
+   with `scripts/record-view-receipt.mjs`; Lead never hand-authors receipt JSON.
+   The standard command must pass the automatic governance `source`
    gate and on-screen-text provenance gate before rendering, then pass the
    Recipe/rhythm-aware motion gate after rendering. For HyperFrames it first
    runs the official browser `check` at transition boundaries with frame/layout
@@ -143,7 +153,11 @@ when preflight returns `run-onboarding-diagnostic`.
    reason but cannot change `truth`. It runs only the Parent standard command,
    clears the same pre-render text and post-render motion gates, opens every
    six-frame sheet and its chapter preview, repairs real defects, and returns
-   one concise `accepted` or `revised` viewing conclusion. `signals` or
+   one concise `accepted` or `revised` viewing conclusion. Parent records it
+   mechanically with `scripts/record-view-receipt.mjs`, then runs
+   `scripts/finalize-canary.mjs` to reopen evidence and create or validate the
+   canary gate. Never rerun an unchanged assignment standard command only to
+   discover a new receipt or finalize the gate. `signals` or
    `unmeasured` stays inside the Builder archive/revise/rerun loop, subject to
    the same two-render-attempt ceiling; never continue a third render retry.
 8. Parent checks file/media facts, direct-shot coverage, FFprobe, full decode,
@@ -171,7 +185,11 @@ when preflight returns `run-onboarding-diagnostic`.
     `avatar-center` use full-frame cutaways. `avatar-split` keeps the approved
     digital presenter source as the full-frame base and overlays validated 9:16
     B-roll on the left with a restrained soft boundary; explicit full-frame
-    B-roll remains allowed. Parent never hand-authors cut times or layout geometry. Keep exactly one canonical
+    B-roll uses a verified native landscape variant from the same Recipe and
+    original DesignMD. Canary and full-production composition fail closed when
+    either the pure-B-roll approval or a required landscape variant is absent.
+    A blurred portrait carrier is framework-demo evidence only and is never
+    publishable. Parent never hand-authors cut times or layout geometry. Keep exactly one canonical
     presenter audio stream and write the composition receipt. Never weaken the
     silent direct-shot contract. When subtitles or another final video derivative
     are delivered, Parent must run `verify-presenter-delivery.mjs` before showing
@@ -290,6 +308,20 @@ the first render, reports their deterministic failures together, writes
 `render-attempts.ndjson`. Preflight failures consume no render attempt; each
 Assignment has at most two actual render attempts. A production is not stable
 merely because Parent manually repaired one video's source.
+
+Deterministic failures are reported in one pass. HyperFrames preflight retains
+bounded stdout and stderr for each failing composition and writes a failure
+receipt bound to the editable-source identity. The same unchanged source may
+not invoke visual preflight again; repair all listed defects first. Planning
+also rejects every Recipe `creativeProposal.visibleText` item declared with
+`source: srt` unless that normalized phrase exists in the original SRT, so bad
+copy cannot reach Lead rendering.
+
+Viewing and finalization are separate from rendering. Lead/Builder returns a
+compact conclusion; Parent runs `scripts/record-view-receipt.mjs` and then
+`scripts/finalize-canary.mjs`. Both commands reopen and hash-bind existing
+evidence. Neither consumes render budget, and neither requires repeating the
+Assignment standard command.
 
 Across governed Plan revisions, use `scripts/reuse-unchanged-shots.mjs` instead
 of rendering an unchanged shot again. Reuse is allowed only when the script

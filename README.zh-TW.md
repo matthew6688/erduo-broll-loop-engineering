@@ -113,7 +113,7 @@ UTF-8 SRT 輸入不限定中文。實際語言品質取決於宿主模型對該�
 ## 已驗證範圍
 
 - macOS Codex 已完成 v1.0.0 production benchmark。Claude Code 的安裝/契約已驗證，但同輸入 v1 production 比較仍為 pending。
-- v1.0.1 預設交付：由 runtime source 直接渲染的有序 H.264 shot，3840 × 2160、30 fps；整條 Master 可選。
+- v1.0.1 預設交付：由 runtime source 直接渲染的有序 H.264 shot，1920 × 1080、30 fps；4K 僅在明確要求時啟用，整條 Master 可選。
 - 同輸入的新 5-shot HyperFrames canary 已通過直接 render、full decode、觀看 receipt、構圖、素材與 signature motion gate。使用者認可結果，並明確要求不製作剩餘 shot 與完整 preview，直接公開。因此不宣稱全片 production 或兩個 backend 已同等驗證。
 - 輸出規格不手寫 JSON，而由 `create-production-profile.mjs` 生成。Parent 一律將該檔案傳給 `plan-runtime.mjs --production-profile`，把寬、高、fps、音訊與 H.264 MP4 規格以同一雜湊綁定到計畫、每個 Builder 任務與交付驗證。例如 `--width 1080 --height 1920 --fps 25 --audio silent --master-format h264-mp4` 會建立直式 25 fps 規格，不會退回預設值。
 - HyperFrames 與 Remotion 是獨立後端，不承諾視覺一致。

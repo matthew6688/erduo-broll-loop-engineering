@@ -5,7 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { validateSchemaValue } from './runtime-schema-validator.mjs';
-import { hashFile, readJson } from './shot-media-lib.mjs';
+import {
+  hashFile, readJson, validateCanaryTechnicalGate, validateCanaryUserDecision,
+} from './shot-media-lib.mjs';
 import {
   parseCliPairs, presenterKindOf, resolveExistingDirectoryWithinRoot, resolveExistingRegularWithinRoot,
   resolveNewOutputWithinRoot,
@@ -103,6 +105,17 @@ export function compilePresenterSegments(recipes, presenterDurationMs, presentat
   return segments;
 }
 
+export function trimPresenterSegments(segments, endMs) {
+  if (!Number.isInteger(endMs) || endMs <= 0) {
+    throw new Error('framework demo endMs must be a positive integer');
+  }
+  const durationMs = segments.at(-1)?.endMs ?? 0;
+  if (endMs > durationMs) throw new Error('framework demo endMs extends beyond the compiled timeline');
+  return segments
+    .filter((segment) => segment.startMs < endMs)
+    .map((segment) => ({...segment, endMs: Math.min(segment.endMs, endMs)}));
+}
+
 async function assertSchema(value, name, label) {
   const schema = await readJson(path.join(schemas, name), `${label} schema`);
   const errors = validateSchemaValue(value, schema, schema);
@@ -116,7 +129,9 @@ export async function createPresenterEditPlan({
   presenterSourceFile,
   outputFile = path.join(productionRoot, '01-runtime-plan', 'presenter-edit-plan.json'),
   compositionScope = 'canary',
+  compositionEndMs = null,
   verifyRuntimePlan,
+  verifyBrollCanaryApproval,
 }) {
   for (const [label, value] of Object.entries({ productionRoot, runtimePlanFile, recipesDirectory, presenterSourceFile, outputFile })) {
     if (!value) throw new Error(`${label} is required`);
@@ -180,6 +195,29 @@ export async function createPresenterEditPlan({
       || presenterSource.approval.scope !== 'full-production')) {
     throw new Error('full-production composition requires publishing authorization and full-production approval');
   }
+  if (compositionScope !== 'framework-demo') {
+    const verifyApproval = verifyBrollCanaryApproval ?? (async () => {
+      const technicalGate = await validateCanaryTechnicalGate({
+        plan: runtimePlan,
+        productionRoot: path.resolve(productionRoot),
+        recipesDirectory: recipeDirectory,
+      });
+      if (!technicalGate) throw new Error('pure B-roll canary technical gate has not passed');
+      const userDecision = await validateCanaryUserDecision({
+        plan: runtimePlan,
+        productionRoot: path.resolve(productionRoot),
+        technicalGate,
+      });
+      if (!userDecision) throw new Error('pure B-roll canary user approval has not passed');
+      return {technicalGate, userDecision};
+    });
+    await verifyApproval({
+      runtimePlan,
+      productionRoot: path.resolve(productionRoot),
+      recipesDirectory: recipeDirectory,
+      compositionScope,
+    });
+  }
   const entries = (await readdir(recipeDirectory, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
     .toSorted((left, right) => left.name.localeCompare(right.name));
@@ -200,7 +238,13 @@ export async function createPresenterEditPlan({
   const durationMs = presenterSource.media.durationMs;
   const presentationContext = runtimePlan.sourceContext?.presentationMode ?? null;
   const presentationMode = presentationContext?.mode ?? 'original';
-  const segments = compilePresenterSegments(loaded.map(({ recipe }) => recipe), durationMs, presentationMode);
+  const compiledSegments = compilePresenterSegments(loaded.map(({ recipe }) => recipe), durationMs, presentationMode);
+  if (compositionEndMs !== null && compositionScope !== 'framework-demo') {
+    throw new Error('only framework-demo composition may end before the complete presenter timeline');
+  }
+  const segments = compositionEndMs === null
+    ? compiledSegments
+    : trimPresenterSegments(compiledSegments, Number(compositionEndMs));
   const fps = runtimePlan.productionProfile.fps.numerator / runtimePlan.productionProfile.fps.denominator;
   const plan = {
     schemaVersion: presentationContext ? '3.0.0' : '2.0.0',
@@ -220,6 +264,7 @@ export async function createPresenterEditPlan({
         identity: presentationContext.identity,
       },
     } : {}),
+    ...(compositionEndMs === null ? {} : {window: {startMs: 0, endMs: Number(compositionEndMs)}}),
     recipes,
     output: {
       width: presentationContext?.output.width ?? runtimePlan.productionProfile.raster.width,
@@ -239,6 +284,7 @@ async function main() {
     productionRoot: options['production-root'], runtimePlanFile: options.plan,
     recipesDirectory: options.recipes, presenterSourceFile: options['presenter-source'],
     outputFile: options.output, compositionScope: options.scope,
+    compositionEndMs: options['end-ms'] === undefined ? null : Number(options['end-ms']),
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

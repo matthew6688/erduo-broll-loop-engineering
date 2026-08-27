@@ -18,6 +18,20 @@ restyles, crops, or rewrites the approved B-roll DesignMD.
 presenter background instead of inventing a new half-screen theme. The
 compositor adds a restrained soft edge around the overlay. The B-roll itself is
 byte-identical to the validated 9:16 shot and keeps its original DesignMD.
+An explicit full-frame cutaway in a 16:9 output uses a separately rendered
+1920×1080 variant from the same Recipe, original DesignMD, timing, and visible
+text. Split windows continue to use the validated 9:16 variant. Only a partial,
+non-publishable `framework-demo` may fall back to keeping the complete portrait
+frame centered over a dimmed same-shot blur carrier. Canary and full production
+fail when a requested full cutaway has no verified landscape variant.
+
+An external legacy B-roll root may be reused only for a partial
+`framework-demo`. The compositor must prove identical original SRT, DesignMD,
+production profile, Recipe truth, visual Recipe fields, media contract, hash,
+and full decode; only `creativeProposal.presenterTreatment` may differ. The
+receipt records the missing or historical Skill evidence and
+`publishable=false`. Canary, full production, and publishing still require
+current per-video Skill sidecars. Historical outputs are never backfilled.
 
 ## Selection and approval
 

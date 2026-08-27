@@ -36,7 +36,7 @@ Director、Assets、Lead、Chapter Builder、五镜头 canary、静音逐镜 B-r
 | 数字人 + B-roll | 已完成真实生产样片 | 授权肖像、本地 VoxCPM 旁白、HeyGen 口型、三段 presenter、单音轨合成、中文字幕 |
 | 真人 + B-roll | 合同与集成测试已支持 | `presenterKind=human` 复用同一编译/合成链；仍应再做一条真实真人母片 canary |
 | 竖屏 9:16 | 已完成真实样片 | 1080×1920、30 fps |
-| 横屏 16:9 | 引擎支持，尚未完成本方案实片 canary | Erduo 默认 profile 为 3840×2160、30 fps，也可显式使用 1920×1080 |
+| 横屏 16:9 | 引擎和确定性合成测试已支持；仓库内尚无当前 Skill 绑定的可发布实片 canary | Erduo 默认 profile 为 1920×1080、30 fps；4K 仅在用户明确要求时生成 |
 | 字幕 | 已纳入最终交付门禁 | 原 SRT 作为 sidecar truth；烧录字幕衍生版必须通过 SRT hash、时间、音轨连续性、响度和完整解码检查 |
 | HeyGen HTTP adapter | canary adapter 已实现并有 mock 回归测试；正式生产 adapter 未完成 | 已有授权文件、余额预检、上传、幂等键、状态持久化、轮询、恢复和下载；仍缺 full-production 授权合同、Webhook/长期任务运维和真实发布回归 |
 
@@ -79,8 +79,8 @@ Chapter Builders → 静音逐镜 B-roll → delivery-index.json
 ### Gate A：输入和输出冻结
 
 先确定完整 SRT、原始 DesignMD、发布用途、素材授权、主持人类型和唯一输出 profile。
-短视频建议先使用 1080×1920；YouTube 横屏建议先用 1920×1080 做成本可控的 canary，正式
-4K 再使用 Erduo 默认 3840×2160。profile 必须由 `create-production-profile.mjs` 生成。
+短视频建议先使用 1080×1920；YouTube 横屏默认使用 1920×1080。只有用户明确要求 4K 时
+才生成 3840×2160 profile。profile 必须由 `create-production-profile.mjs` 生成。
 Presenter 项目还必须用 `create-presentation-mode.mjs` 生成并由用户批准
 `00-inputs/presentation-mode.json`；未批准的 draft 不能进入 Runtime planning。
 

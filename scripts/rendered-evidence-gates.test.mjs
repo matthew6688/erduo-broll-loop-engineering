@@ -6,6 +6,34 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import {validateRecipeVisibleTextAgainstSrt} from '../erduo-broll-loop-engineering/scripts/validate-shot-recipes.mjs';
+
+test('Recipe planning rejects every SRT-declared visible string that is not an exact spoken phrase', () => {
+  const recipes = [
+    {shotId: 'shot03', creativeProposal: {visibleText: [{text: 'HS 401140', source: 'srt'}]}},
+    {shotId: 'shot06', creativeProposal: {visibleText: [
+      {text: '哥伦比亚｜可见交易规模更大', source: 'srt'},
+      {text: '墨西哥｜更强的中国供应基础', source: 'srt'},
+    ]}},
+  ];
+  assert.throws(
+    () => validateRecipeVisibleTextAgainstSrt(recipes, [
+      '1', '00:00:00,000 --> 00:00:02,000', 'HS Code 401140', '',
+      '2', '00:00:02,000 --> 00:00:04,000',
+      '哥伦比亚的可见交易规模更大，墨西哥已经有更强的中国供应基础。',
+    ].join('\n')),
+    (error) => {
+      assert.match(error.message, /shot03.*HS 401140/u);
+      assert.match(error.message, /shot06.*哥伦比亚/u);
+      assert.match(error.message, /shot06.*墨西哥/u);
+      return true;
+    },
+  );
+  assert.doesNotThrow(() => validateRecipeVisibleTextAgainstSrt([
+    {shotId: 'shot03', creativeProposal: {visibleText: [{text: 'HS Code 401140', source: 'srt'}]}},
+  ], 'HS Code 401140'));
+});
+
 import {auditOnscreenText} from '../erduo-broll-loop-engineering/scripts/audit-onscreen-text.mjs';
 import {auditShotMotion} from '../erduo-broll-loop-engineering/scripts/audit-shot-motion.mjs';
 

@@ -4,7 +4,7 @@
   "title": "Public-safe provider-neutral production metrics",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "generatedAt", "productionRoot", "plan", "stages", "agentCalls", "files", "operations", "failures", "retries", "tokens", "privacy"],
+  "required": ["schemaVersion", "generatedAt", "productionRoot", "plan", "stages", "reviewWaits", "agentCalls", "files", "operations", "failures", "retries", "tokens", "privacy"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "generatedAt": { "type": "string", "minLength": 20 },
@@ -19,6 +19,7 @@
       }
     },
     "stages": { "type": "array", "items": { "type": "object" } },
+    "reviewWaits": { "type": "array", "items": { "type": "object" } },
     "agentCalls": { "type": "object" },
     "files": { "type": "object" },
     "operations": { "type": "object" },

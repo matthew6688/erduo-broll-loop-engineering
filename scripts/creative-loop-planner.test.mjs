@@ -490,6 +490,30 @@ test('assignments bind each selected backend to a verified absolute executable i
   );
 });
 
+test('runtime planner CLI automatically records a closed timing span in the production root', async (t) => {
+  const data = await fixture(t, {shotCount: 5});
+  const plannerScript = path.join(skillRoot, 'scripts/plan-runtime.mjs');
+  await execFileAsync(process.execPath, [
+    plannerScript,
+    '--recipes', data.recipesDirectory,
+    '--selection', data.selectionFile,
+    '--narrative-envelope', data.narrativeEnvelopeFile,
+    '--visual-system', data.visualSystemFile,
+    '--representative-scenes', data.representativeScenesFile,
+    '--motion-map', data.motionMapFile,
+    '--original-srt', data.originalSrtFile,
+    '--original-design', data.originalDesignFile,
+    '--hyperframes-executable', data.runtimeExecutableFiles.hyperframes,
+    '--production-root', data.productionRoot,
+  ]);
+  const events = (await readFile(path.join(data.productionRoot, 'production-events.ndjson'), 'utf8'))
+    .trim().split('\n').map(JSON.parse);
+  assert.deepEqual(events.map(({type}) => type), ['stage-start', 'stage-end']);
+  assert.ok(events.every(({stage}) => stage === 'runtime-plan'));
+  assert.equal(events[0].spanId, events[1].spanId);
+  assert.equal(events[1].status, 'passed');
+});
+
 test('Planner alone owns closed-enum solo decisions', async (t) => {
   const accepted = await fixture(t, {
     parentSoloReasons: { S10: 'resource-dependency-conflict' },

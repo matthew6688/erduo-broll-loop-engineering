@@ -20,6 +20,7 @@ import {
   computeRecipeTruthIdentity,
   recipeWindow,
   validateRecipeDirectory,
+  validateRecipeVisibleTextAgainstSrt,
 } from './validate-shot-recipes.mjs';
 import {
   bindRepresentativeScenes,
@@ -35,6 +36,7 @@ import {validateProductionGovernanceIfLocked} from './validate-production-govern
 import {verifySkillUsage} from './skill-usage.mjs';
 import {verifyMaterialPolicy} from './material-policy.mjs';
 import {bindPresentationModeContext} from './presentation-mode.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeRoot = path.join(skillRoot, 'references', 'runtime');
@@ -51,7 +53,7 @@ const CANARY_SHOT_PREFERENCES = ['S01', 'S05', 'S07', 'S09', 'S15'];
 
 export const DEFAULT_PRODUCTION_PROFILE = Object.freeze({
   schemaVersion: '1.0.0',
-  raster: { width: 3840, height: 2160 },
+  raster: { width: 1920, height: 1080 },
   fps: { numerator: 30, denominator: 1 },
   mezzanine: {
     container: 'mp4', codec: 'h264', encoder: 'libx264', pixelFormat: 'yuv420p',
@@ -565,6 +567,9 @@ export async function planRuntime({
   const planSchemaVersion = representativeSceneData
     ? recipeSchemaVersion === '4.0.0' ? '4.0.0' : '3.0.0'
     : '2.0.0';
+  if (planSchemaVersion === '4.0.0') {
+    validateRecipeVisibleTextAgainstSrt(recipes, await readFile(originalSrtFile, 'utf8'));
+  }
   const sharedArtifacts = {
     narrativeEnvelope: sharedArtifactData.narrativeEnvelope.binding,
     visualSystem: sharedArtifactData.visualSystem.binding,
@@ -1337,7 +1342,10 @@ async function main() {
     delete planOptions.parentSoloReasonsFile;
   }
   const result = productionRoot
-    ? await writeProductionPlan({ productionRoot, ...planOptions })
+    ? await runTimedProductionStage({
+      eventsFile: path.join(productionRoot, 'production-events.ndjson'),
+      stage: 'runtime-plan',
+    }, () => writeProductionPlan({ productionRoot, ...planOptions }))
     : await planRuntime(planOptions);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if ((productionRoot ? result.plan : result).status === 'action-required') process.exitCode = 2;

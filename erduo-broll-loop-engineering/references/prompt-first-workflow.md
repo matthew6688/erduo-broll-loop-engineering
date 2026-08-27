@@ -13,7 +13,7 @@
   timestamped directory beside the SRT using its basename plus
   `-broll-YYYYMMDD-HHMMSS`, with a unique suffix when needed.
 - Default delivery is an ordered `05-delivery/shots/` directory: one directly
-  rendered H.264 MP4 per Recipe, 3840×2160, 30 fps, plus `shot-media.json`,
+  rendered H.264 MP4 per Recipe, 1920×1080, 30 fps, plus `shot-media.json`,
   six-frame semantic check sheets, and `delivery-index.json`.
 - The complete preview is assembled only from those verified shot files. A
   full-length `master.mp4` is optional.
@@ -216,7 +216,8 @@ material policy.
 ## 3. Runtime planning and targeted readiness
 
 The Parent first generates the production profile. The default command produces
-H.264 MP4 at 3840×2160, 30 fps, with no audio:
+H.264 MP4 at 1920×1080, 30 fps, with no audio. Generate 4K only when the user
+explicitly requests it:
 
 ```text
 node scripts/create-production-profile.mjs \

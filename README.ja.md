@@ -113,7 +113,7 @@ UTF-8 SRT は中国語に限定されません。実際の品質はホストモ�
 ## 確認済み範囲
 
 - macOS の Codex で v1.0.0 production benchmark を完了。Claude Code はインストール/契約を確認済みですが、同一入力の v1 production 比較は pending です。
-- v1.0.1 の標準出力：runtime source から直接レンダリングした順序付き H.264 shot、3840 × 2160、30 fps。全編 Master は任意です。
+- v1.0.1 の標準出力：runtime source から直接レンダリングした順序付き H.264 shot、1920 × 1080、30 fps。4K は明示的な指定時のみで、全編 Master は任意です。
 - 同一入力の新しい 5-shot HyperFrames canary は、直接 render、full decode、閲覧 receipt、構図・素材・signature motion の gate を通過しました。ユーザーは結果を承認し、残りの shot と全編 preview を制作せず公開することを明示しました。そのため全編 production や両 backend の同等対応は主張しません。
 - 出力ポリシーは手書きせず、`create-production-profile.mjs` で生成します。Parent はそのファイルを必ず `plan-runtime.mjs --production-profile` に渡し、幅、高さ、fps、音声、H.264 MP4 の条件を計画、各 Builder の割り当て、納品検証へ同じハッシュで固定します。たとえば `--width 1080 --height 1920 --fps 25 --audio silent --master-format h264-mp4` は、標準値へ戻らない縦型 25 fps のプロファイルを生成します。
 - HyperFrames と Remotion は独立したバックエンドで、視覚的一致は保証しません。
