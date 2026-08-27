@@ -59,7 +59,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - Director 默认设计约 5–12 秒的完整语义镜头；Planner 再按连续性、后端、素材和复杂度把多个短镜头聚合给同一 Builder，不让“一个短镜头”变成“一个 Agent”。
 - Lead Builder 先完成开头、信息密集段和后段三类真样片、signature motion、素材融合能力与能力索引；随后先做 5 镜头 canary，用户未选择我方至少 3/5 前不得批量展开。
 - 口播中的观点与情绪变化先转成动画节拍；Builder 必须让主体、空间、层级、关系或视觉重点随节拍产生可见发展，装饰循环不能代替主要动画。
-- Chapter Builder 必须打开每镜 6 格图和 chapter preview；发现异常只返修对应镜头，不默认生成全片逐帧或通过态 dense diagnostics。
+- Chapter Builder 必须打开每镜 6 格图和 chapter preview；发现异常只返修对应镜头，不默认生成全片逐帧或通过态 dense diagnostics。Builder 只返回看片结论和真实异常；Parent 用同一条 receipt 命令机械闭合缺失的最小 handoff，不为成功交接再次召回 Builder。
 - 正常生产不再重复派 Onboarding Agent；只有安装身份变化或真实工具故障才定点诊断。
 - 后端规划、任务分发、逐镜渲染、6 格采样、媒体验证和预览准备由 Parent 直接运行脚本，不再启动 Runtime Planner、Integrator 或 Render Agent。
 - 一条生产任务共用素材库与相同依赖；Builder 保持源码隔离，不再复制完整工程和相同素材。
@@ -71,7 +71,7 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - Parent 从每镜运行时源码直接生成独立 H.264 文件、`shot-media.json`、6 格语义检查图和全片 `delivery-index.json`；禁止从 unit 或 Master 二次切割冒充直出。
 - `production-metrics.json` 可汇总阶段耗时、Agent 调用、unit、文件/字节、渲染/解码/hash、失败/重试与可选宿主 Token；没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
 - 三次机械测速必须使用 `prepare-performance-sandbox.mjs` 建立非生产 sandbox。它只复制当前 Skill/Plan 验证通过的输入、Director、Assets 与 canary-first 冻结源码，重新生成指向 sandbox 的命令；明确排除 Visual Plan 批准、用户 canary 决定、view receipt、旧媒体、事件和 render-attempt ledger。旧 Skill、symlink、缺五镜覆盖或已有目标目录都会 fail closed。
-- 五镜头稳定源码基准已从 `79m37s` 的旧批准到门禁墙钟缩短到新根目录的 `3m19s`，实际命令约 `1m49s`；新旧 canary SSIM 为 `0.999203`。该数据证明稳定源码后的机械闭环，不冒充从零创意生产的 24 倍等口径加速。详见 [`docs/V1.0.1-SPEED-OPTIMIZATION.md`](docs/V1.0.1-SPEED-OPTIMIZATION.md)。
+- 当前五镜头 1080p 冻结源码的三次隔离顺序机械基准为 `46.908s / 47.813s / 50.650s`，中位数 `47.813s`，15 组逐镜对比最低 SSIM `0.999655`。direct render 并发 2 慢 `10.2%`，合并 decode/六格图的停止轮慢 `88.7%`，两项均已回退；正式渲染保持顺序执行。此前 `3m19s` 新根目录基准保留为稳定源码闭环的历史证据，不冒充从零创意生产的等口径提速。详见 [`docs/V1.0.1-SPEED-OPTIMIZATION.md`](docs/V1.0.1-SPEED-OPTIMIZATION.md)。
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。
 - 默认正式交付是完整、高质量、可独立解码的 shot 目录；整条 Master 变为可选输出，绝不复制预览冒充 Master。
 - 默认 shot 规格为 1920×1080、30 fps、H.264 MP4；4K 仅在用户明确要求时生成。字幕不重复烧录，背景音乐不自动添加。

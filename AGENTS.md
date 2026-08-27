@@ -42,6 +42,12 @@ truth/source-input identity validation. Keep README, current references,
 schemas, role charters, tests, and release manifests aligned when those
 contracts change.
 
+Keep direct shot rendering sequential: the current five-shot benchmark found
+two-wide rendering and fused decode/sheet work slower. After a creative owner
+returns its viewing conclusion, Parent's receipt command also closes a missing
+minimal handoff; do not reactivate the owner only to author that reference. See
+`docs/V1.0.1-SPEED-OPTIMIZATION.md` for the measured evidence.
+
 Presenter production supports provider-neutral human/digital sources plus
 `presenter|broll|mixed` Recipe treatments. Presenter background and Logo are
 presenter-layer concerns; they must not replace or restyle the original B-roll

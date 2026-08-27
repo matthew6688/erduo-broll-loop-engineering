@@ -4,7 +4,9 @@ Use file locators instead of copying plans, JSON, source, logs, screenshots, or
 media facts into prose. Successful defaults need no narration. Keep the handoff
 short enough to scan. Creative Agents do not hand-write receipts, manifests,
 hashes, probes, decode results, media contracts, or proof; Parent scripts own
-those machine artifacts.
+those machine artifacts. After a creative viewing conclusion, Parent's receipt
+command creates a missing minimal successful handoff; do not recall the Agent
+only to add the receipt locator.
 
 ```markdown
 # <stage> handoff

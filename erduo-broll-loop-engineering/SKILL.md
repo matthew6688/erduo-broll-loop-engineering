@@ -131,7 +131,9 @@ when preflight returns `run-onboarding-diagnostic`.
 5. Lead runs the assignment's standard command, opens all three six-frame
    sheets and short previews, repairs visible defects, and returns `accepted` or
    `revised`. Parent converts that compact conclusion into a hash-bound receipt
-   with `scripts/record-view-receipt.mjs`; Lead never hand-authors receipt JSON.
+   with `scripts/record-view-receipt.mjs`; the same command closes a missing
+   minimal handoff, so Lead is not recalled solely to author that reference.
+   Lead never hand-authors receipt JSON.
    The standard command must pass the automatic governance `source`
    gate and on-screen-text provenance gate before rendering, then pass the
    Recipe/rhythm-aware motion gate after rendering. For HyperFrames it first
@@ -161,7 +163,8 @@ when preflight returns `run-onboarding-diagnostic`.
    clears the same pre-render text and post-render motion gates, opens every
    six-frame sheet and its chapter preview, repairs real defects, and returns
    one concise `accepted` or `revised` viewing conclusion. Parent records it
-   mechanically with `scripts/record-view-receipt.mjs`, then runs
+   mechanically with `scripts/record-view-receipt.mjs`, which also closes a
+   missing minimal handoff, then runs
    `scripts/finalize-canary.mjs` to reopen evidence and create or validate the
    canary gate. Never rerun an unchanged assignment standard command only to
    discover a new receipt or finalize the gate. `signals` or
@@ -328,10 +331,10 @@ also rejects every Recipe `creativeProposal.visibleText` item declared with
 copy cannot reach Lead rendering.
 
 Viewing and finalization are separate from rendering. Lead/Builder returns a
-compact conclusion; Parent runs `scripts/record-view-receipt.mjs` and then
-`scripts/finalize-canary.mjs`. Both commands reopen and hash-bind existing
-evidence. Neither consumes render budget, and neither requires repeating the
-Assignment standard command.
+compact conclusion; Parent runs `scripts/record-view-receipt.mjs`, which closes
+a missing minimal handoff, and then `scripts/finalize-canary.mjs`. Both commands
+reopen and hash-bind existing evidence. Neither consumes render budget, and
+neither requires repeating the Assignment standard command.
 
 Across governed Plan revisions, use `scripts/reuse-unchanged-shots.mjs` instead
 of rendering an unchanged shot again. Reuse is allowed only when the script

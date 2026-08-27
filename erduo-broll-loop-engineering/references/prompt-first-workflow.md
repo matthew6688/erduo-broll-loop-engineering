@@ -284,7 +284,9 @@ Lead samples/capability index, and shared assets/fonts.
 HyperFrames Builders use the release-pinned runtime. Remotion Builders keep
 source isolated but reuse the production-root toolchain for an identical
 dependency identity. Each Builder returns editable source and one direct
-runtime target per assigned `shotId`, plus a minimal exception-led handoff. It
+runtime target per assigned `shotId`, plus a minimal exception-led handoff only
+when a real exception exists. After viewing, Parent's receipt command creates a
+missing successful handoff mechanically. The Builder
 does not create capture, trace, lint, screenshot, frame-scan, render, hash,
 probe, decode, manifest, receipt, contract, or proof tooling and does not write
 those machine artifacts by hand.
