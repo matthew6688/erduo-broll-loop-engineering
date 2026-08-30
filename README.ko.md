@@ -88,7 +88,7 @@ npx -y skills@1.5.22 add ./erduo-broll-loop-engineering-skills-1.0.1 --skill '*'
 필수 환경: macOS, Node.js 22.20 이상, FFmpeg/FFprobe, Codex 또는 Claude Code.
 
 ```bash
-git clone https://github.com/erduo1998-cell/erduo-broll-loop-engineering.git
+git clone https://github.com/matthew6688/erduo-broll-loop-engineering.git
 cd erduo-broll-loop-engineering
 ./Install.command
 ```

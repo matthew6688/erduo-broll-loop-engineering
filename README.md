@@ -278,8 +278,12 @@ npx -y skills@1.5.22 add ./erduo-broll-loop-engineering-skills-1.0.1 --skill '*'
 
 适合首次安装或不确定本机环境的用户：
 
+FengTalk 日常生产使用维护 fork：
+[matthew6688/erduo-broll-loop-engineering](https://github.com/matthew6688/erduo-broll-loop-engineering)。
+本地 `origin` 指向该 fork；原项目 `erduo1998-cell` 仅作为 `upstream` 获取和比较更新。
+
 ```bash
-git clone https://github.com/erduo1998-cell/erduo-broll-loop-engineering.git
+git clone https://github.com/matthew6688/erduo-broll-loop-engineering.git
 cd erduo-broll-loop-engineering
 ./Install.command
 ```
@@ -309,6 +313,16 @@ git pull --ff-only
 ./Install.command
 node scripts/doctor.mjs
 ```
+
+当前生产环境固定使用 HyperFrames `0.7.104`。`git pull` 和重新运行安装器会恢复仓库
+声明的精确版本，但不得对生产 runtime 运行 `npm update`、原地升级或
+`npx hyperframes@latest`。`hyperframes upgrade --check --json` 只能用于只读查看更新，
+不能作为升级批准。
+
+如将来确需升级，必须在隔离 runtime 中进行，并建立新的 hash-bound Runtime Plan，
+依次完成官方 browser check、5 镜头直出与完整解码、六格图、文字/动画审计、
+完整预览和用户选择；全部通过后才能修改版本 pin。仅有 check 通过不代表生产支持，
+旧 runtime 和恢复点要保留到新 canary 获批。
 
 卸载本项目 Skill 链接并恢复安装器备份：
 

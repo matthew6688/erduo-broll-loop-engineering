@@ -88,7 +88,7 @@ npx -y skills@1.5.22 add ./erduo-broll-loop-engineering-skills-1.0.1 --skill '*'
 需要：macOS、Node.js 22.20 或以上、FFmpeg/FFprobe，以及 Codex 或 Claude Code。
 
 ```bash
-git clone https://github.com/erduo1998-cell/erduo-broll-loop-engineering.git
+git clone https://github.com/matthew6688/erduo-broll-loop-engineering.git
 cd erduo-broll-loop-engineering
 ./Install.command
 ```

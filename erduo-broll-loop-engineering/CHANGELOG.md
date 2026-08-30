@@ -1,6 +1,14 @@
 
 ## Unreleased
 
+### Runtime governance
+
+- Documented the maintained FengTalk fork and the fail-closed HyperFrames
+  migration policy. Production remains pinned to `0.7.104`; the isolated
+  `0.8.17` check-only result is evaluation evidence only. Any future change
+  requires an isolated runtime, a new executable-hash-bound Plan, the complete
+  five-shot canary, and user approval.
+
 ### Speed and stability
 
 - Parent receipt recording now closes a missing minimal creative handoff in

@@ -100,7 +100,7 @@ This path uses the Skills CLI universal host store and does not execute this rep
 Use this for a first install or when machine readiness is unknown.
 
 ```bash
-git clone https://github.com/erduo1998-cell/erduo-broll-loop-engineering.git
+git clone https://github.com/matthew6688/erduo-broll-loop-engineering.git
 cd erduo-broll-loop-engineering
 ./Install.command
 ```

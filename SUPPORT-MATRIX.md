@@ -7,7 +7,7 @@
 | macOS + Codex | supported core / v1 technical witness | [v1.0.0 公开基准](docs/V1.0.0-BENCHMARK.md)已完成 `179.866` 秒同 SRT 生产、完整 preview/Master 解码和 80 帧 Director 技术/语义抽检；用户未观看，visual lock 为 `skipped`，不构成审美批准 |
 | macOS + Claude Code | experimental | 安装目标和 v1 契约受测试覆盖，尚缺与 Codex 同输入的 v1 端到端对照 |
 | macOS 首次安装 | supported installer | 安装器、离线 mock 与安全边界受自动化测试覆盖；硬件、网络和宿主差异仍可能要求人工处理 |
-| HyperFrames runtime | v1.0.1 production default / canary approved | CLI 固定为 `0.7.104`，8 个官方核心 Skill 固定为 commit `c96b30c7174984e684620556ce871a285381ec60`；同输入 5 镜头 Chapter Builder canary 已完成技术闭环并获用户认可，未执行完整长片 |
+| HyperFrames runtime | v1.0.1 production default / canary approved | CLI 固定为 `0.7.104`，8 个官方核心 Skill 固定为 commit `c96b30c7174984e684620556ce871a285381ec60`；同输入 5 镜头 Chapter Builder canary 已完成技术闭环并获用户认可，未执行完整长片。2026-08-28 对 `0.8.17` 的隔离 check-only 兼容性检查 5/5 通过，但未完成渲染、解码、审计和用户 canary，因此不属于生产支持，不修改当前 pin |
 | Remotion runtime | explicit opt-in / canary / technical witness only | 旧 `179.866` 秒 run 的 20/20 H.264、合同与 full decode 是技术事实，但视觉结果失败并触发本次 reset；新 production 不默认选择 Remotion，也不能称为与 HyperFrames 同等验证 |
 | Hybrid frozen-media route | contract + validator supported | 逐镜证据规划、连续区块聚合、冻结媒体 schema/hash validator 和 FFmpeg 集成已进入公开契约；FFprobe/完整解码由阶段实跑留证；尚不构成双后端成片或视觉一致性 witness |
 | Windows | unverified | 保留路径和配置兼容设计；没有真实 Windows 运行证据 |
@@ -16,6 +16,11 @@
 稳定版本只冻结公开契约，不会把未完成的环境验证自动提升为 `verified`。Windows 与剪映 GUI 必须保持本表声明，直到取得对应实机证据。
 
 官方 doctor 可能因为 npm 上已有更新版本而把顶层 `ok` 置为 false。只在 doctor 的 `_meta.version` 精确等于本发行包锁定的 `0.7.104`、失败项只是“newer version available”，且 Node、FFmpeg、FFprobe、Chrome 等选中本地渲染事实全部通过时，本项目把它记录为非阻断更新提示；版本不明、版本不符或任何渲染事实失败仍会关闭发布/生产门。
+
+版本升级必须作为一次受治理的 runtime migration：隔离安装、更新全部版本与 lock
+表面、重新生成绑定新可执行文件 hash 的 Runtime Plan，并通过完整五镜 canary 与用户
+批准后才可提升为 production supported。禁止覆盖当前生产 runtime 后再沿用旧 Plan；
+`upgrade --check` 或 browser check 单独通过都不能替代这些证据。
 
 ## v1.0.1 Creative Loop Reset
 

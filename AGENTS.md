@@ -15,6 +15,11 @@ default backend.
 
 ## Source of truth
 
+- FengTalk's maintained production fork is
+  `https://github.com/matthew6688/erduo-broll-loop-engineering`; local `origin`
+  points there and `upstream` points to `erduo1998-cell` for read-only update
+  comparison. Push production changes only to the fork unless the user
+  explicitly requests an upstream PR.
 - Current production policy: `erduo-broll-loop-engineering/SKILL.md`.
 - Runtime and assignment mechanics:
   `erduo-broll-loop-engineering/references/stage-orchestration.md`.
@@ -28,6 +33,11 @@ default backend.
   `creativeProposal`.
 - New blank productions default to HyperFrames. Remotion and `auto` require
   explicit selection; backend failures never silently reroute.
+- Production HyperFrames is release-pinned to `0.7.104`. Do not run an in-place
+  upgrade, `npm update`, or `npx hyperframes@latest` against the production
+  runtime. A newer version requires an isolated runtime, a new hash-bound
+  Runtime Plan, the complete five-shot canary and user approval before it can
+  replace the pin; a check-only pass is not production support.
 - A complete original SRT and original design must reach Director, Lead, and
   every Chapter Builder directly.
 - Do not edit generated stage `AGENTS.md`, `CLAUDE.md`, or role prompts by hand;

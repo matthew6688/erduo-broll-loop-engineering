@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- Documented the maintained FengTalk fork and the fail-closed HyperFrames
+  upgrade policy. Production remains pinned to `0.7.104`; the isolated
+  `0.8.17` check-only result is recorded as evaluation evidence, not production
+  support. Runtime-lock tests now keep code, operator guidance, and the current
+  single-route wording aligned.
 - Parent view-receipt recording now also creates the missing minimal creative
   handoff, eliminating a role reactivation used only to reference the receipt.
   Existing handoffs are preserved only when they already reference the bound

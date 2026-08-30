@@ -1011,7 +1011,6 @@ test('v1 public benchmark preserves measured facts, metric scopes, and unfinishe
   const changelog = await readFile(path.join(root, 'CHANGELOG.md'), 'utf8');
   const support = await readFile(path.join(root, 'SUPPORT-MATRIX.md'), 'utf8');
   const checklist = await readFile(path.join(root, 'RELEASE-CHECKLIST.md'), 'utf8');
-
   assert.match(benchmark, /ff5b9fdc104318827804cf9b0be0e48febf1b81685fb5b509497f4e8996f73ea/u);
   assert.match(benchmark, /179\.866[^\n]*124/u);
   assert.match(benchmark, /20[^\n]*Shot Recipe v3/u);
@@ -4805,6 +4804,14 @@ test('runtime lock pins the complete HyperFrames and Skills CLI graph with integ
   const changelog = await readFile(path.join(root, 'CHANGELOG.md'), 'utf8');
   const support = await readFile(path.join(root, 'SUPPORT-MATRIX.md'), 'utf8');
   const checklist = await readFile(path.join(root, 'RELEASE-CHECKLIST.md'), 'utf8');
+  const agents = await readFile(path.join(root, 'AGENTS.md'), 'utf8');
+  const runtimeSelection = await readFile(path.join(
+    root,
+    'erduo-broll-loop-engineering',
+    'references',
+    'runtime',
+    'runtime-selection.md',
+  ), 'utf8');
   const translatedReadmes = await Promise.all(
     ['README.en.md', 'README.ja.md', 'README.ko.md', 'README.zh-TW.md']
       .map((name) => readFile(path.join(root, name), 'utf8')),
@@ -4821,16 +4828,26 @@ test('runtime lock pins the complete HyperFrames and Skills CLI graph with integ
   assert.match(checklist, /`1\.0\.0`/u);
   for (const translatedReadme of translatedReadmes) {
     assert.match(translatedReadme, /## v0\.9\.2/u);
+    assert.match(translatedReadme, /matthew6688\/erduo-broll-loop-engineering/u);
     assert.match(translatedReadme, /1080p[^\n]*veryfast \/ CRF 22/u);
     assert.match(translatedReadme, /--plan[^\n]*--narrative-envelope[^\n]*--visual-system[^\n]*--contract/u);
     assert.match(translatedReadme, /medium \/ CRF 16[^\n]*[Mm]aster/u);
   }
-  assert.equal(packageJson.dependencies.hyperframes, '0.7.104');
+  assert.equal(packageJson.dependencies.hyperframes, HYPERFRAMES_VERSION);
   assert.equal(packageJson.dependencies.skills, SKILLS_CLI_VERSION);
   assert.equal(lock.lockfileVersion, 3);
-  assert.equal(lock.packages[''].dependencies.hyperframes, '0.7.104');
-  assert.equal(lock.packages['node_modules/hyperframes'].version, '0.7.104');
+  assert.equal(lock.packages[''].dependencies.hyperframes, HYPERFRAMES_VERSION);
+  assert.equal(lock.packages['node_modules/hyperframes'].version, HYPERFRAMES_VERSION);
   assert.equal(lock.packages['node_modules/skills'].version, SKILLS_CLI_VERSION);
+  assert.match(readme, /matthew6688\/erduo-broll-loop-engineering/u);
+  assert.match(readme, /固定使用 HyperFrames `0\.7\.104`/u);
+  assert.match(readme, /仅有 check 通过不代表生产支持/u);
+  assert.match(agents, /Production HyperFrames is release-pinned to `0\.7\.104`/u);
+  assert.match(agents, /check-only pass is not production support/u);
+  assert.match(support, /`0\.8\.17`[^\n]*check-only[^\n]*不属于生产支持/u);
+  assert.match(support, /禁止覆盖当前生产 runtime 后再沿用旧 Plan/u);
+  assert.match(runtimeSelection, /release-pinned single-route workflow/u);
+  assert.doesNotMatch(runtimeSelection, /0\.4\.x/u);
   assert.equal(typeof lock.packages['node_modules/hyperframes'].integrity, 'string');
   const registryWithoutIntegrity = Object.entries(lock.packages)
     .filter(([name, value]) => name && value.resolved?.startsWith('https://registry.npmjs.org/')

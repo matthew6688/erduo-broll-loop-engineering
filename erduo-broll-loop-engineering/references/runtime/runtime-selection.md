@@ -33,8 +33,8 @@ project-local code.
 Explicit `auto` and `hybrid` have `readiness: planning-required`. `auto` is an
 experimental canary mode, not the production default. They permit cached
 common preflight and runtime-neutral Direction, not backend installation. Explicit or
-detected `hyperframes`/`remotion` forces the whole film and preserves the 0.4.x
-single-route workflow. Existing schema-1 single-backend artifacts are
+detected `hyperframes`/`remotion` forces the whole film and preserves the
+release-pinned single-route workflow. Existing schema-1 single-backend artifacts are
 grandfathered and must not be retroactively replanned.
 
 Only an authorized Remotion diagnostic/repair after failed cached preflight may use `--probe-cli`.
