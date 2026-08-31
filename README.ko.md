@@ -34,7 +34,7 @@ Assets는 알려진 공유 소재/폰트만 고정하고 shot별 `search`, `gene
 
 production source에서 `inspection.tsx`, DOM trace marker, 수동 motion window, 성공 상태 dense diagnostics를 제거합니다. Parent는 render/decode/hash/contract/sheet/preview의 기계적 작업만 담당합니다. 12원칙은 짧은 긍정 anchor이며 각 shot은 관련된 2–4개 `craftIntent`만 선택하고 점수나 proof를 만들지 않습니다.
 
-production 기본값은 HyperFrames입니다. Remotion은 명시적 opt-in/canary만, `auto`는 실험적 opt-in만 허용합니다. 5-shot canary가 direct delivery, Builder 실제 시청, 구도/소재/signature motion 다양성, 사용자 선택 3/5 이상, 첫 preview ≤45분을 통과하기 전에는 전체 영상을 시작하지 않습니다.
+production 기본값은 HyperFrames입니다. Remotion은 명시적 opt-in/canary만, `auto`는 실험적 opt-in만 허용합니다. 5-shot canary가 direct delivery, Builder 실제 시청, 구도/소재/signature motion 다양성, 사용자 선택 3/5 이상을 통과하기 전에는 전체 영상을 시작하지 않습니다. 첫 preview의 45분은 효율 목표이며, 초과하면 `over-target`과 병목을 기록한 뒤 완료까지 계속합니다. 소재, source, 기술, 시각, 실제 시청 또는 승인 실패만 production을 중단합니다.
 
 2026-08-18의 179.866초 Remotion run은 실패 근거로 남깁니다. 20/20 media contract/decode는 통과했지만 20 creative units, original design 미전달, 소재 부족, 기술 inspection 통과에도 시각 품질은 불합격이었습니다. 203m13s / 54m17s / 63m13s도 목표를 넘었으며 이번 수정이나 backend 동등성을 증명하지 않습니다.
 

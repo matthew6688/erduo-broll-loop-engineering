@@ -34,7 +34,7 @@ Assets は既知の共有素材/フォントだけを凍結し、shot 固有の 
 
 production source から `inspection.tsx`、DOM trace marker、手動 motion window、成功時の dense diagnostics を削除します。Parent は render/decode/hash/contract/sheet/preview の機械処理だけを担当します。十二原則は短い正向 anchor とし、shot ごとに関連する 2–4 個の `craftIntent` のみ選び、採点や proof は行いません。
 
-production 標準は HyperFrames。Remotion は明示 opt-in/canary のみ、`auto` は実験的 opt-in です。5-shot canary が direct delivery、Builder の実視聴、構図/素材/signature motion の多様性、ユーザー選択 3/5 以上、初回 preview ≤45 分を満たすまで全編制作を開始しません。
+production 標準は HyperFrames。Remotion は明示 opt-in/canary のみ、`auto` は実験的 opt-in です。5-shot canary が direct delivery、Builder の実視聴、構図/素材/signature motion の多様性、ユーザー選択 3/5 以上を満たすまで全編制作を開始しません。初回 preview の 45 分は効率目標であり、超過時は `over-target` とボトルネックを記録して完了まで継続します。素材、source、技術、視覚、実視聴、承認の失敗だけが production を停止します。
 
 2026-08-18 の 179.866 秒 Remotion run は失敗証拠として残します。20/20 の media contract/decode は通過しましたが、20 creative units、original design 不達、素材不足、技術 inspection 合格でも視覚品質不合格でした。203m13s / 54m17s / 63m13s も目標未達であり、本修正や backend 同等性を証明しません。
 

@@ -53,7 +53,7 @@
 - [x] HyperFrames / Remotion Chapter Builder Skill 要求完整 SRT/design 直达、truth 不可改、proposal 可修改、镜头专项素材可重开、逐镜 6 格图 + chapter preview 真观看与缺陷返修。
 - [x] 生产 source 和通过态输出的 no-proof gate 拒绝 `inspection.tsx`、diagnostic Composition、`data-erduo-trace*`、人工 motion windows、visual-weight/focus-group/layer 证明和 dense diagnostics；失败只保留最小证据。
 - [x] production 默认 HyperFrames；Remotion 只有 explicit/canary，`auto` 只有 experimental opt-in。默认与失败路径均不会静默改后端。
-- [x] 5 镜头 technical canary 已完成：5/5 直出/full decode、5/5 Builder 看片、0 低级错误、≥3 构图、≥2 素材融合、≥2 signature motion 与 `≤45` 分钟门均通过；技术 gate identity 为 `sha256:777fe22ff4f95b20edf0faa858d7187b3135d9198fdf181a03b34e460189fb20`。
+- [x] 5 镜头 technical canary 已完成：5/5 直出/full decode、5/5 Builder 看片、0 低级错误、≥3 构图、≥2 素材融合与 ≥2 signature motion 均通过；当次也达到 `≤45` 分钟效率目标，但速度不再是质量门禁。技术 gate identity 为 `sha256:777fe22ff4f95b20edf0faa858d7187b3135d9198fdf181a03b34e460189fb20`。
 - [x] 用户已观看盲测并明确认可本版、授权直接发布；用户同时明确取消剩余镜头与完整 preview。未把这句话伪造成五条逐镜选择，`canary-user-decision.json` 不存在，full-production gate 继续拒绝启动。
 - [ ] 同一 `179.866` 秒完整实测未执行：用户明确取消剩余镜头与完整 preview，本项不写成完成，也不作为本次 v1.0.1 代码与 canary 范围发布的证据。
 - [ ] 完整实测时间与最终完整 preview 批准未执行：用户明确取消；本版只声明 Lead + 5-shot canary 证据。

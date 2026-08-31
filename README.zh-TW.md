@@ -34,7 +34,7 @@ Assets 只凍結已知共享素材/字型，不關閉逐鏡 `search`、`generate
 
 production source 移除 `inspection.tsx`、DOM trace marker、人工 motion window 與通過態 dense diagnostics。Parent 只處理 render/decode/hash/contract/sheet/preview 的確定性工作。十二原則是精簡的正向 anchor，每鏡只選相關的 2–4 個 `craftIntent`，不評分也不造 proof。
 
-production 預設使用 HyperFrames；Remotion 只限明確 opt-in/canary，`auto` 是實驗性 opt-in。5-shot canary 必須通過 direct delivery、Builder 真實看片、構圖/素材/signature motion 多樣性、使用者至少選擇我方 3/5，以及首版 preview ≤45 分鐘，才能開始全片。
+production 預設使用 HyperFrames；Remotion 只限明確 opt-in/canary，`auto` 是實驗性 opt-in。5-shot canary 必須通過 direct delivery、Builder 真實看片、構圖/素材/signature motion 多樣性，以及使用者至少選擇我方 3/5，才能開始全片。首版 preview 以 45 分鐘為效率目標；超出時記錄 `over-target` 與瓶頸並繼續跑完，只有素材、source、技術、視覺、看片或審批失敗才會阻斷 production。
 
 2026-08-18 的 179.866 秒 Remotion run 保留為失敗證據：20/20 media contract/decode 雖通過，但產生 20 creative units、original design 未直達、素材不足，技術 inspection 通過也沒有帶來合格視覺。203m13s / 54m17s / 63m13s 同樣未達目標，不能證明本次修正或 backend 等價。
 

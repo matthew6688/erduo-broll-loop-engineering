@@ -46,7 +46,7 @@ Assets freezes known shared media/fonts without closing shot-specific `search`, 
 
 Production source no longer carries `inspection.tsx`, DOM trace markers, manual motion windows, or passing dense diagnostics. Parent owns deterministic render/decode/hash/contracts/sheets/preview. The positive twelve principles are a short role anchor; each shot selects only 2–4 relevant `craftIntent` values, with no score or proof work.
 
-Production defaults to HyperFrames. Remotion is explicit opt-in or canary-only; `auto` is experimental opt-in. A five-shot canary must pass direct delivery, real Builder viewing, composition/material/signature-motion diversity, user preference of at least 3/5, and a ≤45-minute first preview before full production may start.
+Production defaults to HyperFrames. Remotion is explicit opt-in or canary-only; `auto` is experimental opt-in. A five-shot canary must pass direct delivery, real Builder viewing, composition/material/signature-motion diversity, and user preference of at least 3/5 before full production may start. The first preview has a 45-minute efficiency target; an over-target result records the overage and bottleneck but continues to completion. Only material, source, technical, visual, viewing, or approval failures block production.
 
 The 2026-08-18 179.866-second Remotion run remains failure evidence: 20/20 media contracts and decode passed, but it created 20 creative units, withheld the original design, used little material, and passing technical inspection did not produce acceptable visual quality. Its 203m13s / 54m17s / 63m13s timings also missed targets. It does not validate this reset or equal backends.
 

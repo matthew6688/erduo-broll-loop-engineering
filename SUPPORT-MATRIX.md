@@ -34,7 +34,7 @@
 | Chapter Builder 观看闭环 | `accepted|revised` contract + forward witness | 5 个 canary shot 的原 Builder 均查看六格图和 chapter preview，修复裁切、安全区、空容器等实际问题并写回观看回执 |
 | 检查瘦身 | no-proof source contract | production source 不再需要 inspection/DOM trace/motion-window/通过态 diagnostics；Parent 保留 render、probe、decode、hash、合同和六格图 |
 | Runtime 策略 | HyperFrames default; Remotion explicit; auto experimental | Remotion/auto 均不会在空白生产中自动接管全片；重新开放 auto 需要同输入视觉 canary 与用户选择 |
-| Canary gate | technical passed; user approved release | 5/5 直出与完整解码、Builder 观看、三种构图、至少两镜素材融合、两种 signature motion 与时间门均通过。用户整体认可本版并要求直接发布，但未提交逐镜 3/5 结构化决定，因此 full-production gate 仍保持关闭 |
+| Canary gate | technical passed; user approved release | 5/5 直出与完整解码、Builder 观看、三种构图、至少两镜素材融合和两种 signature motion 均通过；当次 45 分钟效率目标也已达成，但速度不是质量门禁。用户整体认可本版并要求直接发布，但未提交逐镜 3/5 结构化决定，因此 full-production gate 仍保持关闭 |
 | 默认交付 | ordered shot directory | 每镜仍从自己的 runtime source 直出独立 H.264；完整 preview 只用已验证 shot，Master 可选，`broll-shot-export` 仅兼容旧任务 |
 
 v1.0.1 已用相同 `179.866` 秒、`124` cue 输入完成全新 HyperFrames Lead + 5-shot creative canary。技术 gate 身份为 `sha256:777fe22ff4f95b20edf0faa858d7187b3135d9198fdf181a03b34e460189fb20`；用户观看后明确认可效果，并要求停止剩余镜头和完整 preview、直接发布。因未形成逐镜 3/5 结构化决定，代码中的 full-production gate 没有被绕过，发布也不声称完整长片或 Remotion 等价支持。旧 Remotion 技术 run 的 `203m13s / 54m17s / 63m13s` 与视觉失败只作为修正依据。
