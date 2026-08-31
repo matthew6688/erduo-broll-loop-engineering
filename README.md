@@ -32,6 +32,11 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 
 ## 四步完成
 
+第一次使用或需要恢复一条生产任务时，先看
+[`FengTalk 视频生产系统使用手册`](docs/FENGTALK-VIDEO-PRODUCTION-USER-GUIDE.md)。
+它按“提供什么—先看什么计划—在哪些节点批准—最后得到什么”说明完整日常流程，
+不要求使用者会终端。
+
 <p align="center">
   <img src="docs/images/demos/quick-start.gif" alt="安装 Skill、把 SRT 交给 Agent、批准正式渲染的 HyperFrames 动画演示" width="100%">
 </p>
@@ -69,7 +74,8 @@ unapproved themes, layouts, colors, mascots, brand layers, or other overrides.
 - Assets 每条 production lineage 只派发一次；仅 Plan identity 变化而截图、字体、license 与 route 哈希不变时，由脚本机械复验，不重复派 Assets Agent。
 - HyperFrames Assignment Preflight 同时检查 strict runtime 的根节点 `data-start="0"`、`data-no-timeline`/timeline registry 与禁止 `../` 素材路径，避免这些静态源码错误消耗实际渲染预算。
 - Parent 从每镜运行时源码直接生成独立 H.264 文件、`shot-media.json`、6 格语义检查图和全片 `delivery-index.json`；禁止从 unit 或 Master 二次切割冒充直出。
-- `production-metrics.json` 可汇总阶段耗时、Agent 调用、unit、文件/字节、渲染/解码/hash、失败/重试与可选宿主 Token；没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
+- `production-events.ndjson` 记录阶段内 phase；canary、full-preview、final 分别生成不可覆盖的 `production-metrics-<milestone>.json`，汇总创作、素材、预检、渲染/解码/六格图、审计、人物、字幕、装配、人工等待和交付耗时。每份快照公开应有、已记录和缺失 phase，数据不完整时不得据此优化。没有可靠 Token 事实时写“未知”，不估算也不读取私人会话目录。
+- 新的可执行动画只通过 opt-in `animation-extension` 入口登记：固定 HyperFrames `0.7.104`、源码和证据哈希，并强制保留原始 DesignMD；候选扩展未绑定 check、preview 和真实 canary receipt 时不得进入正式生产。
 - 三次机械测速必须使用 `prepare-performance-sandbox.mjs` 建立非生产 sandbox。它只复制当前 Skill/Plan 验证通过的输入、Director、Assets 与 canary-first 冻结源码，重新生成指向 sandbox 的命令；明确排除 Visual Plan 批准、用户 canary 决定、view receipt、旧媒体、事件和 render-attempt ledger。旧 Skill、symlink、缺五镜覆盖或已有目标目录都会 fail closed。
 - 当前五镜头 1080p 冻结源码的三次隔离顺序机械基准为 `46.908s / 47.813s / 50.650s`，中位数 `47.813s`，15 组逐镜对比最低 SSIM `0.999655`。direct render 并发 2 慢 `10.2%`，合并 decode/六格图的停止轮慢 `88.7%`，两项均已回退；正式渲染保持顺序执行。此前 `3m19s` 新根目录基准保留为稳定源码闭环的历史证据，不冒充从零创意生产的等口径提速。详见 [`docs/V1.0.1-SPEED-OPTIMIZATION.md`](docs/V1.0.1-SPEED-OPTIMIZATION.md)。
 - 完整预览由这些已验证 shot 文件按 `delivery-index.json` 顺序装配，供用户判断节奏和整体效果。

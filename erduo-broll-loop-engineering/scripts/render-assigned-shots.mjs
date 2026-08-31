@@ -278,6 +278,64 @@ function hyperframesCompositionRoot(source, compositionId) {
   return tags.find((tag) => htmlDataAttribute(tag, 'composition-id') === compositionId) ?? null;
 }
 
+function hyperframesCompositionRoots(source, compositionId) {
+  const tags = source.match(/<[^!][^>]*\bdata-composition-id\s*=\s*["'][^"']+["'][^>]*>/giu) ?? [];
+  return tags.filter((tag) => htmlDataAttribute(tag, 'composition-id') === compositionId);
+}
+
+function htmlTagName(tag) {
+  return /^<\s*([A-Za-z][A-Za-z0-9:-]*)\b/u.exec(tag)?.[1]?.toLowerCase() ?? null;
+}
+
+function htmlAttribute(tag, name) {
+  const match = new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'iu').exec(tag);
+  return match?.[1] ?? null;
+}
+
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+function rootClassSelectorFailures(source, root) {
+  const classes = (htmlAttribute(root, 'class') ?? '').split(/\s+/u).filter(Boolean);
+  return classes.filter((className) => (
+    new RegExp(`(?:^|[},])\\s*\\.${regexEscape(className)}\\b[^{}]*\\{`, 'imu').test(source)
+  ));
+}
+
+function rootRelativeAssetPaths(source) {
+  const paths = [];
+  const patterns = [
+    /\b(?:src|href)\s*=\s*["']\s*(\/(?!\/)[^"']*)["']/giu,
+    /url\(\s*["']?(\/(?!\/)[^)'"']*)["']?\s*\)/giu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) paths.push(match[1].trim());
+  }
+  return [...new Set(paths)];
+}
+
+function fontFamilyContractFailures(source) {
+  const faceBlocks = source.match(/@font-face\s*\{[^}]*\}/giu) ?? [];
+  const familyName = (declaration) => {
+    const value = /font-family\s*:\s*([^;}]+)/iu.exec(declaration)?.[1]?.split(',')[0]?.trim();
+    if (!value || /^var\(/iu.test(value)) return null;
+    return value.replace(/^["']|["']$/gu, '').trim();
+  };
+  const declared = new Set(faceBlocks.map(familyName).filter(Boolean).map((value) => value.toLowerCase()));
+  const withoutFaces = source.replace(/@font-face\s*\{[^}]*\}/giu, '');
+  const used = [...withoutFaces.matchAll(/font-family\s*:\s*([^;}]+)/giu)]
+    .map((match) => familyName(match[0])).filter(Boolean);
+  const generic = new Set([
+    'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif',
+    'ui-sans-serif', 'ui-monospace', 'ui-rounded', 'emoji', 'math', 'fangsong',
+  ]);
+  return [...new Set(used.filter((value) => {
+    const folded = value.toLowerCase();
+    return !generic.has(folded) && !declared.has(folded);
+  }))];
+}
+
 function parentTraversalAssetPaths(source) {
   const paths = [];
   const patterns = [
@@ -300,8 +358,19 @@ export function validateHyperframesCompositionMetadata({source, target, shot, pr
     duration: expectedDurationSeconds,
     fps: expectedFps,
   };
-  const actual = Object.fromEntries(Object.keys(expected).map((name) => [name, htmlDataAttribute(source, name)]));
   const failures = [];
+  const roots = hyperframesCompositionRoots(source, target.id);
+  if (roots.length !== 1) {
+    failures.push(`data-composition-id ${target.id} must appear exactly once; found ${roots.length}`);
+  }
+  if (roots.some((tag) => ['html', 'body'].includes(htmlTagName(tag)))) {
+    failures.push('composition root must not be html or body; bind metadata to one visible canvas element');
+  }
+  const root = roots.find((tag) => !['html', 'body'].includes(htmlTagName(tag)))
+    ?? roots[0] ?? hyperframesCompositionRoot(source, target.id);
+  const actual = Object.fromEntries(Object.keys(expected).map((name) => [
+    name, root ? htmlDataAttribute(root, name) : null,
+  ]));
   for (const [name, value] of Object.entries(actual)) {
     if (value === null) failures.push(`composition is missing data-${name}`);
   }
@@ -316,20 +385,31 @@ export function validateHyperframesCompositionMetadata({source, target, shot, pr
       failures.push(`data-${name} must equal ${expected[name]}${unit}`);
     }
   }
-  const root = hyperframesCompositionRoot(source, target.id);
   if (root) {
     const start = htmlDataAttribute(root, 'start');
     if (start === null) failures.push('root composition is missing data-start="0"');
     else if (Number(start) !== 0) failures.push('root composition data-start must equal 0');
-    const hasNoTimeline = /\bdata-no-timeline(?=[\s=/]|$)/iu.test(root);
+    const hasNoTimeline = /\bdata-no-timeline\s*=\s*["']true["']/iu.test(root);
     const registersTimeline = /window\s*\.\s*__timelines\s*\[/u.test(source);
     if (!hasNoTimeline && !registersTimeline) {
-      failures.push('root composition must declare data-no-timeline or register window.__timelines');
+      failures.push('root composition must declare data-no-timeline="true" or register window.__timelines');
+    }
+    const rootClassFailures = rootClassSelectorFailures(source, root);
+    if (rootClassFailures.length > 0) {
+      failures.push(`root class selector cannot own canvas styling: ${rootClassFailures.map((value) => `.${value}`).join(', ')}`);
     }
   }
   const traversalPaths = parentTraversalAssetPaths(source);
   if (traversalPaths.length > 0) {
     failures.push(`asset paths must not use parent traversal: ${traversalPaths.join(', ')}`);
+  }
+  const absolutePaths = rootRelativeAssetPaths(source);
+  if (absolutePaths.length > 0) {
+    failures.push(`root-relative asset URL is not portable inside staged sourceRoot: ${absolutePaths.join(', ')}`);
+  }
+  const missingFontFaces = fontFamilyContractFailures(source);
+  if (missingFontFaces.length > 0) {
+    failures.push(`font-family requires a local @font-face declaration: ${missingFontFaces.join(', ')}`);
   }
   if (failures.length > 0) {
     throw new Error(`${shot.shotId} HyperFrames ${failures.join('; ')}`);
@@ -838,6 +918,7 @@ async function renderAssignedShotsInternal({
   auditText = auditOnscreenText,
   auditMotion = auditShotMotion,
   executionState = {},
+  eventsFile = null,
 }) {
   const absoluteSourceRoot = path.resolve(sourceRoot);
   await assertProductionSourcePolicy(absoluteSourceRoot);
@@ -848,6 +929,11 @@ async function renderAssignedShotsInternal({
     readJson(deliverySchemaFile, 'delivery index schema'),
     prepareSourceManifest(absoluteSourceRoot, sourceManifestFile),
   ]);
+  const timedPhase = (phase, operation, unitId = assignment.unitId ?? assignment.assignmentId) => (
+    eventsFile
+      ? runTimedProductionStage({eventsFile, stage: 'builder', phase, unitId}, operation)
+      : operation()
+  );
   await validateRuntimePlan(plan, runtimePlanInputs(productionRoot, recipesDirectory, plan));
   await validateProductionGovernanceIfLocked({
     productionRoot,
@@ -938,12 +1024,12 @@ async function renderAssignedShotsInternal({
     const preflightOutput = path.join(
       path.resolve(productionRoot), assignment.output.workDirectory, 'checks', 'onscreen-text.preflight.json',
     );
-    const textPreflight = await auditText({
+    const textPreflight = await timedPhase('text-audit', () => auditText({
       planFile, recipesDirectory, productionRoot,
       originalSrtFile: path.resolve(productionRoot, plan.sourceContext.originalSrt.locator),
       visualSystemFile: path.join(path.resolve(productionRoot), '01-director', 'visual-system.json'),
       outputFile: preflightOutput, shotIds: renderShotIds,
-    });
+    }));
     if (textPreflight.status !== 'passed') {
       throw new Error(`assignment onscreen-text preflight requires revision: ${textPreflight.status}; report=${preflightOutput}`);
     }
@@ -968,10 +1054,10 @@ async function renderAssignedShotsInternal({
   }
   const renderInvocationByShot = new Map(invocationResults.map(({value}) => [value.shotId, value.invocation]));
   const visualPreflight = renderShotIds.length > 0
-    ? await runHyperframesVisualPreflight({
+    ? await timedPhase('assignment-preflight', () => runHyperframesVisualPreflight({
       assignment, plan, sourceRoot: absoluteSourceRoot, sourceIdentity: sourceBinding.identity,
       productionRoot, hyperframes, compositionIds: activeDescriptors.map(({target}) => target.id), runner,
-    })
+    }))
     : null;
   const preflightReceipt = await writeAssignmentPreflightReceipt({
     productionRoot, assignment, plan, sourceBinding, sharedAssets, renderShotIds, visualPreflight,
@@ -1110,7 +1196,7 @@ async function renderAssignedShotsInternal({
         productionRoot, assignment, planIdentity: plan.identity, sourceIdentity: sourceBinding.identity,
       });
     }
-    backendReceipt = await renderRemotionUnit({
+    backendReceipt = await timedPhase('shot-render', () => renderRemotionUnit({
       productionRoot, project: absoluteSourceRoot, entryPoint,
       publicDirectory: sharedAssets.directory,
       bundleDirectory: path.join(path.resolve(deliveryRoot), '.remotion-bundles', assignmentKey),
@@ -1119,8 +1205,12 @@ async function renderAssignedShotsInternal({
         sharedAssetsIdentity: sharedAssets.identity,
       })).digest('hex')}`,
       renderTargets: pending.map(({ shot, target, output }) => ({ shotId: shot.shotId, id: target.id, output })),
-      onRendered: async ({ shotId }) => finalizeShot(pending.find(({ shot }) => shot.shotId === shotId)),
-    });
+      onRendered: async ({ shotId }) => timedPhase(
+        'shot-decode-sheet',
+        () => finalizeShot(pending.find(({ shot }) => shot.shotId === shotId)),
+        shotId,
+      ),
+    }));
   } else {
     if (pending.length > 0 && plan.schemaVersion === '4.0.0') {
       executionState.renderAttempt = await beginRenderAttempt({
@@ -1130,20 +1220,20 @@ async function renderAssignedShotsInternal({
     for (const descriptor of pending) {
       const invocation = renderInvocationByShot.get(descriptor.shot.shotId);
       if (!invocation) throw new Error(`${descriptor.shot.shotId} has no passing assignment preflight invocation`);
-      const rendered = await runner(invocation);
+      const rendered = await timedPhase('shot-render', () => runner(invocation), descriptor.shot.shotId);
       if (rendered.code !== 0) throw commandFailure(`${descriptor.shot.shotId} direct runtime render`, rendered);
-      await finalizeShot(descriptor);
+      await timedPhase('shot-decode-sheet', () => finalizeShot(descriptor), descriptor.shot.shotId);
     }
   }
   if (plan.schemaVersion === '4.0.0' && renderShotIds.length > 0) {
     const motionOutput = path.join(
       path.resolve(productionRoot), assignment.output.workDirectory, 'checks', 'shot-motion.audit.json',
     );
-    const motionAudit = await auditMotion({
+    const motionAudit = await timedPhase('motion-audit', () => auditMotion({
       planFile, recipesDirectory, productionRoot,
       motionMapFile: path.join(path.resolve(productionRoot), '01-director', 'motion-map.json'),
       outputFile: motionOutput, shotIds: renderShotIds, ffmpeg,
-    });
+    }));
     if (motionAudit.status !== 'passed') {
       throw new Error(`assignment shot-motion audit requires revision: ${motionAudit.status}; report=${motionOutput}`);
     }
@@ -1175,11 +1265,11 @@ async function renderAssignedShotsInternal({
       path.resolve(deliveryRoot), 'chapter-previews',
       `${assignment.unitId}${canarySubset ? '.canary' : ''}.mp4`,
     );
-    chapterPreview = await assembleChapterPreview({
+    chapterPreview = await timedPhase('full-preview-finalize', () => assembleChapterPreview({
       unitId: assignment.unitId, contracts: viewedContracts, deliveryRoot,
       outputFile: chapterOutput, ffmpeg, ffprobe, runner,
       productionRoot, planIdentity: plan.identity, skillUsageBinding: plan.sourceContext?.skillUsage,
-    });
+    }));
     if (plan.schemaVersion === '4.0.0') {
       const recipeBindings = viewedShotIds.map((shotId) => creativeRecipeBinding(recipeById.get(shotId)));
       try {
@@ -1218,10 +1308,10 @@ async function renderAssignedShotsInternal({
       throw error;
     }
   }
-  const canaryTechnicalGate = await tryFinalizeCanaryTechnicalGate({
+  const canaryTechnicalGate = await timedPhase('canary-finalize', () => tryFinalizeCanaryTechnicalGate({
     plan, planFile, productionRoot, deliveryRoot, recipesDirectory, shotSchema, ffmpeg, ffprobe, runner,
     auditText, auditMotion,
-  });
+  }));
   if (canarySubset) {
     return {
       status: canaryTechnicalGate ? 'canary-technical-ready' : 'canary-shots-ready',
@@ -1326,17 +1416,14 @@ async function main() {
   for (const required of ['plan', 'assignment', 'recipes', 'source-root', 'production-root']) {
     if (!options[required]) throw new Error(`--${required} is required`);
   }
-  const assignmentId = path.basename(options.assignment, path.extname(options.assignment));
-  const result = await runTimedProductionStage({
-    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
-    stage: 'lead-builder', unitId: assignmentId,
-  }, () => renderAssignedShots({
+  const result = await renderAssignedShots({
     planFile: options.plan, assignmentFile: options.assignment,
     recipesDirectory: options.recipes, sourceRoot: options['source-root'],
     sourceManifestFile: options['source-manifest'], productionRoot: options['production-root'],
     deliveryRoot: options['delivery-root'], hyperframes: options.hyperframes,
     remotion: options.remotion, ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
-  }));
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+  });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

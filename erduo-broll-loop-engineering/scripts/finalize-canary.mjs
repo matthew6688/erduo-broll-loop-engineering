@@ -59,7 +59,7 @@ async function main() {
   }
   const gate = await runTimedProductionStage({
     eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
-    stage: 'delivery',
+    stage: 'delivery', phase: 'canary-finalize',
   }, () => finalizeCanary({
     planFile: options.plan,
     productionRoot: options['production-root'],

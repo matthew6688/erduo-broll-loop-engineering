@@ -21,6 +21,10 @@ default backend.
   comparison. Push production changes only to the fork unless the user
   explicitly requests an upstream PR.
 - Current production policy: `erduo-broll-loop-engineering/SKILL.md`.
+- User-facing operating instructions:
+  `docs/FENGTALK-VIDEO-PRODUCTION-USER-GUIDE.md`. Keep this focused on the
+  user's inputs, approval gates, outputs, revisions, publishing handoff, and
+  recovery prompt; do not turn it into a second implementation contract.
 - Runtime and assignment mechanics:
   `erduo-broll-loop-engineering/references/stage-orchestration.md`.
 - Closed data contracts: `erduo-broll-loop-engineering/references/runtime/`.
@@ -44,6 +48,13 @@ default backend.
   edit the role-charter JSON and regenerate them.
 - Do not commit user SRTs, media, credentials, production outputs, or private
   absolute paths.
+- Reusable executable animation additions must use the hash-closed
+  `animation-extension` contract. Keep `designMdPolicy=preserve-original`;
+  candidate extensions are opt-in experiments and cannot enter production
+  until their check, preview, and canary evidence pass.
+- Record production timing in the shared event interface rather than adding
+  script-specific timers. Preserve immutable `canary`, `full-preview`, and
+  `final` metrics snapshots; never overwrite or reconstruct an older milestone.
 
 ## Current state
 

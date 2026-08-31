@@ -17,6 +17,7 @@ import {
   computeRecipeIdentity, computeRecipeTruthIdentity, validateRecipeDirectory,
 } from './validate-shot-recipes.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -280,12 +281,16 @@ export async function createPresenterEditPlan({
 
 async function main() {
   const options = parseCliPairs(process.argv.slice(2));
-  const result = await createPresenterEditPlan({
-    productionRoot: options['production-root'], runtimePlanFile: options.plan,
-    recipesDirectory: options.recipes, presenterSourceFile: options['presenter-source'],
-    outputFile: options.output, compositionScope: options.scope,
-    compositionEndMs: options['end-ms'] === undefined ? null : Number(options['end-ms']),
-  });
+  if (!options['production-root']) throw new Error('--production-root is required');
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'assembly', phase: 'presenter-edit-plan',
+  }, () => createPresenterEditPlan({
+      productionRoot: options['production-root'], runtimePlanFile: options.plan,
+      recipesDirectory: options.recipes, presenterSourceFile: options['presenter-source'],
+      outputFile: options.output, compositionScope: options.scope,
+      compositionEndMs: options['end-ms'] === undefined ? null : Number(options['end-ms']),
+    }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

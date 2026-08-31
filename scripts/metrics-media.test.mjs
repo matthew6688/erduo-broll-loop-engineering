@@ -17,10 +17,15 @@ import {
 } from '../erduo-broll-loop-engineering/scripts/record-production-event.mjs';
 import {
   collectProductionMetrics,
+  observabilityCoverage,
 } from '../erduo-broll-loop-engineering/scripts/collect-production-metrics.mjs';
 import {
   verifyLightweightCodec,
 } from '../erduo-broll-loop-engineering/scripts/verify-lightweight-codec.mjs';
+import {
+  computeAnimationExtensionIdentity,
+  validateAnimationExtension,
+} from '../erduo-broll-loop-engineering/scripts/validate-animation-extension.mjs';
 
 async function temporary(t) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'erduo-v1-metrics-test-'));
@@ -85,12 +90,19 @@ test('production metrics use one public-safe scan and preserve unknown host toke
   await recordProductionEvent({ ...base, eventId: 'e7', occurredAt: '2026-08-17T00:00:40.000Z', type: 'stage-end', stage: 'lead-builder', spanId: 'render-U002', unitId: 'U002', status: 'passed' });
   await recordProductionEvent({ ...base, eventId: 'e8', occurredAt: '2026-08-17T00:00:55.000Z', type: 'stage-start', stage: 'builder', spanId: 'receipt-U002', unitId: 'U002' });
   await recordProductionEvent({ ...base, eventId: 'e9', occurredAt: '2026-08-17T00:00:56.000Z', type: 'stage-end', stage: 'builder', spanId: 'receipt-U002', unitId: 'U002', status: 'passed' });
-  const output = path.join(root, 'production-metrics.json');
+  const output = path.join(root, 'production-metrics-canary.json');
   const result = await collectProductionMetrics({
-    productionRoot: root, outputFile: output,
+    productionRoot: root, milestone: 'canary', outputFile: output,
     now: () => new Date('2026-08-17T00:01:00.000Z'),
   });
   assert.equal(result.metrics.stages[0].wallClockMs, 20_000);
+  assert.equal(result.metrics.milestone, 'canary');
+  assert.deepEqual(result.metrics.phaseSummary['stage:builder'], {
+    spans: 2, completed: 2, failed: 0, wallClockMs: 21_000,
+  });
+  assert.equal(result.metrics.observabilityCoverage.status, 'incomplete');
+  assert.equal(result.metrics.observabilityCoverage.productionKind, 'broll');
+  assert.ok(result.metrics.observabilityCoverage.missingPhases.includes('creative-authoring'));
   assert.deepEqual(result.metrics.reviewWaits, [{
     unitId: 'U002', renderEndedAt: '2026-08-17T00:00:40.000Z',
     receiptStartedAt: '2026-08-17T00:00:55.000Z', wallClockMs: 15_000,
@@ -109,8 +121,19 @@ test('production metrics use one public-safe scan and preserve unknown host toke
   assert.equal(result.metrics.privacy.privateSessionPathsRead, false);
   assert.equal((await readFile(output, 'utf8')).includes(root), false);
   await assert.rejects(
-    collectProductionMetrics({ productionRoot: root, outputFile: output }),
+    collectProductionMetrics({ productionRoot: root, milestone: 'canary', outputFile: output }),
     /already exists/u,
+  );
+  const fullPreview = await collectProductionMetrics({
+    productionRoot: root, milestone: 'full-preview',
+    now: () => new Date('2026-08-17T00:02:00.000Z'),
+  });
+  assert.equal(path.basename(fullPreview.file), 'production-metrics-full-preview.json');
+  assert.equal(fullPreview.metrics.milestone, 'full-preview');
+  assert.notEqual(fullPreview.file, output);
+  await assert.rejects(
+    collectProductionMetrics({ productionRoot: root, milestone: 'draft' }),
+    /milestone must be/u,
   );
 });
 
@@ -126,19 +149,74 @@ test('production commands emit a closed stage span for success and failure', asy
   let index = 0;
   const now = () => moments[index++];
   assert.equal(await runTimedProductionStage({
-    eventsFile, stage: 'runtime-plan', spanId: 'runtime-plan-main', now,
+    eventsFile, stage: 'runtime-plan', phase: 'runtime-planning', spanId: 'runtime-plan-main', now,
   }, async () => 'planned'), 'planned');
   await assert.rejects(runTimedProductionStage({
     eventsFile, stage: 'delivery', spanId: 'canary-finalize', now,
   }, async () => { throw new Error('gate failed'); }), /gate failed/u);
   const events = (await readFile(eventsFile, 'utf8')).trim().split('\n').map(JSON.parse);
-  assert.deepEqual(events.map(({type, stage, spanId, status}) => ({type, stage, spanId, status})), [
-    {type: 'stage-start', stage: 'runtime-plan', spanId: 'runtime-plan-main', status: undefined},
-    {type: 'stage-end', stage: 'runtime-plan', spanId: 'runtime-plan-main', status: 'passed'},
-    {type: 'stage-start', stage: 'delivery', spanId: 'canary-finalize', status: undefined},
-    {type: 'stage-end', stage: 'delivery', spanId: 'canary-finalize', status: 'failed'},
+  assert.deepEqual(events.map(({type, stage, phase, spanId, status}) => ({type, stage, phase, spanId, status})), [
+    {type: 'stage-start', stage: 'runtime-plan', phase: 'runtime-planning', spanId: 'runtime-plan-main', status: undefined},
+    {type: 'stage-end', stage: 'runtime-plan', phase: 'runtime-planning', spanId: 'runtime-plan-main', status: 'passed'},
+    {type: 'stage-start', stage: 'delivery', phase: undefined, spanId: 'canary-finalize', status: undefined},
+    {type: 'stage-end', stage: 'delivery', phase: undefined, spanId: 'canary-finalize', status: 'failed'},
   ]);
   assert.equal(Date.parse(events[1].occurredAt) - Date.parse(events[0].occurredAt), 2500);
+});
+
+test('final presenter metrics disclose every missing presenter and delivery phase', () => {
+  const coverage = observabilityCoverage({
+    milestone: 'final',
+    plan: {sourceContext: {presenterSource: {presenterKind: 'digital'}}},
+    stages: [{phase: 'runtime-planning'}],
+  });
+  assert.equal(coverage.productionKind, 'presenter');
+  assert.equal(coverage.status, 'incomplete');
+  for (const phase of [
+    'presenter-edit-plan', 'presenter-assembly', 'subtitles', 'pixel-review', 'final-delivery',
+  ]) assert.ok(coverage.missingPhases.includes(phase));
+});
+
+test('animation extensions preserve original DesignMD and fail closed on evidence drift', async (t) => {
+  const root = await temporary(t);
+  await mkdir(path.join(root, 'source'), {recursive: true});
+  await mkdir(path.join(root, 'evidence'), {recursive: true});
+  const files = {
+    implementation: path.join(root, 'source', 'animation.js'),
+    check: path.join(root, 'evidence', 'check.json'),
+    preview: path.join(root, 'evidence', 'preview.mp4'),
+  };
+  await writeFile(files.implementation, 'export const progress = (t) => t;\n');
+  await writeFile(files.check, '{"status":"passed"}\n');
+  await writeFile(files.preview, Buffer.alloc(32, 7));
+  const digest = async (file) => createHash('sha256').update(await readFile(file)).digest('hex');
+  const manifest = {
+    schemaVersion: '1.0.0', identity: '0'.repeat(64), id: 'workflow-progress',
+    kind: 'hyperframes-block', status: 'candidate',
+    intent: 'Reveal verified workflow progress through stable semantic stages.',
+    runtime: {provider: 'hyperframes', version: '0.7.104'},
+    designMdPolicy: 'preserve-original',
+    implementation: {locator: 'source/animation.js', sha256: await digest(files.implementation)},
+    verification: [
+      {kind: 'check-receipt', artifact: {locator: 'evidence/check.json', sha256: await digest(files.check)}},
+      {kind: 'preview', artifact: {locator: 'evidence/preview.mp4', sha256: await digest(files.preview)}},
+    ],
+    canaryEvidence: null,
+  };
+  manifest.identity = computeAnimationExtensionIdentity(manifest);
+  const manifestFile = path.join(root, 'extension.json');
+  await writeFile(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
+  assert.deepEqual(await validateAnimationExtension({root, manifestFile}), {
+    status: 'verified', id: 'workflow-progress', lifecycle: 'candidate', identity: manifest.identity,
+  });
+  await writeFile(files.preview, Buffer.alloc(32, 8));
+  await assert.rejects(validateAnimationExtension({root, manifestFile}), /preview.*sha256 does not match/u);
+  await writeFile(files.preview, Buffer.alloc(32, 7));
+  const approved = structuredClone(manifest);
+  approved.status = 'canary-approved';
+  approved.identity = computeAnimationExtensionIdentity(approved);
+  await writeFile(manifestFile, `${JSON.stringify(approved, null, 2)}\n`);
+  await assert.rejects(validateAnimationExtension({root, manifestFile}), /requires canary evidence/u);
 });
 
 test('real FFmpeg fixture proves H.264 and FFV1 decode plus continuous concat', async (t) => {

@@ -13,6 +13,7 @@ import {
 import {verifyVideoSkillUsage} from './skill-usage.mjs';
 import {computeRuntimePlanIdentity} from './validate-runtime-plan.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -213,14 +214,18 @@ export async function verifyPresenterDelivery({
 
 async function main() {
   const options = parseCliPairs(process.argv.slice(2));
-  const result = await verifyPresenterDelivery({
-    productionRoot: options['production-root'], finalMediaFile: options.final,
-    subtitleFile: options.subtitle, compositionReceiptFile: options['composition-receipt'],
-    editPlanFile: options['edit-plan'], outputFile: options.output,
-    minMeanVolumeDb: options['min-mean-volume-db'] === undefined ? -30 : Number(options['min-mean-volume-db']),
-    minMaxVolumeDb: options['min-max-volume-db'] === undefined ? -6 : Number(options['min-max-volume-db']),
-    ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
-  });
+  if (!options['production-root']) throw new Error('--production-root is required');
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'delivery', phase: 'final-delivery',
+  }, () => verifyPresenterDelivery({
+      productionRoot: options['production-root'], finalMediaFile: options.final,
+      subtitleFile: options.subtitle, compositionReceiptFile: options['composition-receipt'],
+      editPlanFile: options['edit-plan'], outputFile: options.output,
+      minMeanVolumeDb: options['min-mean-volume-db'] === undefined ? -30 : Number(options['min-mean-volume-db']),
+      minMaxVolumeDb: options['min-max-volume-db'] === undefined ? -6 : Number(options['min-max-volume-db']),
+      ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
+    }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

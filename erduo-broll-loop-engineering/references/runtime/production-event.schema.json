@@ -11,6 +11,7 @@
     "occurredAt": { "type": "string", "minLength": 20 },
     "type": { "enum": ["stage-start", "stage-end", "agent-call", "operation", "failure", "retry"] },
     "stage": { "enum": ["director", "runtime-plan", "assets", "lead-builder", "visual-lock", "builder", "revision", "assembly", "delivery", "other"] },
+    "phase": { "enum": ["intake-governance", "runtime-planning", "creative-authoring", "asset-freeze", "assignment-preflight", "shot-render", "shot-decode-sheet", "text-audit", "motion-audit", "view-receipt", "presenter-generation", "presenter-edit-plan", "presenter-assembly", "subtitles", "pixel-review", "user-review-wait", "canary-finalize", "full-preview-finalize", "final-delivery", "other"] },
     "spanId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
     "unitId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
     "status": { "enum": ["passed", "failed", "action-required"] },

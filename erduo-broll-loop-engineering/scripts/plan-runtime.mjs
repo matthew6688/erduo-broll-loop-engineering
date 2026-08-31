@@ -454,6 +454,7 @@ function actionPlan(
     frozenMediaContractVersion: null, shotMediaContractVersion: null,
     shots: [], blocks: [], authoringUnits: [], warnings: [...new Set(warnings)].sort(),
     ...(schemaVersion === '4.0.0' ? {
+      rolePacketVersion: '2.0.0',
       sourceContext: extras.sourceContext,
       runtimeExecutables: extras.runtimeExecutables,
       leadProduction: extras.leadProduction,
@@ -825,6 +826,7 @@ export async function planRuntime({
       selectionSource: selection.selectionSource,
     },
     sharedArtifacts,
+    ...(planSchemaVersion === '4.0.0' ? { rolePacketVersion: '2.0.0' } : {}),
     productionProfile,
     backendFailurePolicy: 'return-to-selected-backend',
     ...(planSchemaVersion === '4.0.0' ? { sourceContext } : {}),
@@ -1026,7 +1028,7 @@ export function buildBuilderAssignments(plan, {
     const assignedShotIds = phasePlan?.shotIds.length > 0 ? phasePlan.shotIds : fullProductionShotIds;
     const workDirectory = unitDirectory(unit);
     const sourceRoot = `${workDirectory}/source`;
-    const injection = roleInjection('builder');
+    const injection = roleInjection('builder', plan.rolePacketVersion ?? '1.0.0');
     return [{
       schemaVersion: plan.schemaVersion === '4.0.0' ? '3.0.0' : plan.schemaVersion === '3.0.0' ? '2.0.0' : '1.0.0',
       ...(['3.0.0', '4.0.0'].includes(plan.schemaVersion) ? {
@@ -1156,7 +1158,7 @@ export function buildBuilderAssignments(plan, {
     const scenes = leadPlan.representativeScenes.filter((scene) => scene.runtime === runtime);
     const workDirectory = `04-visual-lock/${runtime}`;
     const sourceRoot = `${workDirectory}/shared-source`;
-    const injection = roleInjection('lead');
+    const injection = roleInjection('lead', plan.rolePacketVersion ?? '1.0.0');
     return {
       schemaVersion: plan.schemaVersion === '4.0.0' ? '3.0.0' : '2.0.0',
       assignmentId,
@@ -1344,7 +1346,7 @@ async function main() {
   const result = productionRoot
     ? await runTimedProductionStage({
       eventsFile: path.join(productionRoot, 'production-events.ndjson'),
-      stage: 'runtime-plan',
+      stage: 'runtime-plan', phase: 'runtime-planning',
     }, () => writeProductionPlan({ productionRoot, ...planOptions }))
     : await planRuntime(planOptions);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

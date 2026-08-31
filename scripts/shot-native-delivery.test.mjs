@@ -13,6 +13,7 @@ import { validateShotMedia } from '../erduo-broll-loop-engineering/scripts/valid
 import { assembleShotPreview } from '../erduo-broll-loop-engineering/scripts/assemble-shot-preview.mjs';
 import { canonicalJson, validateSchemaValue } from '../erduo-broll-loop-engineering/scripts/runtime-schema-validator.mjs';
 import {
+  assertProductionSourcePolicy,
   runCommand,
   semanticSamplePoints,
 } from '../erduo-broll-loop-engineering/scripts/shot-media-lib.mjs';
@@ -123,7 +124,7 @@ async function fixture(t, { runtime = 'hyperframes' } = {}) {
     })}\n`);
     if (runtime === 'hyperframes') {
       await mkdir(path.join(sourceRoot, 'compositions'), { recursive: true });
-      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<main data-composition-id="${shot.shotId}" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30"></main>\n`);
+      await writeFile(path.join(sourceRoot, 'compositions', `${shot.shotId}.html`), `<main data-composition-id="${shot.shotId}" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1" data-fps="30"></main>\n`);
     }
   }
   const representativeScenes = {
@@ -292,11 +293,46 @@ test('renderer invokes one native shot target and verifies one complete media fi
 
 test('HyperFrames metadata rejects millisecond duration before an expensive render starts', () => {
   assert.throws(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1000" data-fps="30"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 1000, endMs: 2000}},
     profile: {raster: {width: 640, height: 360}, fps: {numerator: 30, denominator: 1}},
   }), /S02 HyperFrames data-duration must equal 1 seconds/u);
+});
+
+test('HyperFrames source contract rejects strict staging failures before the browser preflight', () => {
+  const source = `<!doctype html>
+    <html data-composition-id="S02">
+      <head><style>
+        .frame { width: 640px; height: 360px; }
+        .copy { font-family: "Noto Sans SC"; }
+      </style></head>
+      <body>
+        <main id="scene-s02" class="frame" data-composition-id="S02"
+          data-start="0" data-no-timeline data-width="640" data-height="360"
+          data-duration="1" data-fps="30"
+          style="background-image:url('/02-assets/fonts/NotoSansSC-wght.ttf')">
+          <p class="copy">测试</p>
+        </main>
+      </body>
+    </html>`;
+  assert.throws(
+    () => validateHyperframesCompositionMetadata({
+      source,
+      target: {id: 'S02', mode: 'direct-runtime-render'},
+      shot: {shotId: 'S02', window: {startMs: 1000, endMs: 2000}},
+      profile: {raster: {width: 640, height: 360}, fps: {numerator: 30, denominator: 1}},
+    }),
+    (error) => {
+      assert.match(error.message, /data-composition-id.*exactly once/iu);
+      assert.match(error.message, /composition root must not be html or body/iu);
+      assert.match(error.message, /data-no-timeline="true"/iu);
+      assert.match(error.message, /root class selector.*\.frame/iu);
+      assert.match(error.message, /root-relative asset URL.*\/02-assets/iu);
+      assert.match(error.message, /font-family.*@font-face.*Noto Sans SC/iu);
+      return true;
+    },
+  );
 });
 
 test('assignment preflight reports every invalid HyperFrames composition before the first render', async (t) => {
@@ -308,7 +344,7 @@ test('assignment preflight reports every invalid HyperFrames composition before 
     ),
     writeFile(
       path.join(value.sourceRoot, 'compositions', 'S02.html'),
-      '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1"></main>\n',
+      '<main data-composition-id="S02" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1"></main>\n',
     ),
     rm(value.sourceManifestFile),
   ]);
@@ -333,13 +369,13 @@ test('assignment preflight reports every invalid HyperFrames composition before 
 
 test('HyperFrames metadata quantizes duration from absolute SRT frame boundaries', () => {
   assert.throws(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline="true" data-width="1280" data-height="720" data-duration="18.5" data-fps="25"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
     profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
   }), /S02 HyperFrames data-duration must equal 18\.48 seconds/u);
   assert.doesNotThrow(() => validateHyperframesCompositionMetadata({
-    source: '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="1280" data-height="720" data-duration="18.48" data-fps="25"></main>',
+    source: '<main data-composition-id="S02" data-start="0" data-no-timeline="true" data-width="1280" data-height="720" data-duration="18.48" data-fps="25"></main>',
     target: {id: 'S02', mode: 'direct-runtime-render'},
     shot: {shotId: 'S02', window: {startMs: 2500, endMs: 21000}},
     profile: {raster: {width: 1280, height: 720}, fps: {numerator: 25, denominator: 1}},
@@ -366,11 +402,28 @@ test('Parent rejects browser-blocked file URLs before HyperFrames can silently f
   const value = await fixture(t);
   await writeFile(
     path.join(value.sourceRoot, 'compositions', 'S02.html'),
-    '<main data-composition-id="S02" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30" style="background:url(\'file:///outside/font.otf\')"></main>\n',
+    '<main data-composition-id="S02" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1" data-fps="30" style="background:url(\'file:///outside/font.otf\')"></main>\n',
   );
   await assert.rejects(
     renderAssignedShots({ ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }),
     /browser-blocked file URL.*copy the frozen asset inside sourceRoot/u,
+  );
+});
+
+test('Parent aggregates non-portable root and remote asset URLs before browser startup', async (t) => {
+  const sourceRoot = await mkdtemp(path.join(os.tmpdir(), 'source-policy-'));
+  t.after(() => rm(sourceRoot, {recursive: true, force: true}));
+  await writeFile(
+    path.join(sourceRoot, 'broken.css'),
+    ".root{background:url('/02-assets/frozen.png')}.remote{background:url('https://example.com/live.png')}\n",
+  );
+  await assert.rejects(
+    assertProductionSourcePolicy(sourceRoot),
+    (error) => {
+      assert.match(error.message, /root-relative asset URL.*broken\.css.*\/02-assets\/frozen\.png/iu);
+      assert.match(error.message, /remote runtime asset URL.*broken\.css.*https:\/\/example\.com\/live\.png/iu);
+      return true;
+    },
   );
 });
 
@@ -386,7 +439,7 @@ test('Parent refreshes its generated source manifest after a concrete pre-render
     /controlled first render failure/u,
   );
   const firstManifest = await readFile(value.sourceManifestFile, 'utf8');
-  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main data-composition-id="S01" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30">repaired S01</main>\n');
+  await writeFile(path.join(value.sourceRoot, 'compositions', 'S01.html'), '<main data-composition-id="S01" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1" data-fps="30">repaired S01</main>\n');
   const result = await renderAssignedShots({
     ...value, sourceManifestFile: undefined, runner: controlledRunner(), ffmpeg: 'ffmpeg', ffprobe: 'ffprobe',
   });
@@ -405,7 +458,7 @@ test('Parent archives a complete prior delivery before rerendering a revised sha
   await Promise.all([
     writeFile(
       path.join(value.sourceRoot, 'compositions', 'S01.html'),
-      '<main data-composition-id="S01" data-start="0" data-no-timeline data-width="640" data-height="360" data-duration="1" data-fps="30">revised</main>\n',
+      '<main data-composition-id="S01" data-start="0" data-no-timeline="true" data-width="640" data-height="360" data-duration="1" data-fps="30">revised</main>\n',
     ),
     rm(path.join(value.deliveryRoot, 'delivery-index.json')),
   ]);

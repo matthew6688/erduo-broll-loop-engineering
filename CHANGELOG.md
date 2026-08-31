@@ -4,6 +4,40 @@
 
 ## Unreleased
 
+- Canary speed validation now prefers completed owner `creative-authoring`
+  events over assignment-file mtimes. The 45-minute threshold is an observable
+  efficiency target rather than a production timeout: over-target work records
+  elapsed/overage and continues through unchanged quality gates. Approval
+  pauses, cross-session idle time, and pre-issued assignments no longer create
+  false failures; legacy productions without events retain the file-time
+  fallback.
+- New Runtime Plan v4 lineages bind `rolePacketVersion: 2.0.0`. Lead/Builder
+  packets front-load the deterministic HyperFrames root, timeline, selector,
+  local-font, and portable-asset contract that previously surfaced only during
+  preflight; legacy plans retain their reproducible v1 packets.
+
+- HyperFrames source validation now catches strict staging failures before the
+  official browser preflight: duplicate or invisible roots, implicit timeline
+  opt-out, root-class scoping, missing local font declarations, and root,
+  parent, `file:`, or remote asset URLs are aggregated without consuming browser
+  or render budget. The official browser, rendered text, motion, canary, and
+  user approval gates remain unchanged.
+- Added an opt-in, hash-closed HyperFrames animation-extension contract. It
+  pins `0.7.104`, forces `preserve-original` DesignMD policy, and requires
+  check plus preview evidence; promoted extensions additionally require a
+  real canary receipt. Candidate extensions never become production defaults.
+- Production events now support closed phase names, and the renderer records
+  preflight, direct render, decode/contact-sheet, audit, preview, canary,
+  presenter generation/edit/assembly, and delivery review boundaries. Metrics
+  are immutable `canary`, `full-preview`, or `final` snapshots with phase
+  totals instead of one overwritable report.
+
+- Added a Chinese FengTalk operator manual covering required inputs, the
+  visual-plan/Lead/five-shot/presenter/full-preview approval sequence, the
+  three frozen presenter modes, independent 9:16 and 16:9 production,
+  delivery contents, safe revision rules, publishing handoff, retrospective,
+  final checklist, and a new-session recovery prompt. It ships in both release
+  profiles and points back to the Skill as the production authority.
 - Documented the maintained FengTalk fork and the fail-closed HyperFrames
   upgrade policy. Production remains pinned to `0.7.104`; the isolated
   `0.8.17` check-only result is recorded as evaluation evidence, not production

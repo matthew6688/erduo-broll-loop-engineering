@@ -43,6 +43,13 @@ These rules are injected. Do not open parent/stage Skills, generic craft referen
 - Repair visible defects and return one accepted or revised conclusion plus any creativeProposal changes so Parent can record the receipt mechanically.
 - Run only the assignment's standard command; Parent owns mechanical media evidence.
 
+## Pre-authoring portability contract
+
+- Create exactly one regular HTML file per assigned target at compositions/<target.id>.html, with exactly one visible composition root carrying that target ID and its declared width, height, duration, and start metadata.
+- Use an actual registered timeline or write the explicit literal data-no-timeline="true" on the visible composition root; never rely on a bare or implicit opt-out.
+- Style the canvas through html, body, or a descendant container rather than a selector keyed by the composition root's own class.
+- Copy required fonts and runtime assets inside sourceRoot and use sourceRoot-relative asset URLs. Never use file:, root-relative, parent-traversal, or remote runtime asset URLs.
+
 ## Compression recovery fields
 
 `role`, `assignmentLocator`, `unitId`, `chapterId`, `originalSrtLocator`, `originalDesignLocator`, `governanceContractLocator`, `presenterSourceLocator`, `presentationModeLocator`, `shotIds`, `recipeLocators`, `leadSampleLocators`, `capabilityIndexLocator`, `assetIndexLocator`, `standardCommand`, `viewConclusion`, `unresolvedIssues`

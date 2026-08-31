@@ -999,6 +999,30 @@ test('public documentation states telemetry defaults, network boundaries, and ex
   }
 });
 
+test('FengTalk operator guide preserves the user-visible approval and delivery contract', async () => {
+  const guide = await readFile(
+    path.join(root, 'docs', 'FENGTALK-VIDEO-PRODUCTION-USER-GUIDE.md'),
+    'utf8',
+  );
+  const readme = await readFile(path.join(root, 'README.md'), 'utf8');
+  const agents = await readFile(path.join(root, 'AGENTS.md'), 'utf8');
+
+  assert.match(readme, /FENGTALK-VIDEO-PRODUCTION-USER-GUIDE\.md/u);
+  assert.match(agents, /FENGTALK-VIDEO-PRODUCTION-USER-GUIDE\.md/u);
+  assert.match(guide, /不需要会终端/u);
+  assert.match(guide, /original[^\n]*avatar-center[^\n]*avatar-split/u);
+  assert.match(guide, /视觉镜头计划/u);
+  assert.match(guide, /Lead 三类样片/u);
+  assert.match(guide, /五镜纯 B-roll Canary/u);
+  assert.match(guide, /至少选择本版 3\/5/u);
+  assert.match(guide, /横屏和竖屏[^\n]*两个独立 production root/u);
+  assert.match(guide, /恰好一条 canonical audio/u);
+  assert.match(guide, /Skill 使用 sidecar/u);
+  assert.match(guide, /不会自动向平台发布/u);
+  assert.match(guide, /发布仍等待单独明确授权/u);
+  assert.match(guide, /不得修改原始 B-roll DesignMD/u);
+});
+
 test('v1 public benchmark preserves measured facts, metric scopes, and unfinished gates', async () => {
   const benchmark = await readFile(path.join(root, 'docs', 'V1.0.0-BENCHMARK.md'), 'utf8');
   const readmes = await Promise.all([
@@ -5542,6 +5566,8 @@ test('public release source contains the parent plus thirteen prompt stage Skill
   );
   assert.equal(SKILL_NAMES.length, 14);
   assert.equal(STANDARD_RELEASE_FILES.includes('Install.command'), false);
+  assert.equal(RELEASE_FILES.includes('docs/FENGTALK-VIDEO-PRODUCTION-USER-GUIDE.md'), true);
+  assert.equal(STANDARD_RELEASE_FILES.includes('docs/FENGTALK-VIDEO-PRODUCTION-USER-GUIDE.md'), true);
   assert.equal(RELEASE_FILES.includes('docs/V1.0.0-BENCHMARK.md'), true);
   assert.equal(STANDARD_RELEASE_FILES.includes('docs/V1.0.0-BENCHMARK.md'), true);
   assert.equal(STANDARD_RELEASE_FILES.includes('scripts/install.mjs'), false);

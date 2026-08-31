@@ -161,7 +161,7 @@ const fixturePlanVerification = async () => ({status: 'valid', recipes: 5});
 
 async function validCanaryClosure(t, {
   compositionCount = 3, materialCount = 2, signatureMotionCount = 2, wallTimeMinutes = 0,
-  includeLead = false, materialPolicy = null,
+  activeAuthoringMinutes = null, includeLead = false, materialPolicy = null,
 } = {}) {
   const productionRoot = await temporaryRoot(t);
   const canaryShotIds = ['S01', 'S05', 'S07', 'S09', 'S15'];
@@ -373,6 +373,21 @@ async function validCanaryClosure(t, {
   if (wallTimeMinutes > 0) {
     const old = new Date(Date.now() - wallTimeMinutes * 60 * 1000);
     await utimes(path.join(assignmentsDirectory, 'U001.json'), old, old);
+  }
+  if (activeAuthoringMinutes !== null) {
+    const spanId = 'fixture-active-authoring';
+    const startedAt = new Date(Date.now() - activeAuthoringMinutes * 60 * 1000).toISOString();
+    await writeFile(path.join(productionRoot, 'production-events.ndjson'), [
+      JSON.stringify({
+        schemaVersion: '1.0.0', eventId: 'fixture-start', occurredAt: startedAt,
+        type: 'stage-start', stage: 'builder', phase: 'creative-authoring', spanId, unitId: 'U001',
+      }),
+      JSON.stringify({
+        schemaVersion: '1.0.0', eventId: 'fixture-end', occurredAt: new Date().toISOString(),
+        type: 'stage-end', stage: 'builder', phase: 'creative-authoring', spanId, unitId: 'U001', status: 'passed',
+      }),
+      '',
+    ].join('\n'));
   }
   const runner = async ({executable, args}) => {
     if (executable === 'ffprobe') {
@@ -656,12 +671,11 @@ test('Parent finalizes an already rendered canary without repeating an assignmen
   assert.equal(gate.canaryPreview.locator, '05-delivery/canary-preview.mp4');
 });
 
-test('canary creative closure enforces composition, material, signature-motion, and 45-minute thresholds', async (t) => {
+test('canary creative closure enforces quality thresholds and reports the 45-minute efficiency target', async (t) => {
   const cases = [
     [{compositionCount: 2}, /three distinct composition/iu],
     [{materialCount: 1}, /two real-or-generated material/iu],
     [{signatureMotionCount: 1}, /two visible signature motions/iu],
-    [{wallTimeMinutes: 46}, /45 minutes/iu],
   ];
   for (const [options, pattern] of cases) {
     const value = await validCanaryClosure(t, options);
@@ -671,6 +685,34 @@ test('canary creative closure enforces composition, material, signature-motion, 
       verifyPlanInputs: fixturePlanVerification,
     }), pattern);
   }
+  const slow = await validCanaryClosure(t, {wallTimeMinutes: 46});
+  const slowResult = await validateCanaryTechnicalGate({
+    plan: slow.plan, productionRoot: slow.productionRoot,
+    recipesDirectory: slow.recipesDirectory, runner: slow.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  });
+  assert.equal(slowResult.creativeChecks.wallTimeStatus, 'over-target');
+    assert.ok(slowResult.creativeChecks.wallTimeOverByMs > 0);
+});
+
+test('canary speed gate measures completed active authoring instead of stale assignment age', async (t) => {
+  const active = await validCanaryClosure(t, {wallTimeMinutes: 120, activeAuthoringMinutes: 5});
+  const passed = await validateCanaryTechnicalGate({
+    plan: active.plan, productionRoot: active.productionRoot,
+    recipesDirectory: active.recipesDirectory, runner: active.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  });
+  assert.equal(passed.creativeChecks.wallTimeSource, 'completed-active-authoring-events');
+  assert.equal(passed.creativeChecks.wallTimeStatus, 'within-target');
+  assert.ok(passed.creativeChecks.wallTimeMs < 6 * 60 * 1000);
+
+  const slow = await validCanaryClosure(t, {activeAuthoringMinutes: 46});
+  const slowResult = await validateCanaryTechnicalGate({
+    plan: slow.plan, productionRoot: slow.productionRoot,
+    recipesDirectory: slow.recipesDirectory, runner: slow.runner,
+    verifyPlanInputs: fixturePlanVerification,
+  });
+  assert.equal(slowResult.creativeChecks.wallTimeStatus, 'over-target');
 });
 
 test('native-only material exception requires an explicit user policy bound to the original design', async (t) => {

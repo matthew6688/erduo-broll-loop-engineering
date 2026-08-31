@@ -321,6 +321,7 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   })}\n`);
   const result = await writeProductionPlan(data);
   assert.equal(result.plan.schemaVersion, '4.0.0');
+  assert.equal(result.plan.rolePacketVersion, '2.0.0');
   assert.equal(result.plan.integrationMode, 'shot-media');
   assert.equal(result.plan.shots.length, 20);
   assert.equal(result.plan.authoringUnits.length, 3);
@@ -345,6 +346,10 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   assert.equal('visualLock' in result.plan, false);
   assert.equal(result.plan.leadProduction.representativeScenes.length, 3);
   assert.equal(lead.phase, 'lead-production');
+  assert.ok([lead, ...builders].every(({rolePacketVersion, rolePrompt}) => (
+    rolePacketVersion === '2.0.0'
+      && /Pre-authoring portability contract/u.test(rolePrompt)
+  )));
   assert.ok([lead, ...builders].every((assignment) => (
     assignment.contextFiles.presenterSource === '00-inputs/presenter/presenter-source.json'
       && assignment.presenterContext.locator === assignment.contextFiles.presenterSource
@@ -410,6 +415,40 @@ test('20 shot-media deliveries remain twenty shots but authoring is three contig
   assert.deepEqual(await gateBuilderAssignment(canaryBuilders[0], v4GateOptions), {
     status: 'ready', role: 'builder', phase: 'canary',
     allowedShotIds: canaryBuilders[0].canaryPhase.shotIds,
+  });
+  const budgetNow = new Date('2026-08-31T04:00:00.000Z');
+  await writeFile(path.join(data.productionRoot, 'production-events.ndjson'), [
+    JSON.stringify({
+      schemaVersion: '1.0.0', eventId: 'lead-start', occurredAt: '2026-08-31T03:20:00.000Z',
+      type: 'stage-start', stage: 'lead-builder', phase: 'creative-authoring',
+      spanId: 'lead-authoring', unitId: lead.assignmentId,
+    }),
+    JSON.stringify({
+      schemaVersion: '1.0.0', eventId: 'lead-end', occurredAt: '2026-08-31T03:50:00.000Z',
+      type: 'stage-end', stage: 'lead-builder', phase: 'creative-authoring',
+      spanId: 'lead-authoring', unitId: lead.assignmentId, status: 'passed',
+    }),
+    '',
+  ].join('\n'));
+  assert.deepEqual(await gateBuilderAssignment(canaryBuilders[0], {
+    ...v4GateOptions, now: () => budgetNow,
+  }), {
+    status: 'ready', role: 'builder', phase: 'canary',
+    allowedShotIds: canaryBuilders[0].canaryPhase.shotIds,
+    speedBudget: {
+      status: 'within-target', source: 'completed-lead-authoring-event',
+      thresholdMs: 45 * 60 * 1000, elapsedMs: 40 * 60 * 1000,
+      remainingMs: 5 * 60 * 1000, overByMs: 0,
+      startedAt: '2026-08-31T03:20:00.000Z',
+    },
+  });
+  assert.deepEqual((await gateBuilderAssignment(canaryBuilders[0], {
+    ...v4GateOptions, now: () => new Date('2026-08-31T04:06:00.000Z'),
+  })).speedBudget, {
+    status: 'over-target', source: 'completed-lead-authoring-event',
+    thresholdMs: 45 * 60 * 1000, elapsedMs: 46 * 60 * 1000,
+    remainingMs: 0, overByMs: 60 * 1000,
+    startedAt: '2026-08-31T03:20:00.000Z',
   });
   assert.deepEqual(result.plan.canaryGate, {
     required: true,

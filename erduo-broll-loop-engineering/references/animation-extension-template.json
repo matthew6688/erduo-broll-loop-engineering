@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0.0",
+  "identity": "REPLACE_WITH_COMPUTED_SHA256",
+  "id": "example-semantic-animation",
+  "kind": "hyperframes-block",
+  "status": "candidate",
+  "intent": "Describe the reusable semantic purpose of this animation.",
+  "runtime": {"provider": "hyperframes", "version": "0.7.104"},
+  "designMdPolicy": "preserve-original",
+  "implementation": {"locator": "source/animation.js", "sha256": "REPLACE_WITH_SHA256"},
+  "verification": [
+    {"kind": "check-receipt", "artifact": {"locator": "evidence/check.json", "sha256": "REPLACE_WITH_SHA256"}},
+    {"kind": "preview", "artifact": {"locator": "evidence/preview.mp4", "sha256": "REPLACE_WITH_SHA256"}}
+  ],
+  "canaryEvidence": null
+}

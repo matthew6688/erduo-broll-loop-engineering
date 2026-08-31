@@ -59,6 +59,21 @@ test('generated role prompts anchor positive craft and chapter creative ownershi
   assert.match(builder, /implementation-only source repairs[\s\S]*decision=accepted/iu);
 });
 
+test('role packet v2 front-loads portable HyperFrames source rules without changing legacy packets', () => {
+  for (const role of ['lead', 'builder']) {
+    const legacy = roleInjection(role, '1.0.0').rolePrompt;
+    const current = roleInjection(role, '2.0.0').rolePrompt;
+    assert.doesNotMatch(legacy, /Pre-authoring portability contract/u, role);
+    assert.match(current, /Pre-authoring portability contract/u, role);
+    assert.match(current, /exactly one visible composition root/u, role);
+    assert.match(current, /data-no-timeline="true"/u, role);
+    assert.match(current, /sourceRoot-relative asset URLs/u, role);
+    assert.match(current, /Never use file:, root-relative, parent-traversal, or remote runtime asset URLs/u, role);
+  }
+  assert.doesNotMatch(roleInjection('director', '2.0.0').rolePrompt, /Pre-authoring portability contract/u);
+  assert.throws(() => roleInjection('builder', '9.0.0'), /role packet version/iu);
+});
+
 test('Parent, orchestration, and stage Skills expose the reset contract', async () => {
   const parent = await readSkill('SKILL.md');
   const orchestration = await readSkill('references/stage-orchestration.md');

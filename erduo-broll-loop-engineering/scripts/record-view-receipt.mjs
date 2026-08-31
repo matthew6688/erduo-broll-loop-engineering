@@ -137,7 +137,7 @@ async function main() {
   const assignmentId = path.basename(options.assignment, path.extname(options.assignment));
   const result = await runTimedProductionStage({
     eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
-    stage: 'builder', unitId: assignmentId,
+    stage: 'builder', phase: 'view-receipt', unitId: assignmentId,
   }, () => createViewReceipt({
     productionRoot: options['production-root'],
     planFile: options.plan,

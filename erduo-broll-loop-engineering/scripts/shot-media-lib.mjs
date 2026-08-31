@@ -82,10 +82,21 @@ const PRODUCTION_PROOF_TOKENS = [
   ['manual motion windows', /data-erduo-motions|\bmotionWindows?\b/iu],
 ];
 
-const UNSAFE_RUNTIME_ASSET_URL = /(?:\burl\(\s*["']?|\b(?:src|href)\s*=\s*["'])file:\/\//iu;
+function runtimeAssetUrls(source) {
+  const values = [];
+  const patterns = [
+    /\burl\(\s*["']?([^)'"\s]+)["']?\s*\)/giu,
+    /\b(?:src|href)\s*=\s*["']([^"']+)["']/giu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) values.push(match[1].trim());
+  }
+  return [...new Set(values)];
+}
 
 export async function assertProductionSourcePolicy(sourceRoot) {
   const root = path.resolve(sourceRoot);
+  const policyFailures = [];
   const visit = async (directory) => {
     for (const entry of await readdir(directory, {withFileTypes: true})) {
       if (directory === root && entry.name === 'node_modules') continue;
@@ -103,14 +114,58 @@ export async function assertProductionSourcePolicy(sourceRoot) {
       }
       if (!/\.(?:[cm]?[jt]sx?|html|css|json)$/iu.test(locator)) continue;
       const body = await readFile(absolute, 'utf8');
-      if (UNSAFE_RUNTIME_ASSET_URL.test(body)) {
-        throw new Error(`production source contains browser-blocked file URL in ${locator}; copy the frozen asset inside sourceRoot`);
+      for (const assetUrl of runtimeAssetUrls(body)) {
+        if (/^file:\/\//iu.test(assetUrl)) {
+          policyFailures.push(`production source contains browser-blocked file URL in ${locator}: ${assetUrl}; copy the frozen asset inside sourceRoot`);
+        } else if (/^\/(?!\/)/u.test(assetUrl)) {
+          policyFailures.push(`production source contains root-relative asset URL in ${locator}: ${assetUrl}; use a portable sourceRoot-relative path`);
+        } else if (/^(?:https?:)?\/\//iu.test(assetUrl)) {
+          policyFailures.push(`production source contains remote runtime asset URL in ${locator}: ${assetUrl}; freeze the asset inside sourceRoot`);
+        }
       }
       const match = PRODUCTION_PROOF_TOKENS.find(([, pattern]) => pattern.test(body));
-      if (match) throw new Error(`production source contains forbidden ${match[0]} in ${locator}`);
+      if (match) policyFailures.push(`production source contains forbidden ${match[0]} in ${locator}`);
     }
   };
   await visit(root);
+  if (policyFailures.length > 0) {
+    throw new Error(`production source policy failed:\n- ${policyFailures.join('\n- ')}`);
+  }
+}
+
+async function canaryActiveAuthoringStart({productionRoot, reviewers}) {
+  const eventsFile = path.join(path.resolve(productionRoot), 'production-events.ndjson');
+  let body;
+  try {
+    body = await readFile(eventsFile, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+  const events = body.split(/\r?\n/u).filter(Boolean).map((line, index) => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      throw new Error(`production events line ${index + 1} is not valid JSON`);
+    }
+  });
+  const ownerIds = new Set(reviewers.flatMap(({value}) => (
+    [value.assignmentId, value.unitId].filter(Boolean)
+  )));
+  const passedSpans = new Set(events.filter((event) => (
+    event.type === 'stage-end'
+      && event.phase === 'creative-authoring'
+      && event.status === 'passed'
+      && ownerIds.has(event.unitId)
+      && typeof event.spanId === 'string'
+  )).map(({spanId}) => spanId));
+  const starts = events.filter((event) => (
+    event.type === 'stage-start'
+      && event.phase === 'creative-authoring'
+      && ownerIds.has(event.unitId)
+      && passedSpans.has(event.spanId)
+  )).map(({occurredAt}) => Date.parse(occurredAt)).filter(Number.isFinite);
+  return starts.length > 0 ? Math.min(...starts) : null;
 }
 
 function exactArray(left, right) {
@@ -459,17 +514,25 @@ async function validateCanaryEvidenceClosure({
   if (signatureMotions.size < 2) throw new Error('canary creative gate requires at least two visible signature motions');
 
   const previewStats = await stat(previewFile);
-  const assignmentStats = await Promise.all(reviewers.map(({file}) => stat(file)));
-  const assignmentIssuedAt = Math.min(...assignmentStats.map((info) => info.mtimeMs));
+  const activeAuthoringStart = await canaryActiveAuthoringStart({productionRoot, reviewers});
+  const assignmentStats = activeAuthoringStart === null
+    ? await Promise.all(reviewers.map(({file}) => stat(file)))
+    : [];
+  const assignmentIssuedAt = activeAuthoringStart
+    ?? Math.min(...assignmentStats.map((info) => info.mtimeMs));
   const wallTimeMs = previewStats.mtimeMs - assignmentIssuedAt;
-  if (!Number.isFinite(wallTimeMs) || wallTimeMs < 0 || wallTimeMs > 45 * 60 * 1_000) {
-    throw new Error('canary assignment-to-first-preview wall time exceeds 45 minutes');
+  if (!Number.isFinite(wallTimeMs) || wallTimeMs < 0) {
+    throw new Error('canary assignment-to-first-preview timing is invalid');
   }
+  const wallTimeTargetMs = 45 * 60 * 1_000;
+  const wallTimeStatus = wallTimeMs > wallTimeTargetMs ? 'over-target' : 'within-target';
   return {
     contracts, recipes, owners: reviewers.map(({value}) => value),
     creativeChecks: {
       lowLevelErrors: 0, compositionFamilies: compositions.size,
       materialShots: materialShots.length, signatureMotions: signatureMotions.size, wallTimeMs,
+      wallTimeSource: activeAuthoringStart === null ? 'assignment-file-fallback' : 'completed-active-authoring-events',
+      wallTimeTargetMs, wallTimeStatus, wallTimeOverByMs: Math.max(0, wallTimeMs - wallTimeTargetMs),
       materialPolicy: nativeOnlyException ? 'user-approved-native-only' : 'standard-minimum-two',
     },
   };

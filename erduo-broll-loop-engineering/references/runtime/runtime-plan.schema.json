@@ -7,6 +7,7 @@
   "required": ["schemaVersion", "status", "planningMode", "selection", "sharedArtifacts", "sourceContext", "runtimeExecutables", "productionProfile", "backendFailurePolicy", "mediaBoundary", "resultingRoute", "requiredBackends", "integrationMode", "frozenMediaContractVersion", "shotMediaContractVersion", "shots", "blocks", "authoringUnits", "leadProduction", "canaryGate", "warnings", "identity"],
   "properties": {
     "schemaVersion": { "const": "4.0.0" },
+    "rolePacketVersion": { "enum": ["1.0.0", "2.0.0"] },
     "status": { "enum": ["planned", "action-required"] },
     "planningMode": { "enum": ["auto", "forced-single", "forced-hybrid"] },
     "selection": {

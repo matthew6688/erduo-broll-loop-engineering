@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { isDirectExecution } from './direct-execution.mjs';
 import { parseCliPairs, resolveExistingRegularWithinRoot, resolveNewOutputWithinRoot } from './presenter-media-lib.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 const BASE_URL = 'https://api.heygen.com';
 const CURRENT_ACCOUNT_RESOURCE = ['v3', 'users', 'me'].join('/');
@@ -176,13 +177,17 @@ export async function generateHeygenPresenter({
 
 async function main() {
   const options = parseCliPairs(process.argv.slice(2));
-  const result = await generateHeygenPresenter({
-    productionRoot: options['production-root'], portraitFile: options.portrait,
-    narrationFile: options.narration, authorizationFile: options.authorization,
-    outputFile: options.output, stateFile: options.state, aspectRatio: options['aspect-ratio'],
-    resolution: options.resolution, title: options.title, motionPrompt: options['motion-prompt'],
-    expressiveness: options.expressiveness, durationSeconds: Number(options['duration-seconds']),
-  });
+  if (!options['production-root']) throw new Error('--production-root is required');
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'assembly', phase: 'presenter-generation',
+  }, () => generateHeygenPresenter({
+      productionRoot: options['production-root'], portraitFile: options.portrait,
+      narrationFile: options.narration, authorizationFile: options.authorization,
+      outputFile: options.output, stateFile: options.state, aspectRatio: options['aspect-ratio'],
+      resolution: options.resolution, title: options.title, motionPrompt: options['motion-prompt'],
+      expressiveness: options.expressiveness, durationSeconds: Number(options['duration-seconds']),
+    }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

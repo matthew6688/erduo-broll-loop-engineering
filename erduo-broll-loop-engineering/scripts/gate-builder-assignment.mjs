@@ -35,6 +35,7 @@ function expectedDirectorLocator(locator) {
 const CONTEXT_POLICY = 'Load only the listed files, selected references named by the assigned Recipes, and files named by the shared asset plans. Do not inherit the parent transcript or read unrelated Recipes.';
 const LEAD_CONTEXT_POLICY = 'Load only the listed representative Recipes and shared plans. Do not inherit the parent transcript or read unrelated Recipes.';
 const SEAM_LIMIT = 'A live transition cannot cross independently rendered units. Keep a live shared-element transition inside one unit; otherwise close this unit on the planned readable state and use the declared matched seam.';
+const CANARY_SPEED_THRESHOLD_MS = 45 * 60 * 1000;
 
 function assertExactAssignment(assignment, expected) {
   if (canonicalJson(assignment) !== canonicalJson(expected)) {
@@ -82,6 +83,49 @@ async function verifyFileHash(productionRoot, locator, expectedSha256, label) {
   if (createHash('sha256').update(body).digest('hex') !== expectedSha256) {
     throw new Error(`${label} file hash differs from its gate binding`);
   }
+}
+
+async function canaryDispatchSpeedBudget({productionRoot, plan, now = () => new Date()}) {
+  const leadIds = new Set((plan.leadProduction?.leadAssignmentLocators ?? []).map((locator) => (
+    path.basename(locator, path.extname(locator))
+  )));
+  if (leadIds.size === 0) return null;
+  let body;
+  try {
+    body = await readFile(path.join(path.resolve(productionRoot), 'production-events.ndjson'), 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+  const events = body.split(/\r?\n/u).filter(Boolean).map((line, index) => {
+    try { return JSON.parse(line); } catch { throw new Error(`production events line ${index + 1} is not valid JSON`); }
+  });
+  const completed = new Set(events.filter((event) => (
+    event.type === 'stage-end'
+      && event.phase === 'creative-authoring'
+      && event.status === 'passed'
+      && leadIds.has(event.unitId)
+      && typeof event.spanId === 'string'
+  )).map(({spanId}) => spanId));
+  const starts = events.filter((event) => (
+    event.type === 'stage-start'
+      && event.phase === 'creative-authoring'
+      && leadIds.has(event.unitId)
+      && completed.has(event.spanId)
+  )).map((event) => ({event, timestamp: Date.parse(event.occurredAt)}))
+    .filter(({timestamp}) => Number.isFinite(timestamp));
+  if (starts.length === 0) return null;
+  const first = starts.sort((left, right) => left.timestamp - right.timestamp)[0];
+  const elapsedMs = now().getTime() - first.timestamp;
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new Error('canary speed budget has an invalid active-authoring clock');
+  const overTarget = elapsedMs > CANARY_SPEED_THRESHOLD_MS;
+  return {
+    status: overTarget ? 'over-target' : 'within-target', source: 'completed-lead-authoring-event',
+    thresholdMs: CANARY_SPEED_THRESHOLD_MS, elapsedMs,
+    remainingMs: Math.max(0, CANARY_SPEED_THRESHOLD_MS - elapsedMs),
+    overByMs: Math.max(0, elapsedMs - CANARY_SPEED_THRESHOLD_MS),
+    startedAt: first.event.occurredAt,
+  };
 }
 
 export async function validateCanaryReleaseGate(plan, {
@@ -194,6 +238,7 @@ export async function gateBuilderAssignment(assignment, options = {}) {
     productionRoot,
     canaryTechnicalGate,
     canaryUserDecision,
+    now,
   } = options;
   if (plan?.schemaVersion === '4.0.0') {
     if (plan.status !== 'planned' || computeRuntimePlanIdentity(plan) !== plan.identity) {
@@ -219,9 +264,11 @@ export async function gateBuilderAssignment(assignment, options = {}) {
       if (assignment.canaryPhase.shotIds.length === 0) {
         throw new Error('full production is blocked until the five-shot canary technical gate and user decision pass');
       }
+      const speedBudget = await canaryDispatchSpeedBudget({productionRoot, plan, now});
       return {
         status: 'ready', role: 'builder', phase: 'canary',
         allowedShotIds: assignment.canaryPhase.shotIds,
+        ...(speedBudget ? {speedBudget} : {}),
       };
     }
     const canary = await validateCanaryReleaseGate(plan, {
@@ -253,7 +300,7 @@ export async function gateBuilderAssignment(assignment, options = {}) {
     }
     assertProfileBinding(assignment, plan);
     const expectedRoot = `04-visual-lock/${assignment.runtime}`;
-    const injection = roleInjection('lead');
+    const injection = roleInjection('lead', '1.0.0');
     assertExactAssignment(assignment, {
       schemaVersion: '2.0.0',
       assignmentId: assignment.assignmentId,
@@ -342,7 +389,7 @@ export async function gateBuilderAssignment(assignment, options = {}) {
   if (assignment.stageSkill !== expectedStageSkill(assignment.runtime)) {
     throw new Error('production assignment stage differs from the runtime plan');
   }
-  const injection = roleInjection('builder');
+  const injection = roleInjection('builder', '1.0.0');
   assertExactAssignment(assignment, {
     schemaVersion: '2.0.0',
     assignmentId: unit.unitId,

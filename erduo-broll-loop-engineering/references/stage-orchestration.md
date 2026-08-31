@@ -83,6 +83,13 @@ blocked until all canary technical/visual-baseline conditions pass and the user
 selects this version for at least 3/5 shots. A failed canary returns to its
 original Lead or Chapter Builder; it never starts the full film.
 
+The Parent reports a 45-minute active-authoring-to-first-preview efficiency
+target at Builder dispatch and canary finalization. `over-target` is telemetry,
+not a timeout: it records elapsed/overage and production continues until it
+finishes. Only the quality, source, technical, viewing, and approval gates above
+may block. This keeps complex narration finishable while preserving evidence
+for the next bottleneck optimization.
+
 The assignment standard command is itself a quality loop. It performs one
 Assignment Preflight before render: runtime-plan/assignment/source/asset/
 governance/Recipe/text checks plus every active target's runtime metadata are
@@ -95,10 +102,15 @@ browser invocation; repair the listed source defects together first.
 HyperFrames preflight also stages each bound composition as a temporary
 root and runs the official browser `check` at tween boundaries with frame/layout
 checking. Missing assets/fonts, runtime errors, contrast failures, collisions,
-and unsafe overflow are returned before the render ledger starts. HyperFrames metadata validation includes the strict runtime's root
-`data-start="0"`, either `data-no-timeline` or a timeline registry, and rejection
-of parent-traversing `../` asset references in addition to raster/fps/duration
-binding. The command then performs rendered Recipe/rhythm motion evidence and
+and unsafe overflow are returned before the render ledger starts. Before that
+browser process starts, the static source contract requires exactly one visible
+non-`html`/`body` composition root, a stable root id, raster/fps/duration,
+`data-start="0"`, explicit `data-no-timeline="true"` or a timeline registry,
+root styling that does not depend on the root's own class selector, and a local
+`@font-face` for every custom font family. It aggregates non-portable root,
+parent-traversing, `file:`, and remote runtime asset URLs across the complete
+source tree. These failures consume neither browser time nor render attempts.
+The command then performs rendered Recipe/rhythm motion evidence and
 refuses a viewing conclusion while either rendered report is `signals` or
 `unmeasured`. Actual render starts and outcomes append to
 `checks/render-attempts.ndjson`; Lead and Builder receive at most two actual
@@ -162,6 +174,15 @@ validator/lint source, complete catalogs, unrelated Recipes, long logs, or
 Parent history. Original task inputs are not redundant rule files. Generated
 AGENTS, CLAUDE, and role prompts come from one role-charter source; the packet
 repeats its short execution anchor/recovery fields after compression.
+
+New Runtime Plan v4 lineages carry `rolePacketVersion: 2.0.0`. Their Lead and
+Builder packets front-load the deterministic HyperFrames portability contract:
+one HTML file per target, exactly one visible metadata-bearing composition root,
+an actual timeline or explicit `data-no-timeline="true"`, no root-class canvas
+styling, and source-root-local fonts/assets referenced without remote, `file:`,
+root, or parent-traversing URLs. Legacy Plans without this field retain the v1
+packet so their immutable assignments remain reproducible. Packet version drift
+requires a new governed Plan; never hand-edit an existing assignment.
 
 ## Director and Assets
 

@@ -1,6 +1,24 @@
 
 ## Unreleased
 
+### Animation extensions and observability
+
+- Added a verified executable-animation extension manifest and validator.
+  Extensions stay opt-in, preserve the original DesignMD, pin HyperFrames
+  `0.7.104`, and fail closed on source or evidence drift.
+- Added phase-level production timing and immutable canary/full-preview/final
+  metrics snapshots. Standard render and presenter commands now record their
+  own machine-execution boundaries without misclassifying them as Builder
+  creative-authoring time.
+
+### User operations
+
+- Added a no-terminal FengTalk video-production manual with explicit
+  visual-plan, Lead sample, five-shot B-roll, presenter, full-preview, and
+  final-delivery approvals. It documents outputs, revision boundaries,
+  publication handoff, retrospective, and session recovery without creating a
+  second production authority.
+
 ### Runtime governance
 
 - Documented the maintained FengTalk fork and the fail-closed HyperFrames
@@ -11,6 +29,20 @@
 
 ### Speed and stability
 
+- The 45-minute canary speed target now measures completed owner active-authoring
+  events when available instead of treating assignment age as production time.
+  Human approval and idle waits remain separately observable. Over-target work
+  records elapsed/overage and continues; source, technical, visual, viewing,
+  approval, and legacy identity checks remain fail closed.
+- New Runtime Plan v4 lineages bind role packet v2, which places deterministic
+  HyperFrames root, timeline, selector, local-font, and portable-asset rules in
+  Lead/Builder context before authoring. Legacy plans keep packet v1 unchanged.
+
+- HyperFrames source validation now rejects strict staging failures before the
+  official browser starts. It aggregates duplicate or invisible composition
+  roots, implicit timeline opt-out, root-class scoping, missing local font
+  declarations, and non-portable runtime asset URLs. No visual, motion, canary,
+  or approval gate was removed or weakened.
 - Parent receipt recording now closes a missing minimal creative handoff in
   the same deterministic command, removing a role roundtrip without weakening
   viewing or canary gates. The five-shot 1080p sequential mechanical baseline

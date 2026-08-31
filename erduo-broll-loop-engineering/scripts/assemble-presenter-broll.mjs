@@ -20,6 +20,7 @@ import { computeRuntimePlanIdentity } from './validate-runtime-plan.mjs';
 import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
 import {bindPresentationModeContext} from './presentation-mode.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 const schemas = path.resolve(import.meta.dirname, '..', 'references', 'runtime');
 
@@ -620,7 +621,11 @@ export async function assemblePresenterBroll({
 
 async function main() {
   const options = parseCliPairs(process.argv.slice(2));
-  const result = await assemblePresenterBroll({
+  if (!options['production-root']) throw new Error('--production-root is required');
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'assembly', phase: 'presenter-assembly',
+  }, () => assemblePresenterBroll({
     productionRoot: options['production-root'], presenterSourceFile: options['presenter-source'],
     editPlanFile: options['edit-plan'], deliveryIndexFile: options['delivery-index'],
     deliveryRoot: options['delivery-root'], outputFile: options.output, receiptFile: options.receipt,
@@ -633,8 +638,8 @@ async function main() {
     landscapeDeliveryIndexFile: options['landscape-delivery-index'],
     landscapeRuntimePlanFile: options['landscape-runtime-plan'],
     landscapeRecipesDirectory: options['landscape-recipes'],
-    ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
-  });
+      ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
+    }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

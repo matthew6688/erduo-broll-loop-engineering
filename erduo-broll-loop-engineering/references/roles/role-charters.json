@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "sourceNotice": "Generated role files are projections of this file. Edit this file, then run generate-role-files.mjs.",
   "positiveCraftAnchor": [
     "Staging: establish one primary focus before it changes.",
@@ -57,6 +57,12 @@
     },
     "lead": {
       "title": "Lead creative charter",
+      "sourceAuthoringContract": [
+        "Create exactly one regular HTML file per assigned target at compositions/<target.id>.html, with exactly one visible composition root carrying that target ID and its declared width, height, duration, and start metadata.",
+        "Use an actual registered timeline or write the explicit literal data-no-timeline=\"true\" on the visible composition root; never rely on a bare or implicit opt-out.",
+        "Style the canvas through html, body, or a descendant container rather than a selector keyed by the composition root's own class.",
+        "Copy required fonts and runtime assets inside sourceRoot and use sourceRoot-relative asset URLs. Never use file:, root-relative, parent-traversal, or remote runtime asset URLs."
+      ],
       "rules": [
       "Read the complete original SRT, original design, compact motion map, three representative Recipes, shared asset/font index, and any approved presentation-mode contract directly.",
       "Read the assignment-bound production governance contract and use only its approved brand tokens, fonts, Logo assets, and visual boundaries.",
@@ -101,6 +107,12 @@
     },
     "builder": {
       "title": "Chapter Builder creative charter",
+      "sourceAuthoringContract": [
+        "Create exactly one regular HTML file per assigned target at compositions/<target.id>.html, with exactly one visible composition root carrying that target ID and its declared width, height, duration, and start metadata.",
+        "Use an actual registered timeline or write the explicit literal data-no-timeline=\"true\" on the visible composition root; never rely on a bare or implicit opt-out.",
+        "Style the canvas through html, body, or a descendant container rather than a selector keyed by the composition root's own class.",
+        "Copy required fonts and runtime assets inside sourceRoot and use sourceRoot-relative asset URLs. Never use file:, root-relative, parent-traversal, or remote runtime asset URLs."
+      ],
       "rules": [
         "Own the complete creative loop for one contiguous chapter, normally five to eight shots: understand, choose, build, render, view, and revise.",
       "Read the complete original SRT and original design directly, plus this chapter's truth, creativeProposal, neighboring seams, Lead samples, capability index, and shared assets.",

@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceFile = path.join(skillRoot, 'references', 'roles', 'role-charters.json');
 const source = JSON.parse(readFileSync(sourceFile, 'utf8'));
+const ROLE_PACKET_VERSIONS = new Set(['1.0.0', '2.0.0']);
+const CURRENT_ROLE_PACKET_VERSION = '2.0.0';
 
 const roleTargets = Object.freeze({
   director: [
@@ -42,8 +44,17 @@ function positiveCraftAnchor() {
   return source.positiveCraftAnchor;
 }
 
-function renderPrompt(role) {
+function renderPrompt(role, version = CURRENT_ROLE_PACKET_VERSION) {
+  if (!ROLE_PACKET_VERSIONS.has(version)) throw new Error(`unknown role packet version ${JSON.stringify(version)}`);
   const charter = requireRole(role);
+  const portability = version === '2.0.0' && role !== 'director'
+    ? [
+      '',
+      '## Pre-authoring portability contract',
+      '',
+      ...charter.sourceAuthoringContract.map((line) => `- ${line}`),
+    ]
+    : [];
   return [
     `# ${charter.title}`,
     '',
@@ -58,6 +69,7 @@ function renderPrompt(role) {
     '## Source-authoring anchor',
     '',
     ...charter.executionAnchor.map((line) => `- ${line}`),
+    ...portability,
     '',
     '## Compression recovery fields',
     '',
@@ -88,10 +100,11 @@ function renderAssignmentSelectedInheritance() {
   ].join('\n');
 }
 
-export function roleInjection(role) {
+export function roleInjection(role, version = CURRENT_ROLE_PACKET_VERSION) {
   const charter = requireRole(role);
   return Object.freeze({
-    rolePrompt: renderPrompt(role),
+    ...(version === '2.0.0' ? {rolePacketVersion: version} : {}),
+    rolePrompt: renderPrompt(role, version),
     positiveCraftAnchor: Object.freeze([...positiveCraftAnchor()]),
     executionAnchor: Object.freeze([...charter.executionAnchor]),
     recoveryFields: Object.freeze([...charter.recoveryFields]),
@@ -101,7 +114,7 @@ export function roleInjection(role) {
 export function generatedRoleFiles() {
   const files = new Map();
   for (const [role, targets] of Object.entries(roleTargets)) {
-    for (const target of targets) files.set(target, renderPrompt(role));
+    for (const target of targets) files.set(target, renderPrompt(role, CURRENT_ROLE_PACKET_VERSION));
   }
   const builderInheritance = renderAssignmentSelectedInheritance();
   for (const stage of ['broll-master-build', 'broll-remotion-build']) {

@@ -138,13 +138,14 @@ function summarizeStages(events) {
       starts.set(event.spanId, event);
     } else if (event.type === 'stage-end') {
       const start = starts.get(event.spanId);
-      if (!start || start.stage !== event.stage || start.unitId !== event.unitId) {
+      if (!start || start.stage !== event.stage || start.phase !== event.phase || start.unitId !== event.unitId) {
         throw new Error(`stage end ${event.eventId} has no matching start`);
       }
       const wallClockMs = Date.parse(event.occurredAt) - Date.parse(start.occurredAt);
       if (wallClockMs < 0) throw new Error(`stage end ${event.eventId} precedes its start`);
       stages.push({
         spanId: event.spanId, stage: event.stage,
+        ...(event.phase ? { phase: event.phase } : {}),
         ...(event.unitId ? { unitId: event.unitId } : {}),
         startedAt: start.occurredAt, endedAt: event.occurredAt, wallClockMs,
         status: event.status,
@@ -155,6 +156,7 @@ function summarizeStages(events) {
   for (const start of starts.values()) {
     stages.push({
       spanId: start.spanId, stage: start.stage,
+      ...(start.phase ? { phase: start.phase } : {}),
       ...(start.unitId ? { unitId: start.unitId } : {}),
       startedAt: start.occurredAt, endedAt: null, wallClockMs: null, status: 'in-progress',
     });
@@ -182,6 +184,47 @@ function summarizeReviewWaits(events) {
     });
   }
   return waits;
+}
+
+function summarizePhases(stages) {
+  const result = {};
+  for (const item of stages) {
+    const key = item.phase ?? `stage:${item.stage}`;
+    const current = result[key] ?? {spans: 0, completed: 0, failed: 0, wallClockMs: 0};
+    current.spans += 1;
+    if (item.wallClockMs !== null) {
+      current.completed += 1;
+      current.wallClockMs += item.wallClockMs;
+    }
+    if (item.status === 'failed') current.failed += 1;
+    result[key] = current;
+  }
+  return Object.fromEntries(Object.entries(result).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+export function observabilityCoverage({milestone, plan, stages}) {
+  const productionKind = plan?.sourceContext?.presenterSource ? 'presenter' : 'broll';
+  const required = new Set([
+    'runtime-planning', 'creative-authoring', 'asset-freeze', 'assignment-preflight',
+    'shot-render', 'shot-decode-sheet', 'text-audit', 'motion-audit',
+    'view-receipt', 'user-review-wait', 'canary-finalize',
+  ]);
+  if (milestone !== 'canary') required.add('full-preview-finalize');
+  if (productionKind === 'presenter' && milestone === 'final') {
+    for (const phase of ['presenter-edit-plan', 'presenter-assembly', 'subtitles']) required.add(phase);
+  }
+  if (milestone === 'final') {
+    required.add('pixel-review');
+    required.add('final-delivery');
+  }
+  const requiredPhases = [...required].sort();
+  const observedPhases = [...new Set(stages.map(({phase}) => phase).filter(Boolean))].sort();
+  const observed = new Set(observedPhases);
+  const missingPhases = requiredPhases.filter((phase) => !observed.has(phase));
+  return {
+    status: missingPhases.length === 0 ? 'complete' : 'incomplete',
+    productionKind, requiredPhases, observedPhases, missingPhases,
+  };
 }
 
 function summarizeAgentCalls(events) {
@@ -250,16 +293,20 @@ function summarizeTokens(hostUsage) {
 
 export async function collectProductionMetrics({
   productionRoot,
+  milestone,
   eventsFile,
   planFile,
   hostUsageFile,
   outputFile,
   now = () => new Date(),
 }) {
+  if (!['canary', 'full-preview', 'final'].includes(milestone)) {
+    throw new Error('production metrics milestone must be canary, full-preview, or final');
+  }
   const root = await realpath(path.resolve(productionRoot));
   const rootInfo = await lstat(root);
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw new Error('production root must be a real directory');
-  const output = await canonicalTarget(outputFile ?? path.join(root, 'production-metrics.json'));
+  const output = await canonicalTarget(outputFile ?? path.join(root, `production-metrics-${milestone}.json`));
   if (!inside(root, output)) throw new Error('production metrics output must be inside the production root');
   try { await lstat(output); throw new Error('production metrics output already exists'); } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
@@ -275,10 +322,13 @@ export async function collectProductionMetrics({
     loadEvents(eventPath), optionalJson(planPath), optionalJson(usagePath),
     scanProductionTree(root, new Set([output])),
   ]);
+  const stages = summarizeStages(events);
   const metrics = {
-    schemaVersion: '1.0.0', generatedAt: now().toISOString(), productionRoot: '.',
+    schemaVersion: '1.0.0', generatedAt: now().toISOString(), milestone, productionRoot: '.',
     plan: summarizePlan(plan),
-    stages: summarizeStages(events),
+    stages,
+    phaseSummary: summarizePhases(stages),
+    observabilityCoverage: observabilityCoverage({milestone, plan, stages}),
     reviewWaits: summarizeReviewWaits(events),
     agentCalls: summarizeAgentCalls(events),
     files,
@@ -301,7 +351,7 @@ export async function collectProductionMetrics({
 
 function parseArgs(argv) {
   const options = {};
-  const known = new Set(['--production-root', '--events', '--plan', '--host-usage', '--output']);
+  const known = new Set(['--production-root', '--milestone', '--events', '--plan', '--host-usage', '--output']);
   for (let index = 0; index < argv.length; index += 1) {
     const name = argv[index];
     if (!known.has(name)) throw new Error(`unknown argument ${name}`);
@@ -309,14 +359,14 @@ function parseArgs(argv) {
     if (!value) throw new Error(`${name} requires a value`);
     options[name.slice(2)] = value;
   }
-  if (!options['production-root']) throw new Error('--production-root is required');
+  if (!options['production-root'] || !options.milestone) throw new Error('--production-root and --milestone are required');
   return options;
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const result = await collectProductionMetrics({
-    productionRoot: options['production-root'], eventsFile: options.events,
+    productionRoot: options['production-root'], milestone: options.milestone, eventsFile: options.events,
     planFile: options.plan, hostUsageFile: options['host-usage'], outputFile: options.output,
   });
   process.stdout.write(`${JSON.stringify({ status: result.status, file: result.file })}\n`);

@@ -14,6 +14,7 @@ import {
 import { validateShotMedia } from './validate-shot-media.mjs';
 import {verifyVideoSkillUsage, writeVideoSkillUsage} from './skill-usage.mjs';
 import {isDirectExecution} from './direct-execution.mjs';
+import {runTimedProductionStage} from './record-production-event.mjs';
 
 function escapeConcatPath(file) {
   return file.replaceAll("'", "'\\''");
@@ -229,12 +230,15 @@ async function main() {
   for (const required of ['plan', 'recipes', 'source-manifest', 'production-root', 'output']) {
     if (!options[required]) throw new Error(`--${required} is required`);
   }
-  const result = await assembleShotPreview({
-    planFile: options.plan, recipesDirectory: options.recipes,
-    sourceManifestFiles: options['source-manifest'], productionRoot: options['production-root'],
-    deliveryRoot: options['delivery-root'], outputFile: options.output,
-    ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
-  });
+  const result = await runTimedProductionStage({
+    eventsFile: path.join(path.resolve(options['production-root']), 'production-events.ndjson'),
+    stage: 'assembly', phase: 'full-preview-finalize',
+  }, () => assembleShotPreview({
+      planFile: options.plan, recipesDirectory: options.recipes,
+      sourceManifestFiles: options['source-manifest'], productionRoot: options['production-root'],
+      deliveryRoot: options['delivery-root'], outputFile: options.output,
+      ffmpeg: options.ffmpeg, ffprobe: options.ffprobe,
+    }));
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

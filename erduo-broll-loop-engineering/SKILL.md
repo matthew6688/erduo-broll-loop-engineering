@@ -220,7 +220,7 @@ when preflight returns `run-onboarding-diagnostic`.
     smallest timestamped findings to the owning Builder or presenter assembly
     stage; never show it as an accepted result.
 
-## Canary hard gate
+## Canary quality gate and speed target
 
 Before full production, require all of the following:
 
@@ -245,13 +245,16 @@ Before full production, require all of the following:
 - `scripts/audit-onscreen-text.mjs` reports no signal on any delivered shot;
 - the technical gate hash-binds both passing audit reports; a gate without
   those bindings, or whose report/media/Plan identity changed, is invalid;
-- user prefers this version for at least 3/5 shots;
-- assignment-to-first-canary-preview wall time is at most 45 minutes.
+- user prefers this version for at least 3/5 shots.
 
-If the projected first-canary wall time exceeds 45 minutes, stop expanding the
-production. Fix preflight, caching, or assignment scope before continuing; do
-not preserve formal gate progress by repeatedly creating roots and re-rendering
-unchanged media.
+Measure completed owner active-authoring start to first-canary preview against a
+45-minute efficiency target. Crossing that target records `over-target`, the
+overage, and the longest measured phases, but never blocks a quality-clean
+production from finishing. Complex narration may legitimately take longer.
+Only source, material, technical, visual, viewing, or approval failures block
+expansion. Fix measured bottlenecks at their earliest deterministic stage and
+reuse still-valid governed evidence; do not create roots or re-render unchanged
+media merely to make the timing number look better.
 
 No automatic score may replace the user's choice.
 

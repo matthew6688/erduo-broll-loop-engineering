@@ -4,10 +4,11 @@
   "title": "Public-safe provider-neutral production metrics",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "generatedAt", "productionRoot", "plan", "stages", "reviewWaits", "agentCalls", "files", "operations", "failures", "retries", "tokens", "privacy"],
+  "required": ["schemaVersion", "generatedAt", "milestone", "productionRoot", "plan", "stages", "phaseSummary", "observabilityCoverage", "reviewWaits", "agentCalls", "files", "operations", "failures", "retries", "tokens", "privacy"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "generatedAt": { "type": "string", "minLength": 20 },
+    "milestone": { "enum": ["canary", "full-preview", "final"] },
     "productionRoot": { "const": "." },
     "plan": {
       "type": ["object", "null"],
@@ -19,6 +20,19 @@
       }
     },
     "stages": { "type": "array", "items": { "type": "object" } },
+    "phaseSummary": { "type": "object" },
+    "observabilityCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "productionKind", "requiredPhases", "observedPhases", "missingPhases"],
+      "properties": {
+        "status": { "enum": ["complete", "incomplete"] },
+        "productionKind": { "enum": ["broll", "presenter"] },
+        "requiredPhases": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "observedPhases": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "missingPhases": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
     "reviewWaits": { "type": "array", "items": { "type": "object" } },
     "agentCalls": { "type": "object" },
     "files": { "type": "object" },

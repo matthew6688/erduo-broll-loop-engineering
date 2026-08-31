@@ -13,7 +13,7 @@ const schemaPath = path.join(skillRoot, 'references', 'runtime', 'production-eve
 function parseArgs(argv) {
   const values = {};
   const known = new Set([
-    '--events', '--event-id', '--occurred-at', '--type', '--stage', '--span', '--unit',
+    '--events', '--event-id', '--occurred-at', '--type', '--stage', '--phase', '--span', '--unit',
     '--status', '--role', '--context', '--operation', '--bytes', '--responsibility', '--detail-code',
   ]);
   for (let index = 0; index < argv.length; index += 1) {
@@ -34,6 +34,7 @@ export async function recordProductionEvent({ eventsFile, ...input }) {
     occurredAt: input.occurredAt ?? new Date().toISOString(),
     type: input.type,
     ...(input.stage ? { stage: input.stage } : {}),
+    ...(input.phase ? { phase: input.phase } : {}),
     ...(input.spanId ? { spanId: input.spanId } : {}),
     ...(input.unitId ? { unitId: input.unitId } : {}),
     ...(input.status ? { status: input.status } : {}),
@@ -67,11 +68,11 @@ export async function recordProductionEvent({ eventsFile, ...input }) {
 }
 
 export async function runTimedProductionStage({
-  eventsFile, stage, spanId, unitId, now = () => new Date(),
+  eventsFile, stage, phase, spanId, unitId, now = () => new Date(),
 }, operation) {
   if (typeof operation !== 'function') throw new Error('timed production stage requires an operation');
   const base = {
-    eventsFile, stage, spanId: spanId ?? `${stage}-${randomUUID()}`,
+    eventsFile, stage, ...(phase ? {phase} : {}), spanId: spanId ?? `${stage}-${randomUUID()}`,
     ...(unitId ? {unitId} : {}),
   };
   await recordProductionEvent({...base, type: 'stage-start', occurredAt: now().toISOString()});
@@ -94,7 +95,7 @@ async function main() {
   const event = await recordProductionEvent({
     eventsFile: options.events,
     eventId: options['event-id'], occurredAt: options['occurred-at'], type: options.type,
-    stage: options.stage, spanId: options.span, unitId: options.unit, status: options.status,
+    stage: options.stage, phase: options.phase, spanId: options.span, unitId: options.unit, status: options.status,
     agentRole: options.role, contextMode: options.context, operation: options.operation,
     bytesProcessed: options.bytes, responsibilityUnit: options.responsibility,
     detailCode: options['detail-code'],
