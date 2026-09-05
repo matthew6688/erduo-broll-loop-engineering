@@ -43,6 +43,7 @@ import {
   atomicWriteJson,
   installManifestIdentity,
   normalizeOfficialDoctor,
+  normalizeSkillsCheck,
   officialSkillBundleRoot,
   runFile,
   sanitizedChildEnv,
@@ -794,6 +795,33 @@ test('official doctor evaluation gates on JSON payload facts, not process exit',
   });
   assert.equal(sanitized.checks.at(-1).id, 'unknown-7');
   assert.equal(JSON.stringify(sanitized).includes('machine'), false);
+});
+
+test('official Skill readiness ignores newly advertised optional Skills but still requires every pinned core Skill', () => {
+  const payload = {
+    summary: { current: HYPERFRAMES_SKILL_NAMES.length, missing: 1, coreMissing: 0 },
+    skills: [
+      ...HYPERFRAMES_SKILL_NAMES.map((name) => ({ name, status: 'current' })),
+      { name: 'new-optional-workflow', status: 'missing' },
+    ],
+    lockMissing: false,
+    _meta: {
+      version: HYPERFRAMES_VERSION,
+      latestVersion: '99.0.0',
+      updateAvailable: true,
+    },
+  };
+  const ready = normalizeSkillsCheck(payload, 1);
+  assert.equal(ready.status, 'ok');
+  assert.equal(ready.installed_count, HYPERFRAMES_SKILL_NAMES.length);
+
+  const missingCore = normalizeSkillsCheck({
+    ...payload,
+    skills: payload.skills.map((skill) => skill.name === HYPERFRAMES_SKILL_NAMES[0]
+      ? { ...skill, status: 'missing' }
+      : skill),
+  }, 1);
+  assert.equal(missingCore.status, 'action-required');
 });
 
 test('official doctor rejects every missing or duplicate required local-render fact', () => {

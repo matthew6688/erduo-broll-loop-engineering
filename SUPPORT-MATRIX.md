@@ -15,7 +15,7 @@
 
 稳定版本只冻结公开契约，不会把未完成的环境验证自动提升为 `verified`。Windows 与剪映 GUI 必须保持本表声明，直到取得对应实机证据。
 
-官方 doctor 可能因为 npm 上已有更新版本而把顶层 `ok` 置为 false。只在 doctor 的 `_meta.version` 精确等于本发行包锁定的 `0.7.104`、失败项只是“newer version available”，且 Node、FFmpeg、FFprobe、Chrome 等选中本地渲染事实全部通过时，本项目把它记录为非阻断更新提示；版本不明、版本不符或任何渲染事实失败仍会关闭发布/生产门。
+官方 doctor 可能因为 npm 上已有更新版本而把顶层 `ok` 置为 false。只在 doctor 的 `_meta.version` 精确等于本发行包锁定的 `0.7.104`、失败项只是“newer version available”，且 Node、FFmpeg、FFprobe、Chrome 等选中本地渲染事实全部通过时，本项目把它记录为非阻断更新提示。官方 Skill 检查只要求本发行版声明的八个固定 Skill；上游目录后来新增的可选工作流可以不安装，但八个必需 Skill 中任意一个缺失、重复、非 `current`、未锁定或版本不符仍会关闭发布/生产门。
 
 版本升级必须作为一次受治理的 runtime migration：隔离安装、更新全部版本与 lock
 表面、重新生成绑定新可执行文件 hash 的 Runtime Plan，并通过完整五镜 canary 与用户

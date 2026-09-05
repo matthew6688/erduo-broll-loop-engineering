@@ -468,13 +468,23 @@ export function normalizeOfficialDoctor(payload) {
 }
 
 export function normalizeSkillsCheck(payload, exitCode) {
-  const status = exitCode === 0 ? 'ok' : 'action-required';
+  const reportedSkills = Array.isArray(payload?.skills) ? payload.skills : [];
+  const requiredCurrent = payload?.lockMissing === false
+    && payload?._meta?.version === HYPERFRAMES_VERSION
+    && HYPERFRAMES_SKILL_NAMES.every((name) => {
+      const matches = reportedSkills.filter((skill) => skill?.name === name);
+      return matches.length === 1 && matches[0].status === 'current';
+    });
+  const legacyOk = exitCode === 0 && payload?.ok !== false;
+  const status = legacyOk || requiredCurrent ? 'ok' : 'action-required';
   return {
     status,
-    payload_ok: typeof payload.ok === 'boolean' ? payload.ok : null,
-    installed_count: Number.isSafeInteger(payload.installed?.length)
+    payload_ok: typeof payload?.ok === 'boolean' ? payload.ok : requiredCurrent || null,
+    installed_count: Number.isSafeInteger(payload?.installed?.length)
       ? payload.installed.length
-      : (Array.isArray(payload.installed) ? payload.installed.length : null),
+      : (Array.isArray(payload?.installed)
+        ? payload.installed.length
+        : (requiredCurrent ? HYPERFRAMES_SKILL_NAMES.length : null)),
   };
 }
 

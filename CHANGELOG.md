@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Environment readiness now validates only the eight official HyperFrames
+  Skills declared by this release. Newly advertised optional workflows may be
+  absent without blocking production, while a missing, duplicate, non-current,
+  unlocked, or wrong-version required Skill still fails closed. This prevents
+  an upstream catalog expansion from breaking the pinned `0.7.104` runtime.
+
 - Canary speed validation now prefers completed owner `creative-authoring`
   events over assignment-file mtimes. The 45-minute threshold is an observable
   efficiency target rather than a production timeout: over-target work records

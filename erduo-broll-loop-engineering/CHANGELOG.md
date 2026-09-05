@@ -1,6 +1,13 @@
 
 ## Unreleased
 
+### Installation readiness
+
+- Official HyperFrames Skill readiness is scoped to the eight Skills declared
+  by this release. Missing newly advertised optional workflows no longer block
+  the pinned runtime; any required-Skill identity, status, lock, duplication,
+  or version failure remains fail closed.
+
 ### Animation extensions and observability
 
 - Added a verified executable-animation extension manifest and validator.
